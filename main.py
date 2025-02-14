@@ -129,7 +129,7 @@ class IrrigationController:
 
     def __init__(self):
         self.global_conditions = GlobalConditions()
-        self.circuits = []
+        self.circuits = {}
         self.circuits_count = 0
 
     def add_circuit(self, name, relay_pin, sensor_pins=[]):
@@ -137,8 +137,9 @@ class IrrigationController:
 
         circuit_number = self.circuits_count
         circuit = IrrigationCircuit(name, circuit_number, relay_pin, sensor_pins)
-        self.circuits.append(circuit)
+        self.circuits[circuit_number] = circuit
         self.circuits_count += 1
+
     
     def print_conditions(self):
         self.global_conditions.update()
@@ -155,7 +156,7 @@ class IrrigationController:
 
         global_conditions = self.get_conditions()
 
-        for circuit in self.circuits:
+        for circuit in self.circuits.values():
             moisture_readings = circuit.read_moisture()
 
             if SoilMoisture.TOO_WET in moisture_readings:
