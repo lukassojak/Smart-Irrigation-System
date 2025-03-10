@@ -55,24 +55,7 @@ class IrrigationController:
         global_conditions = self.global_conditions.get_conditions()
 
         for circuit in self.circuits.values():
-            moisture_readings = circuit.read_moisture()
-
-            if SoilMoisture.TOO_WET in moisture_readings:
-                print(f"Soil too wet in the circuit number {circuit.number}: {circuit.name}, skipping irrigation cycle for the circuit ...")
-                continue
-
-            # move this to the circuit class
-            if SoilMoisture.TOO_DRY in moisture_readings:
-                print(f"Soil too dry in the circuit number {circuit.number}: {circuit.name}, performing irrigation cycle for dry conditions ...")
-                t = threading.Thread(target=circuit.irrigate_too_dry, args=(self.stop_event,))
-                self.threads.append(t)
-                t.start()
-                continue
-
-            if moisture_readings == []:
-                print(f"No soil moisture sensors in the circuit number {circuit.number}: {circuit.name}, irrigation cycle depends only on global conditions ...")
-
-            # optimal soil moisture here, irrigate according to global conditions
+            # irrigate according to global conditions
             t = threading.Thread(target=circuit.irrigate_automatic, args=(self.stop_event,))
             self.threads.append(t)
             t.start()
