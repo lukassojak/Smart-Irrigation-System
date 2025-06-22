@@ -43,30 +43,26 @@ class IrrigationController:
     
     def start_irrigation_circuit(self, circuit):
         """Starts the irrigation process for a specified circuit in a new thread"""
+        def thread_target():
+            circuit.irrigate(duration, self.stop_event)
+
+            # after the irrigation is done, OR after interruption, remove the thread from the list
+            with self.threads_lock:
+                current = threading.current_thread()
+                try:
+                    self.threads.remove(current)
+                except ValueError:
+                    print(f"I-Controller: Thread {current.name} not found in the thread list.")
+
 
         # calculate irrigation time
         duration = TEMP_WATERING_TIME
 
-        t = threading.Thread(target=self._run_irrigation, args=(circuit, duration))
-        
+        t = threading.Thread(target=thread_target)
         with self.threads_lock:
             self.threads.append(t)
-            t.start()
-    
-
-    def _run_irrigation(self, circuit, duration):
-        """Controls irrigation and updates the thread list"""
-
-        circuit.irrigate(duration, self.stop_event)
-
-        # after the irrigation is done, remove the thread from the list
-        # TODO: use a better way to manage threads, e.g. a thread pool
-        with self.threads_lock:
-            current = threading.current_thread()
-            try:
-                self.threads.remove(current)
-            except ValueError:
-                print(f"I-Controller: Thread {current.name} not found in the thread list.")
+            
+        t.start()
 
     
     def perform_irrigation(self):
