@@ -26,6 +26,12 @@ def main():
     time.sleep(2)
     controller.stop_irrigation()
 
+    threads_running = controller.is_irrigating()
+    while threads_running > 0:
+        print("Main        : threads still running: ", threads_running)
+        time.sleep(1)  # Wait for the irrigation to complete
+        threads_running = controller.is_irrigating()
+    print("Main        : Irrigation completed.")
 
 if __name__ == "__main__":
     main()

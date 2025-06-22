@@ -9,3 +9,7 @@ class SoilMoisture(Enum):
 class MoistureSensorState(Enum):
     WET = 3
     DRY = 4
+
+
+SECONDS_IN_MUNUTE = 60
+TEMP_WATERING_TIME = 10

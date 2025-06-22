@@ -1,6 +1,9 @@
 import threading
 from irrigation_circuit import IrrigationCircuit
 from global_conditions import GlobalConditions
+import threading
+from enums import TEMP_WATERING_TIME
+
 
 class IrrigationController:
     """The main irrigation controller that manages all the irrigation circuits"""
@@ -10,7 +13,17 @@ class IrrigationController:
         self.circuits = {}
         self.threads = []
         self.stop_event = threading.Event()
+        self.threads_lock = threading.Lock()
 
+
+    def get_circuit(self, circuit_number):
+        """Returns the circuit object for a given circuit number"""
+
+        if circuit_number in self.circuits:
+            return self.circuits[circuit_number]
+        else:
+            raise ValueError(f"Circuit number {circuit_number} does not exist.")
+        
 
     def add_circuit(self, name, relay_pin, sensor_pins=[]):
         """Adds a new irrigation circuit to the controller"""
@@ -24,18 +37,21 @@ class IrrigationController:
         self.global_conditions.update()
         conditions = self.global_conditions.get_conditions()
 
-        print("Current global conditions:")
+        print("I-Controller: Current global conditions:")
         print(conditions)
 
     
-    def start_irrigation(self, circuit, duration):
+    def start_irrigation_circuit(self, circuit):
         """Starts the irrigation process for a specified circuit in a new thread"""
 
-        t = threading.Thread(target=self._run_irrigation, args=(circuit, duration))
-        t.start()
+        # calculate irrigation time
+        duration = TEMP_WATERING_TIME
 
+        t = threading.Thread(target=self._run_irrigation, args=(circuit, duration))
+        
         with self.threads_lock:
             self.threads.append(t)
+            t.start()
     
 
     def _run_irrigation(self, circuit, duration):
@@ -44,8 +60,13 @@ class IrrigationController:
         circuit.irrigate(duration, self.stop_event)
 
         # after the irrigation is done, remove the thread from the list
+        # TODO: use a better way to manage threads, e.g. a thread pool
         with self.threads_lock:
-            self.threads = [t for t in self.threads if t.is_alive()]        # not too efficient, but works
+            current = threading.current_thread()
+            try:
+                self.threads.remove(current)
+            except ValueError:
+                print(f"I-Controller: Thread {current.name} not found in the thread list.")
 
     
     def perform_irrigation(self):
@@ -56,21 +77,29 @@ class IrrigationController:
 
         for circuit in self.circuits.values():
             # irrigate according to global conditions
-            t = threading.Thread(target=circuit.irrigate_automatic, args=(self.stop_event,))
-            self.threads.append(t)
-            t.start()
+            self.start_irrigation_circuit(circuit)
 
 
     def stop_irrigation(self):
         """Stops all irrigation processes"""
-        print("Stopping all irrigation processes ...")
+        print("I-Controller: Stopping all irrigation processes ...")
         self.stop_event.set()
 
         with self.threads_lock:
-            for t in self.threads:
-                t.join()
-            self.threads.clear()
+            threads_copy = self.threads.copy()
+        
+        for thread in threads_copy:
+            thread.join()  # Wait for all threads to finish
+        
+        self.threads.clear()  # Clear the thread list after stopping all threads
+        
 
 
     def remove_thread(self, thread):
         self.threads.remove(thread)
+
+    
+    def is_irrigating(self) -> int:
+        """Checks how many threads are currently running"""
+        with self.threads_lock:
+            return len(self.threads)
