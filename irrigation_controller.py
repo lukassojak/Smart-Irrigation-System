@@ -1,7 +1,6 @@
 import threading
 from irrigation_circuit import IrrigationCircuit
 from global_conditions import GlobalConditions
-import threading
 from enums import TEMP_WATERING_TIME
 
 
@@ -61,7 +60,7 @@ class IrrigationController:
         t = threading.Thread(target=thread_target)
         with self.threads_lock:
             self.threads.append(t)
-            
+
         t.start()
 
     

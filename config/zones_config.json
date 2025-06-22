@@ -1,0 +1,67 @@
+{
+    "zones": [
+        {
+            "id": 1,
+            "name": "Záhon pod balkonem",
+            "relay_pin": 1,
+            "enabled": true,
+            "standard_flow_seconds": 180,
+            "interval_days": 1,
+            "drippers": [
+                {
+                    "liters_per_hour": 2
+                },
+                {
+                    "liters_per_hour": 2
+                },
+                {
+                    "liters_per_hour": 4
+                }
+            ],
+            "local_correction_factors": {
+                "sunlight": 0.4,
+                "rain": -0.8,
+                "temperature": 0.2
+            }
+        },
+        {
+            "id": 2,
+            "name": "Záhon u skleníku",
+            "relay_pin": 2,
+            "enabled": true,
+            "standard_flow_seconds": 180,
+            "interval_days": 1,
+            "drippers": [
+                {
+                    "liters_per_hour": 2
+                },
+                {
+                    "liters_per_hour": 2
+                }
+            ],
+            "local_correction_factors": {
+                "sunlight": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            }
+        },
+        {
+            "id": 3,
+            "name": "Skleník",
+            "relay_pin": 3,
+            "enabled": true,
+            "standard_flow_seconds": 180,
+            "interval_days": 1,
+            "drippers": [
+                {
+                    "liters_per_hour": 4
+                }
+            ],
+            "local_correction_factors": {
+                "sunlight": 0.3,
+                "rain": -1.0,
+                "temperature": 0.0
+            }
+        }
+    ]
+}
