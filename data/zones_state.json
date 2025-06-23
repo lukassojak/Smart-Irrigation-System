@@ -1,0 +1,23 @@
+{
+    "last_updated": "2025-06-22T14:00:00",
+    "circuits": [
+        {
+            "id": "1",
+            "last_irrigation": "2025-06-21T20:00:00",
+            "last_result": "success",
+            "last_duration": 180
+        },
+        {
+            "id": "2",
+            "last_irrigation": null,
+            "last_result": null,
+            "last_duration": null
+        },
+        {
+            "id": "3",
+            "last_irrigation": null,
+            "last_result": null,
+            "last_duration": null
+        }
+    ]
+}

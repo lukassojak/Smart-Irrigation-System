@@ -1,65 +1,27 @@
 from relay_valve import RelayValve
 from deprecated.soil_moisture_sensor import SoilMoistureSensorPair
 from enums import TEMP_WATERING_TIME
-from dripper import Dripper
+from drippers import Drippers
 
 
 class IrrigationCircuit:
-    def __init__(self, name, circuit_number, relay_pin, sensor_pins=[]):
+    def __init__(self, name, circuit_number, relay_pin, enabled, standard_flow_seconds, interval_days, drippers, sensor_pins=[]):
         self.number = circuit_number
         self.name = name
         self.valve = RelayValve(relay_pin)
+        self.enabled = enabled
+        self.standard_flow_seconds = standard_flow_seconds      # Base watering time in seconds
+        self.interval_days = interval_days
         self.sensors = [SoilMoistureSensorPair(pin1, pin2) for pin1, pin2 in sensor_pins]
 
-        self.drippers = []                      # List of drippers in the circuit
-        self.consumption = 0                    # in liters per hour
-        self.base_irrigation_volume = 0         # in liters
+        self.drippers = Drippers()                              # Instance of Drippers to manage dripper flow rates 
 
     
-    def add_dripper(self, liters_per_hour) -> int:
-        """Adds a dripper to the circuit"""
+    def get_circuit_consumption(self):
+        """Returns the total consumption of all drippers in liters per hour."""
+        return self.drippers.get_consumption()
 
-        self.consumption += liters_per_hour
-        self.base_irrigation_volume += liters_per_hour
-        dripper_number = len(self.drippers)
-        dripper = Dripper(dripper_number, liters_per_hour)
-        self.drippers.append(dripper)
-        return dripper_number
-    
-    def remove_dripper_by_number(self, dripper_number) -> bool:
-        """Removes a dripper from the circuit by it's number"""
 
-        if dripper_number < len(self.drippers):
-            dripper = self.drippers[dripper_number]
-            self.consumption -= dripper.liters_per_hour
-            self.base_irrigation_volume -= dripper.liters_per_hour
-            del self.drippers[dripper_number]
-            return True
-        else:
-            return False
-    
-    def remove_dripper_by_object(self, dripper) -> bool:
-        """Removes a dripper from the circuit by object"""
-
-        if dripper in self.drippers:
-            self.consumption -= dripper.liters_per_hour
-            self.base_irrigation_volume -= dripper.liters_per_hour
-            self.drippers.remove(dripper)
-            return True
-        else:
-            return False
-        
-    def remove_dripper_by_consumption(self, liters_per_hour) -> bool:
-        """Removes a dripper from the circuit by consumption"""
-
-        for dripper in self.drippers:
-            if dripper.liters_per_hour == liters_per_hour:
-                self.consumption -= dripper.liters_per_hour
-                self.base_irrigation_volume -= dripper.liters_per_hour
-                self.drippers.remove(dripper)
-                return True
-        return False
-    
     def irrigate_automatic(self, stop_event):
         """Starts the automatic irrigation process depending on global conditions"""
 
