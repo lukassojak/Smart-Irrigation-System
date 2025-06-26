@@ -93,19 +93,23 @@ class CircuitStateManager():
         if result:
             return datetime.fromisoformat(result)
         return None
-    
-    def update_irrigation_time(self, circuit: IrrigationCircuit) -> None: 
-        """Sets the last irrigation time for a given circuit and updates the last_updated timestamp.
+
+    def update_irrigation_result(self, circuit: IrrigationCircuit, result: str, duration: int) -> None:
+        """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""
-        now = datetime.now()
-        iso_timestamp = now.strftime("%Y-%m-%dT%H:%M:%S")
+        if result not in ["success", "failure", "skipped", "error"]:
+            # add logging here
+            # logging.error(f"Invalid irrigation result: {result}")
+            return
+        
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
             # add logging here
             # logging.error(f"Circuit with ID {circuit.id} not found in state.")
             return
         
-        self.state["circuits"][circuit_index]["last_irrigation"] = iso_timestamp
-        self.state["last_updated"] = iso_timestamp
+        self.state["circuits"][circuit_index]["last_result"] = result
+        self.state["circuits"][circuit_index]["last_duration"] = duration
+        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.
