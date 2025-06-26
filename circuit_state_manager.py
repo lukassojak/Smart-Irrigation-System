@@ -108,8 +108,21 @@ class CircuitStateManager():
             # logging.error(f"Circuit with ID {circuit.id} not found in state.")
             return
         
+        if result == "skipped":
+            # If the result is "skipped", we do not update last_irrigation or last_duration
+            # Because we need to keep the last irrigation time and duration intact to calculate the next irrigation time correctly.
+            self.state["circuits"][circuit_index]["last_result"] = result
+            self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            self.save_state()
+            return
+        
+        # If the result is "failure" or "error", we update the last_irrigation time and last_duration (to None)
+        # This leads to loss of the last irrigation time and duration, which is acceptable in this case.
+    
+        # .get() would be safer here, but we assume the structure is valid since we validated it in load_state()
         self.state["circuits"][circuit_index]["last_result"] = result
-        self.state["circuits"][circuit_index]["last_duration"] = duration
+        self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failure" or "error", duration is 0
+        self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.
