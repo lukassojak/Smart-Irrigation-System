@@ -15,8 +15,9 @@ Tento projekt je minimalistický prototyp inteligentního zavlažovacího systé
 
 ## 📁 Struktura konfigurace
 
-- `config_global.json`: Globální nastavení systému
-- `zones_config.json`: Definice všech zavlažovacích okruhů
+- `config_global.json`: Globální konfigurace systému
+- `zones_config.json`: Definice všech zavlažovacích okruhů a jejich konfigurace
+- `zones_state.json`: Aktuální stav každého z okruhů
 
 ## 📜 Logování
 
@@ -36,3 +37,7 @@ Automatika může být zapnutá či vypnutá. V automatickém režimu systém za
 - Lokální senzory vlhkosti pro okruh
 - Webové rozhraní pro řízení
 - Integrace s Home Assistantem
+
+## 🗒️ Poznámky
+
+- Pojem `zóna` je v kontextu projektu synonymum pojmu `okruh`

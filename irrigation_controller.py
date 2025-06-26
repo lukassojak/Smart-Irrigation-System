@@ -5,7 +5,7 @@ from enums import TEMP_WATERING_TIME
 
 
 class IrrigationController:
-    """The main irrigation controller that manages all the irrigation circuits"""
+    """The main irrigation controller that manages all the irrigation circuits. Pattern: Singleton"""
 
     def __init__(self):
         self.global_conditions = GlobalConditions()

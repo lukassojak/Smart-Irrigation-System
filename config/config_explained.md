@@ -58,7 +58,7 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 - `relay_pin`: Číslo GPIO pinu, který ovládá relé pro ventil.
 - `enabled`: Příznak, zda je okruh aktivní. Pokud je `false`, okruh se přeskakuje, ale zůstává v konfiguraci.
 - `standard_flow_seconds`: Počet sekund, jak dlouho má být ventil otevřen při **100% výpočtu výtoku** (bazálním stavu, např. 60 sekund). Např. pokud výsledný výpočet ukáže 150%, takový ventil se pak otevře na 90 sekund (1.5 * 60)¨
-- `interval_days`: Počet dní mezi jednotlivými cykly zavlažování daného okruhu. Např. 1 = každý den, 2 = každý druhý den. Při každém denním spuštění v daný čas systém zkontroluje, zda od posledního zavlažení dané zóny uplynulo dost dní. Stav posledního zalití každé zóny bude potřeba uchovávat – např. v paměti nebo ve zvláštním datovém souboru.
+- `interval_days`: Počet dní mezi jednotlivými cykly zavlažování daného okruhu. Např. 1 = každý den, 2 = každý druhý den. Při každém denním spuštění v daný čas systém zkontroluje, zda od posledního zavlažení dané zóny uplynulo dost dní. Stav posledního zalití a jiné stavové hodnoty jsou uchovávány při běhu v paměti a ve stavovém souboru [`zones_state.json`](./../data/zones_state.json).
 - `drippers`: Seznam kapkovačů s jejich spotřebou (v l/h).
 
 ### local_correction_factors:

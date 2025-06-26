@@ -32,4 +32,5 @@ Typ: `array`
 Pozn.:
 - Hodnoty `null` jsou použity pro nové okruhy nebo takové, které zatím nebyly zavlažovány.
 - Všechny časové údaje jsou v UTC nebo je třeba si je sjednotit s ostatními částmi systému.
-- Tento soubor bude obvykle spravovat třída jako `ZoneStateManager`, která zajišťuje načtení, aktualizaci a zápis.
+- Tento soubor bude obvykle spravovat třída `CircuitStateManager`, která zajišťuje načtení, aktualizaci a zápis.
+- Je potřeba zajistit atomicitu operací zavlažení a aktualizace souboru `zones_state.json`.

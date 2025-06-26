@@ -2,8 +2,9 @@ import json
 from irrigation_circuit import IrrigationCircuit
 from enums import TEMP_WATERING_TIME
 from drippers import Drippers
+from correction_factors import CorrectionFactors
 
-def load_zones_config(filepath: str) -> list:
+def load_zones_config(filepath: str) -> list[IrrigationCircuit]:
     """
     Loads circuits configurations from JSON file and creates IrrigationCircuit objects for each circuit.
     """
@@ -27,25 +28,41 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     relay_pin = zone["relay_pin"]
     enabled = zone["enabled"]
     standard_flow_seconds = zone["standard_flow_seconds"]
-    interval_days = zone[interval_days]
+    interval_days = zone["interval_days"]
 
     # not used in this version, but can be used for sensors
     # sensor_pins = zone.get("sensor_pins", [])  # expected to be a list of lists
 
-    circuit = IrrigationCircuit(name, number, relay_pin)
-
-    # Add drippers to the circuit
-    drippers = zone.get("drippers", [])
-    for dripper in drippers:
+    drippers = Drippers()
+    # Add drippers to the drippers instance
+    drippers_list = zone.get("drippers", [])
+    for dripper in drippers_list:
         lph = dripper["liters_per_hour"]
-        circuit.drippers.add_dripper(lph)
+        drippers.add_dripper(lph)
     
     # Set local correction factors
-    
+    correction_factors = CorrectionFactors(
+        sunlight=zone.get("sunlight"),
+        rain=zone.get("rain"),
+        temperature=zone.get("temperature")
+    )
+
+    # Create the IrrigationCircuit object
+    circuit = IrrigationCircuit(
+        name=name,
+        circuit_number=number,
+        relay_pin=relay_pin,
+        enabled=enabled,
+        standard_flow_seconds=standard_flow_seconds,
+        interval_days=interval_days,
+        drippers=drippers,
+        correction_factors=correction_factors
+    )
 
     return circuit
 
 
+# maybe useless
 def circuits_to_config(circuits: list) -> dict:
     """
     Převod všech IrrigationCircuit objektů zpět do struktury JSON pro uložení.
@@ -55,6 +72,7 @@ def circuits_to_config(circuits: list) -> dict:
     }
 
 
+# maybe useless
 def circuit_to_config(circuit: IrrigationCircuit) -> dict:
     """
     Převod jednoho IrrigationCircuit objektu zpět do JSON záznamu.
