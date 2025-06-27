@@ -96,13 +96,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - `irrigation_log.txt`  
   Běžný log aktivit, chyb a hlášení pro ladění i dohled.
 
-## 📜 Logování
-
-Každé Raspberry Pi Pico zapisuje log do vlastního souboru `irrigation_log.txt`.
-
-## 📅 Automatické zavlažování
-
-Automatika může být zapnutá či vypnutá. V automatickém režimu systém zalévá každý den v nastavený čas.
+---
 
 ## 🔌 Požadavky
 
