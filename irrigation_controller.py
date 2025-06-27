@@ -1,7 +1,12 @@
 import threading
+import time
+import json
 from irrigation_circuit import IrrigationCircuit
 from global_conditions import GlobalConditions
 from enums import TEMP_WATERING_TIME
+
+
+CONFIG_PATH = "./config/config_global.json"
 
 
 class IrrigationController:
