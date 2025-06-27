@@ -143,3 +143,8 @@ Automatika může být zapnutá či vypnutá. V automatickém režimu systém za
 - [ ] MQTT komunikace mezi uzly
 
 ---
+
+## 🗒️ Poznámky
+
+- Termíny **"okruh"** a **"zóna"** jsou v rámci tohoto projektu synonymní.
+---
