@@ -36,7 +36,7 @@ Když je o 2 mm více srážek než standardní, výpočet výtoku bude snížen
 - `main_valve_max_flow`: Maximální odběr v l/h pro celý zavlažovací uzel.
 
 Např.:
-Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% běžné doby.
+Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% běžného objemu.
 
 ### automation:
 - `enabled`: Povolí/zakáže automatické zavlažování v nastavený čas.
@@ -44,7 +44,12 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
 - `irrigation_mode`: může být:
     - `sequential`: zavlažování probíhá sekvenčně - v daný okamžik je aktivní pouze jeden zavlažovací okruh (zóna) v rámci celého zavlažovacího uzlu.
     - `concurrent`: zavlažování probíhá souběžně – všechny okruhy v rámci zavlažovacího uzlu se spustí najednou. Pokud je `max_flow_monitoring` nastaveno na `false` a spotřeba vody překročí dostupný přítok, může dojít k nepřesnému zavlažení (např. některé zóny dostanou méně vody, než bylo plánováno).
-- `max_flow_monitoring`: Pokud je `true`, IrrigationController během spuštěného zavlažování kontroluje aktuální odběr všech zavlažovacích okruhů. Pokud by při **souběžném zavlažování** mělo spuštění zavlažování dalšího okruhu navýšit odběr nad `main_valve_max_flow`, počká tento okruh, než doběhne zavlažování jiných a až poté se spustí. V případě omezeného `main_valve_max_flow` je tento režim bezpečnou variantou pro souběžné zavlažování, zároveň ale **negarantuje 100% souběžné zavlažování**. Pokud je `irrigation_mode` nastaveno na `sequential`, pak nemá žádný vliv.
+- `max_flow_monitoring`: Pokud je `true`, IrrigationController během spuštěného zavlažování kontroluje aktuální odběr všech zavlažovacích okruhů. Pokud by při **souběžném zavlažování** mělo spuštění zavlažování dalšího okruhu navýšit odběr nad `main_valve_max_flow`, počká tento okruh, než doběhne zavlažování jiných, a až poté se spustí. V případě omezeného `main_valve_max_flow` je tento režim bezpečnou variantou pro souběžné zavlažování, zároveň ale **negarantuje 100% souběžné zavlažování**. Pokud je `irrigation_mode` nastaveno na `sequential`, pak nemá žádný vliv.
+- `server_offline`: **Nedostupné v MVP** V případě, že nejsou dostupné záznamy o počasí, nebo je server (centrální Raspberry Pi 4) offline:
+    - `disabled`: Zavlažování se pozastaví do té doby, než bude server dostupný
+    - `history_based`: Zavlažování pokračuje v nastavený čas podle konfigurace, nedostupná data o počasí pro výpočet objemu zavlažení jsou nahrazena průměrem zavlažení z posledních 3 dnů pro každý okruh.
+    - `base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 100% bazálního množství.
+    - `half_base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 50% bazálního množství.
 
 ### logging:
 Ovládá chování výstupu logování na klientském zařízení.
