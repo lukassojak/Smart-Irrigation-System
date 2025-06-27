@@ -33,6 +33,7 @@ Když je o 2 mm více srážek než standardní, výpočet výtoku bude snížen
 ### irrigation_limits:
 - `min_percent`: Dolní hranice výpočtu (např. 0 = žádné zavlažování).
 - `max_percent`: Horní hranice (např. 500 = maximálně 5× běžné doby).
+- `main_valve_max_flow`: Maximální odběr v l/h pro celý zavlažovací uzel.
 
 Např.:
 Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% běžné doby.
@@ -40,6 +41,10 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
 ### automation:
 - `enabled`: Povolí/zakáže automatické zavlažování v nastavený čas.
 - `scheduled_hour`, `scheduled_minute`: Denní čas, kdy má systém spustit zavlažování (např. 20:00).
+- `irrigation_mode`: může být:
+    - `sequential`: zavlažování probíhá sekvenčně - v daný okamžik je aktivní pouze jeden zavlažovací okruh (zóna) v rámci celého zavlažovacího uzlu.
+    - `concurrent`: zavlažování probíhá souběžně – všechny okruhy v rámci zavlažovacího uzlu se spustí najednou. Pokud je `max_flow_monitoring` nastaveno na `false` a spotřeba vody překročí dostupný přítok, může dojít k nepřesnému zavlažení (např. některé zóny dostanou méně vody, než bylo plánováno).
+- `max_flow_monitoring`: Pokud je `true`, IrrigationController během spuštěného zavlažování kontroluje aktuální odběr všech zavlažovacích okruhů. Pokud by při **souběžném zavlažování** mělo spuštění zavlažování dalšího okruhu navýšit odběr nad `main_valve_max_flow`, počká tento okruh, než doběhne zavlažování jiných a až poté se spustí. V případě omezeného `main_valve_max_flow` je tento režim bezpečnou variantou pro souběžné zavlažování, zároveň ale **negarantuje 100% souběžné zavlažování**. Pokud je `irrigation_mode` nastaveno na `sequential`, pak nemá žádný vliv.
 
 ### logging:
 Ovládá chování výstupu logování na klientském zařízení.

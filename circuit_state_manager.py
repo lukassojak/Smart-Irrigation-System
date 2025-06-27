@@ -3,6 +3,13 @@ from irrigation_circuit import IrrigationCircuit
 from typing import Optional, Any
 from datetime import datetime
 
+
+# 1. Possible problem with key being a string
+# 2. Add last_decision_time to track the last decision and reason of watering / not watering
+# In case the decision is to water manually by user (selected volume), the volume should not be
+# used in case of offline mode - in this case, it should use the last automatically calculated volume instead
+
+
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
     def __init__(self, state_file: str):
