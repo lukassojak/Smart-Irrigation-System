@@ -24,3 +24,9 @@ class Drippers:
     def get_consumption(self):
         """Returns the total consumption of all drippers in liters per hour."""
         return self.total_consumption
+    
+    def get_minimum_dripper_flow(self):
+        """Returns flow rate of the minimum dripper in the configuration. In liters per hour."""
+        if not self.drippers:
+            return 0
+        return min(self.drippers.keys())

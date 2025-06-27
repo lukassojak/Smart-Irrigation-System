@@ -56,10 +56,19 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 - `id`: Jedinečné identifikační číslo každého okruhu. Může být využito pro řazení (sekvenční zavlažování od nejnižšího id), identifikaci v datech, komunikaci s klientskými zařízeními.
 - `name`: Lidsky čitelný název okruhu, např. pro zobrazení v Home Assistantu.
 - `relay_pin`: Číslo GPIO pinu, který ovládá relé pro ventil.
-- `enabled`: Příznak, zda je okruh aktivní. Pokud je `false`, okruh se přeskakuje, ale zůstává v konfiguraci.
-- `standard_flow_seconds`: Počet sekund, jak dlouho má být ventil otevřen při **100% výpočtu výtoku** (bazálním stavu, např. 60 sekund). Např. pokud výsledný výpočet ukáže 150%, takový ventil se pak otevře na 90 sekund (1.5 * 60)¨
+- `enabled`: Boolean příznak, zda je okruh aktivní. Pokud je `false`, okruh se přeskakuje, ale zůstává v konfiguraci.
+- `even_area_mode`: Boolean příznak, který určuje režim zavlažování pro daný okruh:
+    - `true`: Plocha se zavlažuje rovnoměrně podle hodnot `target_mm` a `zone_area_m2`. V tomto režimu se očekává plocha souvisle a rovnoměrně osazena zavlažovacími emitory (např. kapkovače, nebo průsaková hadice), které rozvádějí vodu rovnoměrně po celé ploše. Je potom možné regulovat zálivku podle mm vodního sloupce na zadanou plochu. **V tomto režimu je hodnota `liters_per_minimum_dripper` nastavena na `null`**.
+    - `false`: Obecnější režim pro plochy, které nejsou rovnoměrně osazeny zavlažovacími emitory a není tak možné pracovat s výškou vodního sloupce na ploše. V tomto režimu se používá uživatelská hodnota atributu `liters_per_minimum_dripper`. Vhodné pro nerovnoměrné okruhy zavlažování, např. několik rostlin různých rozměrů. V takové situaci mají zavlažovací emitory takový průtok l/h v poměru požadavků rostlin v okruhu (např. velká rostlina má emitor/y s průtokem 5l/h, malá rostlina 1l/h). Tento režim je spolehlivý a intuitivní při použití pouze zavlažovacích emitorů typu kapkovač.
+- `target_mm`: Cílové množství vody (vodní sloupec) v milimetrech pro zavlažování. Pokud je `even_area_mode` `false`, hodnota je `null`.
+- `zone_area_m2`: Velikost zavlažované plochy v m². Pokud je `even_area_mode` `false`, hodnota je `null`.
+- `liters_per_minimum_dripper`: Množství vody, které je při bazálním stavu (při výpočtu 100% výtoku pro daný okruh podle nastavených globálních standardních podmínek) **vypuštěno z jednoho minimálního kapkovače (kapkovač s nejmenším průtokem v konfiguraci)**. Pokud je `even_area_mode` `true`, hodnota je `null`.
 - `interval_days`: Počet dní mezi jednotlivými cykly zavlažování daného okruhu. Např. 1 = každý den, 2 = každý druhý den. Při každém denním spuštění v daný čas systém zkontroluje, zda od posledního zavlažení dané zóny uplynulo dost dní. Stav posledního zalití a jiné stavové hodnoty jsou uchovávány při běhu v paměti a ve stavovém souboru [`zones_state.json`](./../data/zones_state.json).
-- `drippers`: Seznam kapkovačů s jejich spotřebou (v l/h).
+- `drippers_summary`: Slovník, kde klíče jsou průtoky kapkovačů v litrech za minutu (jako řetězce) a hodnoty jsou počty těchto kapkovačů v daném okruhu.
+
+
+**DŮLEŽITÉ: Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání konfigurace.**
+
 
 ### local_correction_factors:
 Modifikace chování daného okruhu oproti globálním korekcím.

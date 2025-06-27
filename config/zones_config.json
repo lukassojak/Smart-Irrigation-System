@@ -5,19 +5,15 @@
             "name": "Záhon pod balkonem",
             "relay_pin": 1,
             "enabled": true,
-            "standard_flow_seconds": 180,
+            "even_area_mode": true,
+            "target_mm": 6.0,
+            "zone_area_m2": 4.0,
+            "liters_per_minimum_dripper": null,
             "interval_days": 1,
-            "drippers": [
-                {
-                    "liters_per_hour": 2
-                },
-                {
-                    "liters_per_hour": 2
-                },
-                {
-                    "liters_per_hour": 4
-                }
-            ],
+            "drippers_summary": {
+                "2": 2,
+                "4": 1
+            },
             "local_correction_factors": {
                 "sunlight": 0.4,
                 "rain": -0.8,
@@ -29,16 +25,14 @@
             "name": "Záhon u skleníku",
             "relay_pin": 2,
             "enabled": true,
-            "standard_flow_seconds": 180,
+            "even_area_mode": true,
+            "target_mm": 3.0,
+            "zone_area_m2": 2.0,
+            "liters_per_minimum_dripper": null,
             "interval_days": 1,
-            "drippers": [
-                {
-                    "liters_per_hour": 2
-                },
-                {
-                    "liters_per_hour": 2
-                }
-            ],
+            "drippers_summary": {
+                "2": 2
+            },
             "local_correction_factors": {
                 "sunlight": 0.0,
                 "rain": 0.0,
@@ -50,13 +44,14 @@
             "name": "Skleník",
             "relay_pin": 3,
             "enabled": true,
-            "standard_flow_seconds": 180,
+            "even_area_mode": false,
+            "target_mm": null,
+            "zone_area_m2": null,
+            "liters_per_minimum_dripper": 0.5,
             "interval_days": 1,
-            "drippers": [
-                {
-                    "liters_per_hour": 4
-                }
-            ],
+            "drippers_summary": {
+                "4": 1
+            },
             "local_correction_factors": {
                 "sunlight": 0.3,
                 "rain": -1.0,
