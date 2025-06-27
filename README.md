@@ -19,9 +19,9 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 ### Stabilní verze
 - Systém bude rozdělen do tří vrstev:  
-  **1. Uživatelská vrstva (UI) - Webová aplikace, Home Assistant, CLI, případně kombinace**
-  **2. Centrální řídicí server (Raspberry Pi 4)**  
-  **3. Zavlažovací uzly (n Raspberry Pi Pico)**
+  - **1. Uživatelská vrstva (UI) - Webová aplikace, Home Assistant, CLI, případně kombinace**
+  - **2. Centrální řídicí server (Raspberry Pi 4)**  
+  - **3. Zavlažovací uzly (n Raspberry Pi Pico)**
 
 #### 1. Centrální řídicí server (RPi 4):
 - Zajišťuje **sběr dat ze serveru meteostanice** – intenzita slunečního svitu, teplota, srážky, vlhkost atd.
