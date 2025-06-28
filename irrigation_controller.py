@@ -1,20 +1,26 @@
 import threading
 import time
 import json
+from typing import List, Dict
 from irrigation_circuit import IrrigationCircuit
 from global_conditions import GlobalConditions
-from enums import TEMP_WATERING_TIME
+from global_config import GlobalConfig
+from config_loader import load_global_config, load_zones_config
 
 
-CONFIG_PATH = "./config/config_global.json"
+CONFIG_GLOBAL_PATH = "./config/config_global.json"
+CONFIG_ZONES_PATH =  "./config/zones_config.json"
 
 
 class IrrigationController:
     """The main irrigation controller that manages all the irrigation circuits. Pattern: Singleton"""
 
-    def __init__(self):
-        self.global_conditions = GlobalConditions()
-        self.circuits = {}
+    def __init__(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
+        self.global_conditions: GlobalConditions = GlobalConditions()                                          # Initialize global conditions
+        self.circuits_list = load_zones_config(config_zones_path)
+        self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}  # Create a dictionary of circuits by their ID
+        self.global_config: GlobalConfig = load_global_config(config_global_path)
+
         self.threads = []
         self.stop_event = threading.Event()
         self.threads_lock = threading.Lock()
@@ -27,22 +33,6 @@ class IrrigationController:
             return self.circuits[circuit_number]
         else:
             raise ValueError(f"Circuit number {circuit_number} does not exist.")
-        
-
-    def add_circuit(self, name, relay_pin, sensor_pins=[]):
-        """Adds a new irrigation circuit to the controller"""
-
-        circuit_number = len(self.circuits)
-        circuit = IrrigationCircuit(name, circuit_number, relay_pin, sensor_pins)
-        self.circuits[circuit_number] = circuit
-
-    
-    def print_conditions(self):
-        self.global_conditions.update()
-        conditions = self.global_conditions.get_conditions()
-
-        print("I-Controller: Current global conditions:")
-        print(conditions)
 
     
     def start_irrigation_circuit(self, circuit):
@@ -69,8 +59,9 @@ class IrrigationController:
         t.start()
 
     
-    def perform_irrigation(self):
-        """Performs irrigation for all circuits based on the current conditions"""
+    def perform_irrigation(self, sequential: bool = False):
+        """Performs automatic irrigation for all circuits"""
+        
         self.stop_event.clear()
 
         global_conditions = self.global_conditions.get_conditions()
@@ -92,11 +83,6 @@ class IrrigationController:
             thread.join()  # Wait for all threads to finish
         
         self.threads.clear()  # Clear the thread list after stopping all threads
-        
-
-
-    def remove_thread(self, thread):
-        self.threads.remove(thread)
 
     
     def is_irrigating(self) -> int:

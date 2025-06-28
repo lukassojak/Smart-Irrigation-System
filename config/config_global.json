@@ -18,7 +18,8 @@
         "enabled": true,
         "scheduled_hour": 20,
         "scheduled_minute": 0,
-        "max_flow_monitoring": true
+        "max_flow_monitoring": true,
+        "sequential": false
     },
     "logging": {
         "enabled": true,
