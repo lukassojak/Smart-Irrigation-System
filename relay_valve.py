@@ -1,5 +1,4 @@
 
-
 class RelayValve:
     def __init__(self, pin):
         self.pin = pin
@@ -18,10 +17,12 @@ class RelayValve:
         print(f"Valve      {self.pin}: valve will be opened for {duration} seconds")
         self.control(True)
 
-        if not stop_event.wait(duration):
-            print(f"Valve      {self.pin}: Closing valve duly after {duration} seconds")
-        else:
-            print(f"Valve      {self.pin}: Closing valve early.")
-
-        self.control(False)
+        # try-except block provides a fail-safe mechanism to ensure the valve is not left open indefinitely
+        try:
+            if not stop_event.wait(duration):
+                print(f"Valve      {self.pin}: Closing valve duly after {duration} seconds")
+            else:
+                print(f"Valve      {self.pin}: Closing valve early.")
+        finally:
+            self.control(False)
         

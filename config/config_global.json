@@ -2,24 +2,24 @@
     "standard_conditions": {
         "sunlight_hours": 12.0,
         "rain_mm": 0.0,
-        "temperature_celsius": 20.0
+        "temperature_celsius": 21.0
     },
     "correction_factors": {
-        "sunlight": 0.05,
+        "sunlight": 0.1,
         "rain": -0.2,
-        "temperature": 0.05
+        "temperature": 0.1
     },
     "irrigation_limits": {
         "min_percent": 0,
         "max_percent": 500,
-        "main_valve_max_flow": 50
+        "main_valve_max_flow": 100
     },
     "automation": {
         "enabled": true,
+        "sequential": false,
         "scheduled_hour": 20,
         "scheduled_minute": 0,
-        "max_flow_monitoring": true,
-        "sequential": false
+        "max_flow_monitoring": true
     },
     "logging": {
         "enabled": true,

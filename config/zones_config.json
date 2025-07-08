@@ -16,7 +16,7 @@
             },
             "local_correction_factors": {
                 "sunlight": 0.4,
-                "rain": -0.8,
+                "rain": -0.2,
                 "temperature": 0.2
             }
         },

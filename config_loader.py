@@ -1,6 +1,5 @@
 import json
 from irrigation_circuit import IrrigationCircuit
-from enums import TEMP_WATERING_TIME
 from drippers import Drippers
 from correction_factors import CorrectionFactors
 from global_config import GlobalConfig
@@ -99,6 +98,9 @@ def _is_valid_zone(zone: dict) -> bool:
         "target_mm", "zone_area_m2", "liters_per_minimum_dripper",
         "standard_flow_seconds", "interval_days", "drippers_summary"
     ]
+    # REQUIRED_KEYS_COMMON = [...]
+    # REQUIRED_KEYS_EVEN = [...]
+    # REQUIRED_KEYS_DRIPPER = [...]
 
     # Check if all required keys are present
     if not all(key in zone for key in required_keys):
@@ -160,6 +162,8 @@ def _is_valid_global_config(data: dict) -> bool:
     auto = data["automation"]
     if not isinstance(auto.get("enabled"), bool):
         raise ValueError("automation.enabled must be a boolean")
+    if not isinstance(auto.get("sequential"), bool):
+        raise ValueError("automation.sequential must be a boolean")
     if not isinstance(auto.get("scheduled_hour"), int):
         raise ValueError("automation.scheduled_hour must be an int")
     if not isinstance(auto.get("scheduled_minute"), int):

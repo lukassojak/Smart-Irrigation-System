@@ -30,6 +30,7 @@ class IrrigationLimits:
 @dataclass
 class AutomationSettings:
     enabled: bool
+    sequential: bool
     scheduled_hour: int
     scheduled_minute: int
     max_flow_monitoring: bool
@@ -74,6 +75,7 @@ class GlobalConfig:
             ),
             automation=AutomationSettings(
                 enabled=data["automation"]["enabled"],
+                sequential=data["automation"]["sequential"],
                 scheduled_hour=data["automation"]["scheduled_hour"],
                 scheduled_minute=data["automation"]["scheduled_minute"],
                 max_flow_monitoring=data["automation"]["max_flow_monitoring"]

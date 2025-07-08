@@ -22,13 +22,16 @@ Tyto hodnoty slouží jako výchozí bod pro výpočty – aktuální podmínky 
 
 ### correction_factors:
 Koeficienty, které určují, jak moc ovlivní odchylka od ideálních podmínek výsledné množství vody.
+Pro **přímou úměru** (více, než referenční hodnota v `standard_conditions` = více zalévání) se koeficienty zapisují kladné.
+Pro **nepřímou úměru** (více, než referenční hodnota = méně zalévání) se koeficienty zapisují záporné.
 
-- `sunlight`: Kolik procent se přidá/ubere za každou hodinu slunečního svitu navíc/méně.
-- `rain`: Kolik procent se ubere/přidá za každý mm srážek navíc/méně.
-- `temperature`: Kolik procent se přidá/ubere za každý stupeň Celsia navíc/méně.
+- `sunlight`: Kolik procent se přidá za každou hodinu slunečního svitu navíc.
+- `rain`: Kolik procent se přidá za každý mm srážek navíc/méně.
+- `temperature`: Kolik procent se přidá za každý stupeň Celsia navíc.
 
 Např.:
-Když je o 2 mm více srážek než standardní, výpočet výtoku bude snížen o 2 × (-0.1) = -20 %.
+`rain` je nastaveno na -0.2. Za každý mm srážek se ubere 20% výtoku okruhu.
+Když je o 2 mm více srážek než standardní, výpočet výtoku bude upraven o 2 × (-0.2) = -0.2 (-20 %).
 
 ### irrigation_limits:
 - `min_percent`: Dolní hranice výpočtu (např. 0 = žádné zavlažování).
@@ -41,11 +44,12 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
 ### automation:
 - `enabled`: Povolí/zakáže automatické zavlažování v nastavený čas.
 - `scheduled_hour`, `scheduled_minute`: Denní čas, kdy má systém spustit zavlažování (např. 20:00).
-- `irrigation_mode`: může být:
+- `irrigation_mode`: **Nedostupné v MVP** může být:
     - `sequential`: zavlažování probíhá sekvenčně - v daný okamžik je aktivní pouze jeden zavlažovací okruh v rámci celého zavlažovacího uzlu.
     - `concurrent`: zavlažování probíhá souběžně – všechny okruhy v rámci zavlažovacího uzlu se spustí najednou. Pokud je `max_flow_monitoring` nastaveno na `false` a spotřeba vody překročí dostupný přítok, může dojít k nepřesnému zavlažení (např. některé okruhy dostanou méně vody, než bylo plánováno).
-- `max_flow_monitoring`: Pokud je `true`, IrrigationController během spuštěného zavlažování kontroluje aktuální odběr všech zavlažovacích okruhů. Pokud by při **souběžném zavlažování** mělo spuštění zavlažování dalšího okruhu navýšit odběr nad `main_valve_max_flow`, počká tento okruh, než doběhne zavlažování jiných, a až poté se spustí. V případě omezeného `main_valve_max_flow` je tento režim bezpečnou variantou pro souběžné zavlažování, zároveň ale **negarantuje 100% souběžné zavlažování**. Pokud je `irrigation_mode` nastaveno na `sequential`, pak nemá žádný vliv.
-- `server_offline`: **Nedostupné v MVP** V případě, že nejsou dostupné záznamy o počasí, nebo je server (centrální Raspberry Pi 4) offline:
+- `max_flow_monitoring`: Pokud je `true`, IrrigationController během spuštěného zavlažování kontroluje aktuální odběr všech zavlažovacích okruhů. Pokud by při **souběžném zavlažování** mělo spuštění zavlažování dalšího okruhu navýšit odběr nad `main_valve_max_flow`, počká tento okruh, než doběhne zavlažování jiných, a až poté se spustí. V případě omezeného `main_valve_max_flow` je tento režim bezpečnou variantou pro souběžné zavlažování, zároveň ale **negarantuje 100% souběžné zavlažování**. Při **sekvenčním zavlažování** nepovolí zavlažení okruhů, které mají vypočítaný větší odběr, než je `main_valve_max_flow`.
+- `sequential`: Boolean příznak, který, pokud je `true`, deaktivuje souběžné zavlažování a aktivuje zavlažování sekvenční (vždy zalévá jen jeden okruh). Okruhy jsou zalévány v pořadí podle jejich ID vzestupně.
+- `server_offline_fallback`: **Nedostupné v MVP** V případě, že nejsou dostupné záznamy o počasí, nebo je server (centrální Raspberry Pi 4) offline:
     - `disabled`: Zavlažování se pozastaví do té doby, než bude server dostupný
     - `history_based`: Zavlažování pokračuje v nastavený čas podle konfigurace, nedostupná data o počasí pro výpočet objemu zavlažení jsou nahrazena průměrem zavlažení z posledních 3 dnů pro každý okruh.
     - `base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 100% bazálního množství.
@@ -81,10 +85,10 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 
 
 ### local_correction_factors:
-Modifikace chování daného okruhu oproti globálním korekcím.
+Modifikace chování daného okruhu vůči globálním korekcím.
 
 - `sunlight`: Např. pokud je v trvalém stínu, může být záporný – méně vody navzdory globálnímu slunci.
 - `rain`: Některé části mohou být více vystavené srážkám (např. otevřený trávník) → vyšší negativní korekce.
 - `temperature`: Např. terasa na betonu se silněji zahřívá, takže má smysl zvýšit vliv teploty.
 
-Tyto hodnoty doplňují globální koeficienty – nejsou náhradou. Pokud např. globální hodnota pro `rain` je -0.5 a lokální je -0.8, pak celková citlivost na déšť bude -1.3.
+Tyto hodnoty doplňují globální koeficienty – nejsou náhradou. Globální a lokální korekční koeficienty se mezi sebou násobí. Pokud např. globální hodnota pro `rain` je -0.5 a lokální je také -0.5, pak celková citlivost na déšť bude -0.25.
