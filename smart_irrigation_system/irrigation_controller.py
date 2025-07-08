@@ -5,7 +5,7 @@ from typing import List, Dict
 
 from irrigation_circuit import IrrigationCircuit
 from global_conditions import GlobalConditions
-from Weather_simulator import WeatherSimulator
+from weather_simulator import WeatherSimulator
 from global_config import GlobalConfig
 from config_loader import load_global_config, load_zones_config
 from enums import IrrigationState
@@ -56,10 +56,11 @@ class IrrigationController:
         
         return total_consumption
     
-    def update_global_conditions(self):
+    def update_global_conditions(self) -> GlobalConditions:
         """Updates the global conditions with the latest data from the weather server"""
         self.global_conditions = WeatherSimulator().get_current_conditions()
         print(f"Global Conditions Updated: {self.global_conditions}")
+        return self.global_conditions
 
     
     def start_irrigation_circuit(self, circuit: IrrigationCircuit):
@@ -67,7 +68,7 @@ class IrrigationController:
         def thread_target():
 
             try:
-                duration = circuit.irrigate_automatic(self.global_config, self.global_conditions, self.stop_event)
+                duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
                 self.state_manager.update_irrigation_result(circuit, "success", duration)
             except Exception as e:
                 self.state_manager.update_irrigation_result(circuit, "error", 0)
@@ -150,7 +151,7 @@ class IrrigationController:
                       Disable max flow monitoring to allow imprecise irrigation of the circuit.")
                 continue
             try:
-                duration = circuit.irrigate_automatic(self.global_config, self.global_conditions, self.stop_event)
+                duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
                 self.state_manager.update_irrigation_result(circuit, "success", duration)
             except Exception as e:
                 print(f"I-Controller: Error during irrigation of circuit {circuit.id}: {e}")
