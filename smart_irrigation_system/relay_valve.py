@@ -7,9 +7,9 @@ class RelayValve:
         """Enables or disables the relay valve to start or stop watering"""
 
         if action_open:
-            print(f"Valve      {self.pin}: OPEN-VALVE ")
+            print(f"Valve      {self.pin}: OPEN-VALVE ")    # replace with GPIO.output(self.pin, GPIO.HIGH) in actual implementation
         else:
-            print(f"Valve      {self.pin}: CLOSE-VALVE ")
+            print(f"Valve      {self.pin}: CLOSE-VALVE ")   # replace with GPIO.output(self.pin, GPIO.LOW) in actual implementation
     
     def open(self, duration, stop_event):
         """Opens the valve for a specified duration"""
