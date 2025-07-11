@@ -1,5 +1,5 @@
 import random
-from enums import MoistureSensorState, SoilMoisture
+from smart_irrigation_system.enums import MoistureSensorState, SoilMoisture
 
 class SoilMoistureSensorPair:
     """Represents a pair of soil moisture sensors"""

@@ -59,7 +59,7 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
 Ovládá chování výstupu logování na klientském zařízení.
 
 - `enabled`: Zapne/vypne logování
-- `log_level`: Úroveň výstupu (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+- `log_level`: Úroveň výstupu (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`)
 
 ---
 

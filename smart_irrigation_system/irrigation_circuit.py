@@ -1,11 +1,10 @@
-from relay_valve import RelayValve
+from smart_irrigation_system.relay_valve import RelayValve
 from deprecated.soil_moisture_sensor import SoilMoistureSensorPair
-from enums import TEMP_WATERING_TIME
-from drippers import Drippers
-from correction_factors import CorrectionFactors
-from global_config import GlobalConfig
-from global_conditions import GlobalConditions
-from enums import IrrigationState
+from smart_irrigation_system.enums import IrrigationState
+from smart_irrigation_system.drippers import Drippers
+from smart_irrigation_system.correction_factors import CorrectionFactors
+from smart_irrigation_system.global_config import GlobalConfig
+from smart_irrigation_system.global_conditions import GlobalConditions
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -41,13 +40,14 @@ class IrrigationCircuit:
     @property
     def is_currently_irrigating(self):
         with self._irrigating_lock:
-            return self.state == IrrigationState.IRRIGATING
+            # possible bug
+            return self._state == IrrigationState.IRRIGATING
         
     @property
     def state(self) -> IrrigationState:
         """Returns the current state of the irrigation circuit."""
         with self._irrigating_lock:
-            return self.state
+            return self._state
 
     # state setter
     @state.setter
@@ -55,7 +55,7 @@ class IrrigationCircuit:
         """Sets the current state of the irrigation circuit."""
         with self._irrigating_lock:
             self._state = new_state
-            print(f"I-Circuit {self.id}: State changed to {self.state.value}")
+            print(f"I-Circuit {self.id}: State changed to {new_state}")
 
 
     def get_circuit_consumption(self):
@@ -107,9 +107,9 @@ class IrrigationCircuit:
         l_c = self.local_correction_factors
 
         total_adjustment = (
-            (delta_sunlight * g_c.sunlight * l_c.sunlight) +
-            (delta_rain * g_c.rain * l_c.rain) +
-            (delta_temperature * g_c.temperature * l_c.temperature)
+            (delta_sunlight * g_c.sunlight * l_c.factors.get('sunlight')) +
+            (delta_rain * g_c.rain * l_c.factors.get('rain')) +
+            (delta_temperature * g_c.temperature * l_c.factors.get('temperature'))
         )
 
         # If total adjustment is -1 or less, no irrigation is needed
@@ -183,9 +183,6 @@ class IrrigationCircuit:
 
     def is_irrigation_allowed(self, state_manager) -> bool:
         """Checks if irrigation is needed based on global conditions and circuit settings."""
-        # Placeholder logic for determining if irrigation is needed
-        # This should be replaced with actual logic based on soil moisture, weather conditions,
-        # circuit irrigation frequency, and other factors.
         if self.state != IrrigationState.IDLE:
             print(f"I-Circuit {self.id}: Cannot check irrigation need, circuit is not idle.")
             return False

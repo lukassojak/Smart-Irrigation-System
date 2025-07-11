@@ -1,14 +1,15 @@
 import json
-from irrigation_circuit import IrrigationCircuit
-from drippers import Drippers
-from correction_factors import CorrectionFactors
-from global_config import GlobalConfig
+from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.drippers import Drippers
+from smart_irrigation_system.correction_factors import CorrectionFactors
+from smart_irrigation_system.global_config import GlobalConfig
+from typing import Tuple, List
 
 def load_global_config(filepath: str) -> GlobalConfig:
     with open(filepath, "r") as f:
         data = json.load(f)
 
-    _is_valid_global_config(data)
+    _is_valid_global_config(data)       # if invalid, raises ValueError
     return GlobalConfig.from_dict(data)
 
 
@@ -21,9 +22,12 @@ def load_zones_config(filepath: str) -> list[IrrigationCircuit]:
 
     circuits = []
     for zone in config_data["zones"]:
-        if not _is_valid_zone(zone):
+        # Validate the zone configuration
+        valid, errors = _is_valid_zone(zone)
+        if not valid:
             # log the error and skip the invalid zone
-            raise ValueError(f"Invalid zone configuration: {zone}")
+            print(f"Invalid zone configuration for {zone['name']}: {', '.join(errors)}")
+            continue
 
         circuit = circuit_from_config(zone)
         circuits.append(circuit)
@@ -50,7 +54,6 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         zone_area_m2 = None
         liters_per_minimum_dripper = zone["liters_per_minimum_dripper"]
 
-    standard_flow_seconds = zone["standard_flow_seconds"]
     interval_days = zone["interval_days"]
 
     # not used in this version, but can be used for sensors
@@ -65,10 +68,11 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         
 
     # Set local correction factors
+    file_correction_factors = zone.get("local_correction_factors", {})
     correction_factors = CorrectionFactors(
-        sunlight=zone.get("sunlight"),
-        rain=zone.get("rain"),
-        temperature=zone.get("temperature")
+        sunlight=file_correction_factors.get("sunlight", 55.0),
+        rain=file_correction_factors.get("rain", 55.0),
+        temperature= file_correction_factors.get("temperature", 55.0)
     )
 
     # Create the IrrigationCircuit object
@@ -89,36 +93,56 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     return circuit
 
 
-def _is_valid_zone(zone: dict) -> bool:
+def _is_valid_zone(zone: dict) -> Tuple[bool, List[str]]:
     """
     Validates the structure of a zone configuration dictionary.
     """
+    errors = []
     required_keys = [
         "name", "id", "relay_pin", "enabled", "even_area_mode",
         "target_mm", "zone_area_m2", "liters_per_minimum_dripper",
-        "standard_flow_seconds", "interval_days", "drippers_summary"
+        "interval_days", "drippers_summary",
+        "local_correction_factors"
     ]
     # REQUIRED_KEYS_COMMON = [...]
     # REQUIRED_KEYS_EVEN = [...]
     # REQUIRED_KEYS_DRIPPER = [...]
 
     # Check if all required keys are present
-    if not all(key in zone for key in required_keys):
-        return False
+    for key in required_keys:
+        if key not in zone:
+            errors.append(f"Missing required key: {key}")
 
     # Check if even_area_mode == true - then target_mm and zone_area_m2 must be present and liters_per_minimum_dripper must be None
     # Otherwise, the liters_per_minimum_dripper must be present and target_mm and zone_area_m2 must be None
-    if zone["even_area_mode"]:
-        if zone["target_mm"] is None or zone["zone_area_m2"] is None or zone["liters_per_minimum_dripper"] is not None:
-            return False
+    if zone.get("even_area_mode", False):
+        if zone.get("target_mm", None) is None or zone.get("zone_area_m2", None) is None or zone.get("liters_per_minimum_dripper") is not None:
+            errors.append("Even area mode is True, but target_mm or zone_area_m2 is None or liters_per_minimum_dripper is present")
     else:
-        if zone["target_mm"] is not None or zone["zone_area_m2"] is not None or zone["liters_per_minimum_dripper"] is None:
-            return False
-        
-    return True
+        if zone.get("target_mm") is not None or zone.get("zone_area_m2") is not None or zone.get("liters_per_minimum_dripper", None) is None:
+            errors.append("Even area mode is False, but target_mm or zone_area_m2 is present or liters_per_minimum_dripper is None")
+
+    # Check if drippers_summary is a dictionary with integer keys and values
+    if not isinstance(zone.get("drippers_summary", None), dict):
+        errors.append("drippers_summary must be a dictionary")
+    else:
+        for flow_rate_str, count in zone["drippers_summary"].items():
+            if not flow_rate_str.isdigit() or not isinstance(count, int):
+                errors.append(f"Invalid dripper summary entry: {flow_rate_str}: {count}")
+    
+    # Check if local_correction_factors is a dictionary with valid keys
+    local_cf = zone.get("local_correction_factors", {})
+    if not isinstance(local_cf, dict):
+        errors.append("local_correction_factors must be a dictionary")
+    else:
+        for key in ["sunlight", "rain", "temperature"]:
+            if key in local_cf and not isinstance(local_cf[key], (float, int)):
+                errors.append(f"local_correction_factors.{key} must be a number")
+    
+    return len(errors) == 0, errors
 
 
-def _is_valid_global_config(data: dict) -> bool:
+def _is_valid_global_config(data: dict):
     """
     Validates the structure and types in the global config dictionary.
     Raises ValueError if something is invalid.

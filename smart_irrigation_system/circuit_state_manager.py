@@ -1,5 +1,5 @@
 import json
-from irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from typing import Optional, Any
 from datetime import datetime
 
@@ -15,8 +15,9 @@ class CircuitStateManager():
     def __init__(self, state_file: str):
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
+        self._rebuild_circuit_index()
         # for optimization, quick access to circuits by their ID
-        self.circuit_index = {}                                 # ensures O(1) lookup time
+        self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
     
     def _rebuild_circuit_index(self):
         """Rebuilds the circuit index from the current state.
@@ -32,14 +33,14 @@ class CircuitStateManager():
                 state = json.load(f)
         except FileNotFoundError:
             # add logging here
-            # logging.error(f"State file {self.state_file} not found. Returning empty state.")
-            return {}
+            # logging.error(f"State file {self.state_file} not found. Returning new empty state.")
+            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
         if not self._is_valid_state(state):
+            # single invalid circuit entry cause the whole state to be invalid, so we return a new empty state
             # add logging here
-            # logging.error(f"Invalid state structure in {self.state_file}. Returning empty state.")
-            return {}
+            # logging.error(f"Invalid state structure in {self.state_file}. Returning new empty state.")
+            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
         
-        self._rebuild_circuit_index()
         return state
     
     def save_state(self) -> None:
@@ -90,6 +91,7 @@ class CircuitStateManager():
 
         return True
     
+
     def get_last_irrigation_time(self, circuit: IrrigationCircuit) -> Optional[datetime]:
         """Returns the last irrigation time for a given circuit."""
         circuit_index = self.circuit_index.get(circuit.id)
@@ -100,6 +102,7 @@ class CircuitStateManager():
         if result:
             return datetime.fromisoformat(result)
         return None
+
 
     def update_irrigation_result(self, circuit: IrrigationCircuit, result: str, duration: int) -> None:
         """Updates the last irrigation result and duration for a given circuit.
@@ -113,7 +116,8 @@ class CircuitStateManager():
         if circuit_index is None:
             # add logging here
             # logging.error(f"Circuit with ID {circuit.id} not found in state.")
-            return
+            # create a new circuit entry if it does not exist
+            self.create_circuit_entry(circuit)
         
         if result == "skipped":
             # If the result is "skipped", we do not update last_irrigation or last_duration
@@ -133,3 +137,20 @@ class CircuitStateManager():
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.
+
+
+    def create_circuit_entry(self, circuit: IrrigationCircuit) -> None:
+        """Creates a new circuit entry in the state if it does not exist."""
+        if circuit.id in self.circuit_index:
+            # add logging here
+            # logging.warning(f"Circuit with ID {circuit.id} already exists in state.")
+            return
+        
+        new_entry = {
+            "id": str(circuit.id),
+            "last_irrigation": None,
+            "last_result": None,
+            "last_duration": 0
+        }
+        self.state["circuits"].append(new_entry)
+        self._rebuild_circuit_index()
