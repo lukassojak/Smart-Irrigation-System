@@ -5,14 +5,14 @@
         "temperature_celsius": 21.0
     },
     "correction_factors": {
-        "sunlight": 0.1,
+        "sunlight": 0.05,
         "rain": -0.2,
-        "temperature": 0.1
+        "temperature": 0.05
     },
     "irrigation_limits": {
         "min_percent": 0,
         "max_percent": 500,
-        "main_valve_max_flow": 100
+        "main_valve_max_flow": 840
     },
     "automation": {
         "enabled": true,

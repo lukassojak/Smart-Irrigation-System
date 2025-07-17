@@ -7,17 +7,17 @@
             "enabled": true,
             "even_area_mode": true,
             "target_mm": 6.0,
-            "zone_area_m2": 4.0,
+            "zone_area_m2": 5.0,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "2": 2,
-                "4": 1
+                "12": 20,
+                "15": 40
             },
             "local_correction_factors": {
-                "sunlight": 0.4,
-                "rain": -0.2,
-                "temperature": 0.2
+                "sunlight": 0.05,
+                "rain": 0.15,
+                "temperature": 0.0
             }
         },
         {
@@ -31,7 +31,7 @@
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "2": 2
+                "4": 20
             },
             "local_correction_factors": {
                 "sunlight": 0.0,
@@ -50,11 +50,13 @@
             "liters_per_minimum_dripper": 0.5,
             "interval_days": 1,
             "drippers_summary": {
-                "4": 1
+                "8": 8,
+                "2": 8,
+                "12": 4
             },
             "local_correction_factors": {
-                "sunlight": 0.3,
-                "rain": -1.0,
+                "sunlight": 0.05,
+                "rain": 0.2,
                 "temperature": 0.0
             }
         }

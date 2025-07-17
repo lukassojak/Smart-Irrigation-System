@@ -68,29 +68,22 @@ class IrrigationCircuit:
         if self.even_area_mode:
             # Calculate the target water amount based on the target mm and zone area
             base_target_water_amount = self.target_mm * self.zone_area_m2    # in mm * m^2 = liters
+            print(f"I-Circuit {self.id}: Base target water amount is {base_target_water_amount} liters (even area mode).")
         else:
             # Calculate the target water amount based on the liters per minimum dripper
             duration = self.liters_per_minimum_dripper / self.drippers.get_minimum_dripper_flow()   # in hours (liters per minimum dripper / liters per hour = hours)
             base_target_water_amount = self.get_circuit_consumption() * duration  # in liters per hour * hours = liters
+            print(f"I-Circuit {self.id}: Base target water amount is {base_target_water_amount} liters (non-even area mode).")
         
-        return base_target_water_amount
+        return round(base_target_water_amount, 3)   # Round to 3 decimal places for precision
 
 
     def get_target_duration_seconds(self, target_water_amount: float) -> float:
         """Calculates the target duration of irrigation based on the target water amount and global conditions."""
-        if self.even_area_mode:
-            # Calculate the target duration based on the target water amount and the total consumption
-            total_consumption = self.get_circuit_consumption()
-            duration_hours = target_water_amount / total_consumption  # in hours (liters / liters per hour = hours)
-        else:
-            # Calculate the target duration based on the liters per minimum dripper and its flow rate
-            minimum_dripper_consumption = self.drippers.get_minimum_dripper_flow()  # in liters per hour
-            minimum_dripper_target_water_amount = self.liters_per_minimum_dripper   # in liters
-            duration_hours = minimum_dripper_target_water_amount / minimum_dripper_consumption  # in hours (liters / liters per hour = hours)
-        
-        # Convert hours to seconds
-        duration_seconds = duration_hours * 60 * 60  # in seconds
-        return duration_seconds
+        total_consumption = self.get_circuit_consumption()
+        duration_hours = target_water_amount / total_consumption  # in hours (liters / liters per hour = hours)
+        duration_seconds = duration_hours * 60 * 60
+        return round(duration_seconds)
 
 
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> float:
@@ -100,6 +93,7 @@ class IrrigationCircuit:
         standard_conditions = global_config.standard_conditions
         # if there was more sunlight, rain, or temperature than the standard conditions, the delta will be POSITIVE
         delta_sunlight = global_conditions.sunlight_hours - standard_conditions.sunlight_hours
+        print(standard_conditions.sunlight_hours)
         delta_rain = global_conditions.rain_mm - standard_conditions.rain_mm
         delta_temperature = global_conditions.temperature - standard_conditions.temperature_celsius
 
@@ -107,25 +101,27 @@ class IrrigationCircuit:
         l_c = self.local_correction_factors
 
         total_adjustment = (
-            (delta_sunlight * g_c.sunlight * l_c.factors.get('sunlight')) +
-            (delta_rain * g_c.rain * l_c.factors.get('rain')) +
-            (delta_temperature * g_c.temperature * l_c.factors.get('temperature'))
+            (delta_sunlight * (g_c.sunlight + l_c.factors.get('sunlight', 0.0))) +
+            (delta_rain * (g_c.rain + l_c.factors.get('rain', 0.0))) +
+            (delta_temperature * (g_c.temperature + l_c.factors.get('temperature', 0.0)))
         )
 
         # If total adjustment is -1 or less, no irrigation is needed
         if total_adjustment <= -1:
             print(f"I-Circuit {self.id}: No irrigation needed due to negative adjustment.")
             return
-        
-        # Check bounds for the total adjustment
-        min = global_config.irrigation_limits.min_percent / 100.0
-        max = global_config.irrigation_limits.max_percent / 100.0
-        if not (min <= total_adjustment <= max):
-            print(f"I-Circuit {self.id}: Total adjustment {total_adjustment} is out of bounds ({min}, {max}). Limiting to bounds.")
-            total_adjustment = max(min, min(total_adjustment, max))
 
         # Adjust the target water amount based on the total adjustment
         adjusted_water_amount = base_target_water_amount * (1 + total_adjustment)
+        adjusted_water_amount = round(adjusted_water_amount, 3)  # Round to 3 decimal places for precision
+
+        # Check bounds for the total adjusted water amount
+        min_water_amount = global_config.irrigation_limits.min_percent / 100.0 * base_target_water_amount
+        max_water_amount = global_config.irrigation_limits.max_percent / 100.0 * base_target_water_amount
+        if not (min_water_amount <= adjusted_water_amount <= max_water_amount):
+            print(f"I-Circuit {self.id}: Adjusted water amount {adjusted_water_amount} is out of bounds ({min_water_amount}, {max_water_amount}). Limiting to bounds.")
+            adjusted_water_amount = max(min_water_amount, min(adjusted_water_amount, max_water_amount))
+
         print(f"I-Circuit {self.id}: Adjusted water amount is {adjusted_water_amount} liters.")
         
         duration = self.get_target_duration_seconds(adjusted_water_amount)
@@ -147,15 +143,14 @@ class IrrigationCircuit:
 
     def irrigate(self, duration, stop_event):
         """Starts the irrigation process for a specified duration"""
-
-        print(f"I-Circuit  {self.id}: Starting irrigation")
+        
+        print(f"I-Circuit {self.id}: Starting irrigation")
+        # Should check if the circuit is already irrigating
         self.state = IrrigationState.IRRIGATING
         try:
-            if not self.valve.is_open():
-                self.valve.open(duration, stop_event)
-            else:
-                print(f"I-Circuit {self.id}: Valve is already open, skipping.")
+            self.valve.open(duration, stop_event)
         except Exception as e:
+            # propagate the error to the caller - to indicate that the irrigation failed
             self.state = IrrigationState.ERROR
             print(f"I-Circuit {self.id}: Error during irrigation - {e}")
         finally:
@@ -166,7 +161,7 @@ class IrrigationCircuit:
                 self.state = IrrigationState.FINISHED
                 print(f"I-Circuit {self.id}: Finished irrigation")
 
-            self.valve.close()  # Fail-safe close the valve if it was opened
+            self.valve.control(False)  # Fail-safe close the valve if it remains open
             return 0 if self.state == IrrigationState.ERROR else duration
         
     def interval_days_passed(self, last_irrigation_time: Optional[datetime]) -> bool:
@@ -176,7 +171,8 @@ class IrrigationCircuit:
             return True
         
         # Calculate the time difference from the last irrigation
-        time_difference = datetime.now() - last_irrigation_time
+        # Measured in whole days, ignoring the time part
+        time_difference = datetime.now().date() - last_irrigation_time.date()
         # Check if the interval days have passed
         return time_difference >= timedelta(days=self.interval_days)
 

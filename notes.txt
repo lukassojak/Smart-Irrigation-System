@@ -19,3 +19,13 @@ for factor in ["sunlight", "rain", "temperature"]:
     local_f = zone_config.get(factor, 0.0)
     current_value = weather_data[factor]  # Normalizované na rozsah -1 až 1
     adjustment += (global_f + local_f) * current_value
+
+
+
+
+- datum zavlazovani - brat jen dny
+- ukladat do zones_state take "irrigating" na zacatku zavlazovani, pak prepsat na "success"/"skipped"/..
+- špatný výpočet množství vody BAZÁLNÍ / ADJUSTED
+- zavlažuje o cca 2s méně, než vypočítáno 29:51
+- sklenik nema byt ovlivnovat destem vubec - jak na to?
+- non-even-area mode nefunguje přepočet na čas

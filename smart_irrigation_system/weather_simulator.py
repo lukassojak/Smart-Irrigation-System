@@ -12,9 +12,12 @@ class WeatherSimulator:
 
     def get_current_conditions(self) -> GlobalConditions:
         """Generates simulated weather data."""
-        temperature = self.rng.uniform(10, 40)    # °C in average in the last INTERVAL hours
-        rain_mm = self.rng.uniform(0, 30)         # mm in the last INTERVAL hours
-        sunlight_hours = self.rng.uniform(0, 16)  # number of hours of sunlight in the last INTERVAL hours
+        # temperature = self.rng.uniform(17, 40)    # °C in average in the last INTERVAL hours
+        # rain_mm = self.rng.uniform(0, 10)         # mm in the last INTERVAL hours
+        # sunlight_hours = self.rng.uniform(8, 16)  # number of hours of sunlight in the last INTERVAL hours
+        temperature = 21        # Fixed temperature for simulation
+        rain_mm = 2.0              # Fixed rain in mm for simulation
+        sunlight_hours = 20     # Fixed sunlight hours for simulation
         timestamp_retrieved = datetime.now()
         return GlobalConditions(
             temperature=temperature,

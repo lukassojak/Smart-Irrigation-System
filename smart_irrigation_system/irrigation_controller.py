@@ -1,19 +1,44 @@
-import threading
+try:
+    import threading
+    print("Threading module is supported.")
+    THREADING_SUPPORTED = True
+except ImportError:
+    THREADING_SUPPORTED = False
+    print("Threading module is not supported. Using dummy threading implementation.")
+    class DummyThread:
+        def __init__(self, *args, **kwargs): pass
+        def start(self): print("Threading not supported.")
+
+    class DummyLock:
+        def __enter__(self): pass
+        def __exit__(self, exc_type, exc_val, exc_tb): pass
+
+    class DummyEvent:
+        def set(self): pass
+        def clear(self): pass
+        def is_set(self): return False
+        def wait(self, timeout=None): pass
+
+    threading = type('threading', (), {
+        'Thread': DummyThread,
+        'Lock': DummyLock,
+        'Event': DummyEvent,
+        'current_thread': lambda: "main-thread"
+    })()
+
 import time
-import json
-from typing import List, Dict
+from typing import Dict
 
-from irrigation_circuit import IrrigationCircuit
-from global_conditions import GlobalConditions
-from weather_simulator import WeatherSimulator
-from global_config import GlobalConfig
-from config_loader import load_global_config, load_zones_config
-from enums import IrrigationState
-from circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.global_conditions import GlobalConditions
+from smart_irrigation_system.weather_simulator import WeatherSimulator
+from smart_irrigation_system.global_config import GlobalConfig
+from smart_irrigation_system.config_loader import load_global_config, load_zones_config
+from smart_irrigation_system.enums import IrrigationState
+from smart_irrigation_system.circuit_state_manager import CircuitStateManager
 
 
-# Constants
-from enums import TEMP_WATERING_TIME  # Importing TEMP_WATERING_TIME from enums.py
+# Paths to configuration files
 
 CONFIG_GLOBAL_PATH = "./config/config_global.json"
 CONFIG_ZONES_PATH =  "./config/zones_config.json"
@@ -33,9 +58,10 @@ class IrrigationController:
         self.global_config: GlobalConfig = load_global_config(config_global_path)
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH)  # Load the circuit state manager with the state file
 
-        self.threads = []
-        self.stop_event = threading.Event()
-        self.threads_lock = threading.Lock()
+        if THREADING_SUPPORTED:
+            self.threads = []
+            self.stop_event = threading.Event()
+            self.threads_lock = threading.Lock()
 
 
     def get_circuit(self, circuit_number):
@@ -68,6 +94,7 @@ class IrrigationController:
         def thread_target():
 
             try:
+                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
                 duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
                 self.state_manager.update_irrigation_result(circuit, "success", duration)
             except Exception as e:
@@ -115,6 +142,7 @@ class IrrigationController:
                             and self.get_current_consumption() + circuit.get_circuit_consumption()
                             > self.global_config.irrigation_limits.main_valve_max_flow):
                         if wait_time >= MAX_WAIT_TIME:
+                            self.state_manager.update_irrigation_result(circuit, "skipped", 0)
                             raise TimeoutError(f"I-Controller: Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
 
                         print(f"I-Controller: Waiting for more flow capacity for circuit {circuit.id} ...")
@@ -147,10 +175,11 @@ class IrrigationController:
             # Check the current consumption against the main valve max flow limit
             if self.global_config.automation.max_flow_monitoring and \
             circuit.get_circuit_consumption() > self.global_config.irrigation_limits.main_valve_max_flow:
-                print(f"I-Controller: Circuit {circuit.id} has too high consumption, skipping it. \
-                      Disable max flow monitoring to allow imprecise irrigation of the circuit.")
+                print(f"I-Controller: Circuit {circuit.id} has too high consumption, skipping it. Disable max flow monitoring to allow imprecise irrigation of the circuit.")
+                self.state_manager.update_irrigation_result(circuit, "skipped", 0)
                 continue
             try:
+                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
                 duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
                 self.state_manager.update_irrigation_result(circuit, "success", duration)
             except Exception as e:

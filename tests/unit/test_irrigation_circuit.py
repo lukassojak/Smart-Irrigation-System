@@ -164,7 +164,7 @@ def test_is_irrigation_allowed_interval_not_passed(manager, irrigation_circuit):
 # --- Tests for state getters and setters ---
 
 @pytest.fixture
-def basic_irrigation_circuit():
+def basic_irrigation_circuit(mock_drippers, mock_correction_factors):
     return IrrigationCircuit(
         name="Test Circuit",
         circuit_id=1,
@@ -179,4 +179,20 @@ def basic_irrigation_circuit():
         correction_factors=mock_correction_factors(),
         sensor_pins=None
     )
+
+# Initial state should be IDLE
+def test_initial_state_is_idle(basic_irrigation_circuit):
+    assert basic_irrigation_circuit.state == IrrigationState.IDLE
+
+# Tests for setting the state of the irrigation circuit
+def test_set_state_to_irrigating(basic_irrigation_circuit):
+    basic_irrigation_circuit.state = IrrigationState.IRRIGATING
+    assert basic_irrigation_circuit.state == IrrigationState.IRRIGATING
+
+# Tests for setting the state of the irrigation circuit to WAITING
+def test_set_state_to_waiting(basic_irrigation_circuit):
+    basic_irrigation_circuit.state = IrrigationState.WAITING_FOR_FLOW
+    assert basic_irrigation_circuit.state == IrrigationState.WAITING_FOR_FLOW
+
+
 

@@ -78,7 +78,7 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 - `zone_area_m2`: Velikost zavlažované plochy v m². Pokud je `even_area_mode` `false`, hodnota je `null`.
 - `liters_per_minimum_dripper`: Množství vody, které je při bazálním stavu (při výpočtu 100% výtoku pro daný okruh podle nastavených globálních standardních podmínek) **vypuštěno z jednoho minimálního kapkovače (kapkovač s nejmenším průtokem v konfiguraci)**. Pokud je `even_area_mode` `true`, hodnota je `null`.
 - `interval_days`: Počet dní mezi jednotlivými cykly zavlažování daného okruhu. Např. 1 = každý den, 2 = každý druhý den. Při každém denním spuštění v daný čas systém zkontroluje, zda od posledního zavlažení dané zóny uplynulo dost dní. Stav posledního zalití a jiné stavové hodnoty jsou uchovávány při běhu v paměti a ve stavovém souboru [`zones_state.json`](./../data/zones_state.json).
-- `drippers_summary`: Slovník, kde klíče jsou průtoky kapkovačů v litrech za minutu (jako řetězce) a hodnoty jsou počty těchto kapkovačů v daném okruhu.
+- `drippers_summary`: Slovník, kde klíče jsou průtoky kapkovačů v **litrech za hodinu** (jako řetězce, např. "2", "8", "12", "15", ..) a hodnoty jsou počty těchto kapkovačů v daném okruhu.
 
 
 **DŮLEŽITÉ: Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání konfigurace.**

@@ -15,9 +15,11 @@ class CircuitStateManager():
     def __init__(self, state_file: str):
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
-        self._rebuild_circuit_index()
+
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
+        self._rebuild_circuit_index()
+
     
     def _rebuild_circuit_index(self):
         """Rebuilds the circuit index from the current state.
@@ -77,6 +79,8 @@ class CircuitStateManager():
                 return False
             if "id" not in circuit:
                 return False
+            if "irrigation_state" not in circuit:
+                return False
             if "last_irrigation" in circuit and circuit["last_irrigation"] is not None:
                 try:
                     datetime.fromisoformat(circuit["last_irrigation"])
@@ -102,6 +106,21 @@ class CircuitStateManager():
         if result:
             return datetime.fromisoformat(result)
         return None
+    
+    def irrigation_started(self, circuit: IrrigationCircuit) -> None:
+        """Updates the last irrigation time to the current time for a given circuit.
+        This is called when the irrigation starts."""
+        circuit_index = self.circuit_index.get(circuit.id)
+        if circuit_index is None:
+            # add logging here
+            # logging.error(f"Circuit with ID {circuit.id} not found in state.")
+            print(f"State Manager: Circuit with ID {circuit.id} not found in state. Creating a new entry.")
+            self.create_circuit_entry(circuit)
+            circuit_index = self.circuit_index.get(circuit.id)
+        
+        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        self.state["circuits"][circuit_index]["irrigation_state"] = "irrigating"  # Set irrigation state to running
+        self.save_state()
 
 
     def update_irrigation_result(self, circuit: IrrigationCircuit, result: str, duration: int) -> None:
@@ -117,8 +136,11 @@ class CircuitStateManager():
             # add logging here
             # logging.error(f"Circuit with ID {circuit.id} not found in state.")
             # create a new circuit entry if it does not exist
+            print(f"State Manager: Circuit with ID {circuit.id} not found in state. Creating a new entry.")
             self.create_circuit_entry(circuit)
+            circuit_index = self.circuit_index.get(circuit.id)
         
+        self.state["circuits"][circuit_index]["irrigation_state"] = "idle"  # Set irrigation state to idle after irrigation is done
         if result == "skipped":
             # If the result is "skipped", we do not update last_irrigation or last_duration
             # Because we need to keep the last irrigation time and duration intact to calculate the next irrigation time correctly.
@@ -144,6 +166,7 @@ class CircuitStateManager():
         if circuit.id in self.circuit_index:
             # add logging here
             # logging.warning(f"Circuit with ID {circuit.id} already exists in state.")
+            print(f"State Manager: Circuit with ID {circuit.id} already exists in state. Skipping creation.")
             return
         
         new_entry = {

@@ -9,6 +9,12 @@ class IrrigationState(Enum):
     ERROR = "error"                         # An error occurred
     STOPPED = "stopped"                     # Irrigation has been stopped by the user
 
+
+class Environment(Enum):
+    PC = "pc"                               # Running on a PC, e.g., for testing
+    RASPBERRY_PI_PICO_W = "raspberry_pi_pico_w"  # Running on a Raspberry Pi Pico W
+    RASPBERRY_PI_ZERO_W = "raspberry_pi_zero_w"  # Running on a Raspberry Pi Zero W
+
 class SoilMoisture(Enum):
     TOO_WET = 0
     TOO_DRY = 1
