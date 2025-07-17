@@ -173,3 +173,8 @@ cython_debug/
 
 # VS Code
 .vscode/
+
+
+# other
+#  If you have other files that you want to ignore, you can add them here.
+notes.txt

@@ -23,9 +23,4 @@ for factor in ["sunlight", "rain", "temperature"]:
 
 
 
-- datum zavlazovani - brat jen dny
-- ukladat do zones_state take "irrigating" na zacatku zavlazovani, pak prepsat na "success"/"skipped"/..
-- špatný výpočet množství vody BAZÁLNÍ / ADJUSTED
-- zavlažuje o cca 2s méně, než vypočítáno 29:51
-- sklenik nema byt ovlivnovat destem vubec - jak na to?
-- non-even-area mode nefunguje přepočet na čas
+- skipped, i kdyz nepotrebuje zavlazovani kvuli days not passed !

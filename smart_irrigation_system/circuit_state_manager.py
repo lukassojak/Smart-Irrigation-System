@@ -1,7 +1,8 @@
 import json
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from typing import Optional, Any
 from datetime import datetime
+from smart_irrigation_system.logger import get_logger
+
 
 
 # 1. Possible problem with key being a string
@@ -13,12 +14,14 @@ from datetime import datetime
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
     def __init__(self, state_file: str):
+        self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
 
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
         self._rebuild_circuit_index()
+        self.logger.info(f"CircuitStateManager initialized")
 
     
     def _rebuild_circuit_index(self):
@@ -34,13 +37,11 @@ class CircuitStateManager():
             with open(self.state_file, "r") as f:
                 state = json.load(f)
         except FileNotFoundError:
-            # add logging here
-            # logging.error(f"State file {self.state_file} not found. Returning new empty state.")
+            self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
             return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
         if not self._is_valid_state(state):
             # single invalid circuit entry cause the whole state to be invalid, so we return a new empty state
-            # add logging here
-            # logging.error(f"Invalid state structure in {self.state_file}. Returning new empty state.")
+            self.logger.error(f"Invalid state structure in {self.state_file}. Returning new empty state.")
             return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
         
         return state
@@ -51,9 +52,8 @@ class CircuitStateManager():
             with open(self.state_file, "w") as f:
                 json.dump(self.state, f, indent=4)
         except Exception as e:
-            # add logging here
-            # logging.error(f"Error saving state to {self.state_file}: {e}")
-            pass
+            self.logger.error(f"Failed to save state to {self.state_file}: {e}")
+
     
     def _is_valid_state(self, state: dict) -> bool:
         """Validates the state structure. See zones_state_explained.md for details."""
@@ -96,25 +96,23 @@ class CircuitStateManager():
         return True
     
 
-    def get_last_irrigation_time(self, circuit: IrrigationCircuit) -> Optional[datetime]:
+    def get_last_irrigation_time(self, circuit: "IrrigationCircuit") -> Optional[datetime]:
         """Returns the last irrigation time for a given circuit."""
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            # add logging here
+            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
             return None
         result = self.state.get("circuits", {})[circuit_index].get("last_irrigation")
         if result:
             return datetime.fromisoformat(result)
         return None
     
-    def irrigation_started(self, circuit: IrrigationCircuit) -> None:
+    def irrigation_started(self, circuit: "IrrigationCircuit") -> None:
         """Updates the last irrigation time to the current time for a given circuit.
         This is called when the irrigation starts."""
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            # add logging here
-            # logging.error(f"Circuit with ID {circuit.id} not found in state.")
-            print(f"State Manager: Circuit with ID {circuit.id} not found in state. Creating a new entry.")
+            self.logger.warning(f"Circuit with ID {circuit.id} not found in state. Creating a new entry.")
             self.create_circuit_entry(circuit)
             circuit_index = self.circuit_index.get(circuit.id)
         
@@ -123,20 +121,17 @@ class CircuitStateManager():
         self.save_state()
 
 
-    def update_irrigation_result(self, circuit: IrrigationCircuit, result: str, duration: int) -> None:
+    def update_irrigation_result(self, circuit: "IrrigationCircuit", result: str, duration: int) -> None:
         """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""
         if result not in ["success", "failure", "skipped", "error"]:
-            # add logging here
-            # logging.error(f"Invalid irrigation result: {result}")
+            self.logger.error(f"Invalid result '{result}' for circuit {circuit.id}. Expected one of ['success', 'failure', 'skipped', 'error'].")
             return
         
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            # add logging here
-            # logging.error(f"Circuit with ID {circuit.id} not found in state.")
+            self.logger.warning(f"Circuit with ID {circuit.id} not found in state. Creating a new entry.")
             # create a new circuit entry if it does not exist
-            print(f"State Manager: Circuit with ID {circuit.id} not found in state. Creating a new entry.")
             self.create_circuit_entry(circuit)
             circuit_index = self.circuit_index.get(circuit.id)
         
@@ -161,12 +156,10 @@ class CircuitStateManager():
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.
 
 
-    def create_circuit_entry(self, circuit: IrrigationCircuit) -> None:
+    def create_circuit_entry(self, circuit: "IrrigationCircuit") -> None:
         """Creates a new circuit entry in the state if it does not exist."""
         if circuit.id in self.circuit_index:
-            # add logging here
-            # logging.warning(f"Circuit with ID {circuit.id} already exists in state.")
-            print(f"State Manager: Circuit with ID {circuit.id} already exists in state. Skipping creation.")
+            self.logger.warning(f"Circuit with ID {circuit.id} already exists in state. Skipping creation.")
             return
         
         new_entry = {

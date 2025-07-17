@@ -5,9 +5,9 @@
         "temperature_celsius": 21.0
     },
     "correction_factors": {
-        "sunlight": 0.05,
+        "sunlight": 0.02,
         "rain": -0.2,
-        "temperature": 0.05
+        "temperature": 0.03
     },
     "irrigation_limits": {
         "min_percent": 0,

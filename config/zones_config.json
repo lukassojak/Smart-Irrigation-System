@@ -15,8 +15,8 @@
                 "15": 40
             },
             "local_correction_factors": {
-                "sunlight": 0.05,
-                "rain": 0.15,
+                "sunlight": 0.01,
+                "rain": 0.17,
                 "temperature": 0.0
             }
         },
@@ -31,7 +31,7 @@
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "4": 20
+                "4": 2000
             },
             "local_correction_factors": {
                 "sunlight": 0.0,
@@ -47,7 +47,7 @@
             "even_area_mode": false,
             "target_mm": null,
             "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.5,
+            "liters_per_minimum_dripper": 0.05,
             "interval_days": 1,
             "drippers_summary": {
                 "8": 8,
@@ -55,7 +55,7 @@
                 "12": 4
             },
             "local_correction_factors": {
-                "sunlight": 0.05,
+                "sunlight": 0.01,
                 "rain": 0.2,
                 "temperature": 0.0
             }
