@@ -2,7 +2,7 @@ import logging
 import os
 
 # Log file path
-LOG_FILE = "irrigation_system_log.txt"
+LOG_FILE = "irrigation_system_log.log"
 
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, 'w') as f:

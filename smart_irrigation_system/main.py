@@ -1,6 +1,7 @@
 from smart_irrigation_system.irrigation_controller import IrrigationController
 from smart_irrigation_system.enums import Environment
 from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.button import Button
 # import atexit, os - for cleanup and unclean shutdown logging
 
 ENVIRONMENT = Environment.PC

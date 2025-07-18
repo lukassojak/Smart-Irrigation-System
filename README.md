@@ -2,7 +2,7 @@
 # Smart Irrigation System (Minimum Viable Product)
 
 ### MVP
-Tento projekt představuje **minimalistický prototyp chytrého zavlažovacího systému**, který využívá **Raspberry Pi Pico** k řízení jednotlivých zavlažovacích okruhů (zón).
+Tento projekt představuje **minimalistický prototyp chytrého zavlažovacího systému**, který využívá **Raspberry Pi Zero** k řízení jednotlivých zavlažovacích okruhů (zón).
 
 ### Stabilní verze
 Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém automatizovaného zavlažování s integrací s **Home Assistantem**, **Webovým UI** a centrálním serverem na **Raspberry Pi 4**.
@@ -12,7 +12,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 ## 🧠 Architektura systému
 
 ### MVP
-- Jeden zavlažovací uzel **Raspberry Pi Pico** pracuje v **standalone režimu** a je zodpovědný za několik zavlažovacích zón.
+- Jeden zavlažovací uzel **Raspberry Pi Zero** pracuje v **standalone režimu** a je zodpovědný za několik zavlažovacích zón.
 - Data o konfiguraci a stavu jsou uložena v lokálních JSON souborech.
 - **Simulované globální podmínky** (např. teplota, sluneční svit, vlhkost) se využívají k výpočtu potřebné závlahy.
 - Ventily jsou řízeny pomocí **relé**.
@@ -21,7 +21,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - Systém bude rozdělen do tří vrstev:  
   - **1. Uživatelská vrstva (UI) - Webová aplikace, Home Assistant, CLI, případně kombinace**
   - **2. Centrální řídicí server (Raspberry Pi 4)**  
-  - **3. Zavlažovací uzly (n Raspberry Pi Pico)**
+  - **3. Zavlažovací uzly (n Raspberry Pi Zero)**
 
 #### 1. Centrální řídicí server (RPi 4):
 - Zajišťuje **sběr dat ze serveru meteostanice** – intenzita slunečního svitu, teplota, srážky, vlhkost atd.
@@ -32,7 +32,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - Provádí **analýzu a agregaci dat** (např. historie zavlažování, úspora vody, predikce podle počasí).
 - Poskytuje data k **předpovědi počasí** prostřednictvím API.
 
-#### 2. Zavlažovací uzly (RPi Pico):
+#### 2. Zavlažovací uzly (RPi Zero):
 - Obdrží a lokálně uloží aktuální konfiguraci a podmínky ze serveru.
 - Stále fungují **autonomně** (fail-safe fallback): v případě výpadku komunikace pokračují v režimu podle posledně známé konfigurace.
 - Vyhodnocují stav každé zóny a **lokálně spouští závlahu** podle instrukcí a případně podle **lokálních senzorů vlhkosti půdy**.
@@ -52,7 +52,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 ## 🔧🚀 Hlavní funkce 
 
 ### MVP
-- **Řízení více zavlažovacích okruhů** – každý Pi Pico může řídit více výstupů (ventilů) s vlastní nezávislou logikou.
+- **Řízení více zavlažovacích okruhů** – každý Pi Zero může řídit více výstupů (ventilů) s vlastní nezávislou logikou.
 - **Sekvenční i souběžné (paralelní) zavlažování** – dle nastavení v konfiguraci. Při paralelním zavlažování je k dispozici funkce `max_flow_monitoring`, která sleduje aktuální potřebu průtoku vody a maximální dostupný průtok vody. Pokud by souběžné spuštění více okruhů překročilo limit, systém přepne do **hybridního režimu** a spouští některé zóny postupně, tak aby byl využit limit na maximum, ale nedošlo k přetížení.
 - **Ruční spuštění** – možnost manuálně spustit všechny nebo vybrané okruhy.
 - **Automatické denní zavlažování** – dle času a konfigurace.
@@ -101,14 +101,14 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 ## 🔌 Požadavky
 
 - **Hardware**
-  - Raspberry Pi Pico (1 ks pro každý zavlažovací uzel)
+  - Raspberry Pi Zero W (1 ks pro každý zavlažovací uzel)
   - Relé modul (pro spínání ventilů)
   - Napájení
-  - Dosah WiFi sítě (v budoucnu)
+  - Dosah WiFi sítě / Ethernetové připojení (v budoucnu)
 
 - **Software**
   - Python 3 (Micropython)
-  - Používané knihovny: `json`, `time`, `threading`, `os`
+  - Používané knihovny: `json`, `time`, `datetime`, `threading`, `os`, `logging`, `luma.oled`
 
 ---
 

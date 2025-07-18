@@ -31,7 +31,7 @@
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "4": 2000
+                "4": 20
             },
             "local_correction_factors": {
                 "sunlight": 0.0,

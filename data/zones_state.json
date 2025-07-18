@@ -1,11 +1,11 @@
 {
-    "last_updated": "2025-07-17T19:34:42",
+    "last_updated": "2025-07-17T23:39:27",
     "circuits": [
         {
             "id": "1",
             "irrigation_state": "idle",
             "last_irrigation": "2025-07-17T19:33:52",
-            "last_result": "success",
+            "last_result": "skipped",
             "last_duration": 59
         },
         {
@@ -19,7 +19,7 @@
             "id": "3",
             "irrigation_state": "idle",
             "last_irrigation": "2025-07-17T19:34:42",
-            "last_result": "success",
+            "last_result": "skipped",
             "last_duration": 50
         }
     ]
