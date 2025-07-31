@@ -88,7 +88,7 @@ class CircuitStateManager():
                     return False
             if "last_result" not in circuit:
                 return False
-            if circuit["last_result"] not in ["success", "failure", "skipped", "error", None]:
+            if circuit["last_result"] not in ["success", "failure", "skipped", "interrupted", "error", None]:
                 return False
             if "last_duration" not in circuit:
                 return False
@@ -124,7 +124,7 @@ class CircuitStateManager():
     def update_irrigation_result(self, circuit: "IrrigationCircuit", result: str, duration: int) -> None:
         """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""
-        if result not in ["success", "failure", "skipped", "error"]:
+        if result not in ["success", "failure", "skipped", "interrupted", "error"]:
             self.logger.error(f"Invalid result '{result}' for circuit {circuit.id}. Expected one of ['success', 'failure', 'skipped', 'error'].")
             return
         
@@ -144,7 +144,7 @@ class CircuitStateManager():
             self.save_state()
             return
         
-        # If the result is "failure" or "error", we update the last_irrigation time and last_duration (to None)
+        # If the result is "interrupted" or "error", we update the last_irrigation time and last_duration (to None)
         # This leads to loss of the last irrigation time and duration, which is acceptable in this case.
     
         # .get() would be safer here, but we assume the structure is valid since we validated it in load_state()

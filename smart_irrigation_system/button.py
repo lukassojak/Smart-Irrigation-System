@@ -1,12 +1,43 @@
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+    print("RPi.GPIO module is supported.")
+# if ImportError or RuntimeError occurs, we will use a dummy GPIO class for testing
+except (ImportError, RuntimeError):
+    print("RPi.GPIO module is not supported. Using dummy GPIO for testing.")
+    class GPIO:
+        BCM = None
+        IN = None
+        OUT = None
+        PUD_UP = None
+        LOW = None
+        HIGH = None
+        FALLING = None
+        RISING = None
+        BOTH = None
+        @staticmethod
+        def setmode(mode): pass
+        @staticmethod
+        def setup(pin, mode, pull_up_down=None): pass
+        @staticmethod
+        def output(pin, state): pass
+        @staticmethod
+        def input(pin): return False
+        @staticmethod
+        def add_event_detect(pin, edge, callback=None, bouncetime=None): pass
+        @staticmethod
+        def cleanup(pins=None): pass
+    
+    GPIO = GPIO  # Use the dummy GPIO class for testing
+
 import time
 from smart_irrigation_system.logger import get_logger
 
 class Button:
-    def __init__(self, gpio_pin, led_pin=None):
+    def __init__(self, gpio_pin, led_pin=None, user_callback=None):
         self.gpio_pin = gpio_pin
         self.led_pin = led_pin
         self.state = False  # software state (False = off, True = on)
+        self.user_callback = user_callback  
         self.logger = get_logger(f"Button-{gpio_pin}")
         
         GPIO.setmode(GPIO.BCM)
@@ -29,6 +60,12 @@ class Button:
         
         # Log the state change
         self.logger.info(f"Button on GPIO {self.gpio_pin} pressed. New state: {'ON' if self.state else 'OFF'}")
+
+        if self.user_callback:
+            try:
+                self.user_callback(self.state)
+            except Exception as e:
+                self.logger.error(f"Error in user callback: {e}")
         
     def is_pressed(self):
         # True if the button is pressed (GPIO pin is LOW)

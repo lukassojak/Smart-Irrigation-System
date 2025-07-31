@@ -24,9 +24,9 @@ Seznam jednotlivých zavlažovacích okruhů a jejich posledního známého stav
 Typ: `array`
 
 - `id`: Unikátní identifikátor okruhu. Musí odpovídat id z [`zones_config.json`](./../config/zones_config.json)
-- `irrigation_state`: Aktuální stav okruhu (ventilu). Může být: `idle`, `irrigating`.
+- `irrigation_state`: Aktuální stav okruhu (ventilu). Může být: `idle`, `irrigating`. ZMĚNIT NA CIRCUIT_STATE A UDRŽOVAT STAV Z OBJEKTU (VOLAT MANAGER V SETTRU OKRUHU)
 - `last_irrigation`: Datum a čas posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00).
-- `last_result`: Výsledek posledního pokusu o zavlažování. Může být: `success`, `skipped`, `error`, nebo `null` (pokud zatím nikdy neproběhlo).
+- `last_result`: Výsledek posledního pokusu o zavlažování. Může být: `success`, `skipped`, `interrupted`, `error`, nebo `null` (pokud zatím nikdy neproběhlo).
 - `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo.
 
 

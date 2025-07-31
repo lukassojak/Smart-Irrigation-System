@@ -1,5 +1,10 @@
 from enum import Enum
 
+class ControllerState(Enum):
+    IDLE = "idle"
+    IRRIGATING = "irrigating"
+    ERROR = "error"
+
 
 class IrrigationState(Enum):
     IDLE = "idle"                           # No irrigation is currently happening
@@ -8,6 +13,11 @@ class IrrigationState(Enum):
     FINISHED = "finished"                   # Irrigation has finished
     ERROR = "error"                         # An error occurred
     STOPPED = "stopped"                     # Irrigation has been stopped by the user
+
+
+class RelayValveState(Enum):
+    OPEN = "open"                           # Relay valve is open
+    CLOSED = "closed"                       # Relay valve is closed
 
 
 class Environment(Enum):

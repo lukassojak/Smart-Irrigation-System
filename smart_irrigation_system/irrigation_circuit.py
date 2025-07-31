@@ -1,6 +1,6 @@
 from smart_irrigation_system.relay_valve import RelayValve
 from deprecated.soil_moisture_sensor import SoilMoistureSensorPair
-from smart_irrigation_system.enums import IrrigationState
+from smart_irrigation_system.enums import IrrigationState, RelayValveState
 from smart_irrigation_system.drippers import Drippers
 from smart_irrigation_system.correction_factors import CorrectionFactors
 from smart_irrigation_system.global_config import GlobalConfig
@@ -60,7 +60,7 @@ class IrrigationCircuit:
         """Sets the current state of the irrigation circuit."""
         with self._irrigating_lock:
             self._state = new_state
-            self.logger.info(f"Irrigation Circuit {self.id} state changed to {self._state.name}.")
+            self.logger.debug(f"State changed to {self._state.name}.")
 
     
     def get_status_summary(self) -> Dict[str, str]:
@@ -89,12 +89,12 @@ class IrrigationCircuit:
         if self.even_area_mode:
             # Calculate the target water amount based on the target mm and zone area
             base_target_water_amount = self.target_mm * self.zone_area_m2    # in mm * m^2 = liters
-            self.logger.debug(f"I-Circuit {self.id}: Base target water amount is {base_target_water_amount} liters (even area mode).")
+            self.logger.debug(f"Base target water amount is {base_target_water_amount} liters (even area mode).")
         else:
             # Calculate the target water amount based on the liters per minimum dripper
             duration = self.liters_per_minimum_dripper / self.drippers.get_minimum_dripper_flow()   # in hours (liters per minimum dripper / liters per hour = hours)
             base_target_water_amount = self.get_circuit_consumption() * duration  # in liters per hour * hours = liters
-            self.logger.debug(f"I-Circuit {self.id}: Base target water amount is {base_target_water_amount} liters (non-even area mode).")
+            self.logger.debug(f"Base target water amount is {base_target_water_amount} liters (non-even area mode).")
         
         return round(base_target_water_amount, 3)   # Round to 3 decimal places for precision
 
@@ -108,7 +108,7 @@ class IrrigationCircuit:
 
 
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> float:
-        """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds."""
+        """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         base_target_water_amount = self.get_base_target_water_amount()
 
         standard_conditions = global_config.standard_conditions
@@ -148,7 +148,7 @@ class IrrigationCircuit:
         
 
     def irrigate_manual(self, target_water_amount, stop_event):
-        """Starts the manual irrigation process for a specified water amount"""
+        """Starts the manual irrigation process for a specified water amount. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         # Maybe should use mm instead of liters?
         if target_water_amount <= 0:
             self.logger.warning(f"Target water amount must be greater than 0. Received: {target_water_amount} liters. No irrigation will be performed.")
@@ -157,33 +157,33 @@ class IrrigationCircuit:
         # Calculate the target duration of irrigation based on the target water amount and global conditions
         target_duration = self.get_target_duration_seconds(target_water_amount)
 
-        self.irrigate(target_duration, stop_event)
+        return self.irrigate(target_duration, stop_event)
 
 
-    def irrigate(self, duration, stop_event):
-        """Starts the irrigation process for a specified duration"""
+    def irrigate(self, duration, stop_event) -> Optional[int]:
+        """Starts the irrigation process for a specified duration. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         
         self.logger.info(f"Starting irrigation for {duration} seconds.")
         # Should check if the circuit is already irrigating
         self.state = IrrigationState.IRRIGATING
         try:
-            self.valve.open(duration, stop_event)
+            elapsed_time = self.valve.open(duration, stop_event)
+            return elapsed_time
         except Exception as e:
             # propagate the error to the caller - to indicate that the irrigation failed
-            self.logger.error(f"Error during irrigation: {e}")
+            # NOTE: elapsed time won't be set in this case. This should be solved in future (the circuit state manager does not have a way to handle this yet)
             self.state = IrrigationState.ERROR
-            raise e
+            self.logger.error(f"Error during irrigation: {e}")
+            raise e  # Re-raise the exception to indicate failure
         finally:
-            if stop_event.is_set():
+            if stop_event.is_set() and self.state == IrrigationState.IRRIGATING:
                 self.state = IrrigationState.STOPPED
                 self.logger.info(f"Irrigation stopped by user.")
             elif self.state != IrrigationState.ERROR:
                 self.state = IrrigationState.FINISHED
                 self.logger.info(f"Irrigation finished successfully.")
 
-            self.valve.control(False)  # Fail-safe close the valve if it remains open
-
-        return duration
+            # self.valve.control(RelayValveState.CLOSED)  # Maybe redundant, because the valve is already closed in the RelayValve.open() method
         
     def interval_days_passed(self, last_irrigation_time: Optional[datetime]) -> bool:
         """Checks if the interval days have passed since the last irrigation."""

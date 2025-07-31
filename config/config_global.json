@@ -17,8 +17,8 @@
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 20,
-        "scheduled_minute": 0,
+        "scheduled_hour": 13,
+        "scheduled_minute": 12,
         "max_flow_monitoring": true
     },
     "logging": {
