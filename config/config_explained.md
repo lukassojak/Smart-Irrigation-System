@@ -81,7 +81,7 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 - `drippers_summary`: Slovník, kde klíče jsou průtoky kapkovačů v **litrech za hodinu** (jako řetězce, např. "2", "8", "12", "15", ..) a hodnoty jsou počty těchto kapkovačů v daném okruhu.
 
 
-**DŮLEŽITÉ: Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání konfigurace.**
+**DŮLEŽITÉ: Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání a validaci konfigurace.**
 
 
 ### local_correction_factors:
