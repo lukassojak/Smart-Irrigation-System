@@ -129,7 +129,7 @@ class IrrigationCircuit:
         # Adjust the target water amount based on the total adjustment
         adjusted_water_amount = base_target_water_amount * (1 + total_adjustment)
         adjusted_water_amount = round(adjusted_water_amount, 3)  # Round to 3 decimal places for precision
-        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is {total_adjustment}.")
+        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is {round(total_adjustment, 2)}.")
 
         # If total adjustment is -1 or less, no irrigation is needed
         if total_adjustment <= -1:
@@ -149,7 +149,6 @@ class IrrigationCircuit:
 
     def irrigate_manual(self, target_water_amount, stop_event):
         """Starts the manual irrigation process for a specified water amount. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
-        # Maybe should use mm instead of liters?
         if target_water_amount <= 0:
             self.logger.warning(f"Target water amount must be greater than 0. Received: {target_water_amount} liters. No irrigation will be performed.")
             return

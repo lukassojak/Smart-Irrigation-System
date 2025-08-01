@@ -77,15 +77,15 @@ def main():
             logger.debug(f"Evaluating irrigation time. Current time: {current_time_str}, ")
             if (current_hour == irrigation_hour and 
                 abs(current_minute - irrigation_minute) <= TOLERANCE):
-                logger.info("Time to irrigate!")
+                logger.debug(f"Current time {current_time_str} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
                 display.render()
                 controller.perform_automatic_irrigation()
-                time.sleep(CHECK_INTERVAL)
+                time.sleep(TOLERANCE + CHECK_INTERVAL)  # Wait for TOLERANCE + CHECK_INTERVAL to avoid multiple triggers
             else:
                 time_left = (irrigation_hour - current_hour) * 60 + (irrigation_minute - current_minute)
                 if time_left < 0:
                     time_left += 24 * 60
-                logger.info(f"Next irrigation in {time_left} minutes.")
+                logger.debug(f"Next irrigation in {time_left} minutes.")
                 display.render()
 
             time.sleep(CHECK_INTERVAL)
@@ -104,7 +104,7 @@ def main():
         current, peak = tracemalloc.get_traced_memory()
         current_kb = current / 1024
         peak_kb = peak / 1024
-        logger.info(f"Current memory usage: {current_kb:.2f} KB; Peak: {peak_kb:.2f} KB")
+        logger.debug(f"Current memory usage: {current_kb:.2f} KB; Peak: {peak_kb:.2f} KB")
         tracemalloc.stop()
 
 

@@ -1,9 +1,9 @@
 try:
     import RPi.GPIO as GPIO
-    print("RPi.GPIO module is supported.")
+    GPIO_SUPPORTED = True
 # if ImportError or RuntimeError occurs, we will use a dummy GPIO class for testing
 except (ImportError, RuntimeError):
-    print("RPi.GPIO module is not supported. Using dummy GPIO for testing.")
+    GPIO_SUPPORTED = False
     class GPIO:
         BCM = None
         IN = None
@@ -49,6 +49,11 @@ class Button:
         
         # Interrupt for button press (detecting falling edge)
         GPIO.add_event_detect(self.gpio_pin, GPIO.FALLING, callback=self._handle_press, bouncetime=200)
+        
+        if GPIO_SUPPORTED:
+            self.logger.info(f"Button initialized on GPIO {self.gpio_pin} with LED on GPIO {self.led_pin if self.led_pin else 'None'}")
+        else:
+            self.logger.warning(f"Button initialized, but GPIO support is not available. Using dummy GPIO.")
         
     def _handle_press(self, channel):
         # Toggle softwarove state

@@ -1,13 +1,11 @@
 try:
     import threading
-    print("Threading module is supported.")
     THREADING_SUPPORTED = True
 except ImportError:
     THREADING_SUPPORTED = False
-    print("Threading module is not supported. Using dummy threading implementation.")
     class DummyThread:
         def __init__(self, *args, **kwargs): pass
-        def start(self): print("Threading not supported.")
+        def start(self): pass
 
     class DummyLock:
         def __enter__(self): pass
@@ -71,6 +69,9 @@ class IrrigationController:
             self.threads = []
             self.stop_event = threading.Event()
             self.threads_lock = threading.Lock()
+            self.logger.info("Threading is supported in this environment.")
+        else:
+            self.logger.warning("Threading is not supported in this environment. Using dummy threading implementation.")
         
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
 
@@ -203,7 +204,6 @@ class IrrigationController:
 
         for circuit in self.circuits.values():
             # Check if the stop event is set before starting irrigation
-            print("### Current consumption:", self.get_current_consumption())
             if self.stop_event.is_set():
                 self.logger.info("Stopping irrigation due to stop event.")
                 break
@@ -319,6 +319,6 @@ class IrrigationController:
     def update_global_conditions(self) -> GlobalConditions:
         """Updates the global conditions with the latest data from the weather server"""
         self.global_conditions = WeatherSimulator().get_current_conditions()
-        self.logger.info("Global conditions updated: %s.", self.global_conditions)
+        self.logger.debug("Global conditions updated: %s.", self.global_conditions)
         return self.global_conditions
     
