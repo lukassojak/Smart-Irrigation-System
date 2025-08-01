@@ -131,19 +131,17 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 ---
 
-## 🛠️ Možnosti řízení
+## Spuštění projektu
 
-### Ruční režim:
-- Spuštění všech okruhů ručně
-- Spuštění konkrétní zóny dle ID/názvu ručně
-- Vypnutí všech zón
+Projekt je v MVP fázi a probíhá jeho ladění pro provoz na cílovém hardware (Raspberry Pi).
+Pro účely testování je možné ho spustit i mimo prostředí Raspberry Pi, kdy je knihovna pro GPIO nahrazena dummy implementací.
+Před spuštěním je nutné mít dostupné všechny závislosti. Chystá se automatický Environment setup.
 
-### Automatický režim:
-- Spouští zavlažování ve zvolený čas pro ty zóny, které daný den mají zavlažovat
-- Konfigurace automatického režimu podle [`config_explained.md`](./config/config_explained.md)
-- Monitoring aktuálního průtoku (ochrana proti přetížení)
-- Pozastavení všech zón pro následující cyklus
-- Pozastavení konkrétní zóny pro následující cyklus
+Spuštění systému je možné tímto příkazem v kořenovém adresáři projektu:
+
+```bash
+python3 -m smart_irrigation_system.main
+```
 
 ---
 
