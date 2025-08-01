@@ -118,7 +118,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 ## 🔌 Požadavky
 
 - **Hardware**
-  - Raspberry Pi Pico W (1 ks pro každý zavlažovací uzel)
+  - Raspberry Pi Zero W (1 ks pro každý zavlažovací uzel)
   - Relé modul (pro spínání ventilů, 1 ks pro každý okruh v uzlu)
   - Napájení
   - Dosah WiFi sítě / Ethernetové připojení
