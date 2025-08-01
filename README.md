@@ -45,7 +45,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - **UART** pro uzly, které je možné spojit síťovým kabelem
 - **MQTT** pro uzly, které není možné spojit síťovým kabelem, také jako fallback v případě neúspěšného pokusu o spojení přes UART
 
-#### Redundance a bezpečnost:
+### Redundance a bezpečnost:
 - Lokální konfigurace na uzlech slouží jako záloha při výpadku komunikace.
 - Uzel pravidelně zasílá informace o svém stavu na centrální server.
 - Komunikace mezi uzly a centrálním serverem je šifrovaná: MQTT over TLS + HTTPS
@@ -57,7 +57,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - Systém validuje a filtruje extrémní hodnoty ze senzorů a dat o počasí, aby se předešlo přijetí chybných dat.
 - Je zavedeno podrobné ***logování všech operací*** v několika úrovních, logy jsou ukládány lokálně na uzlu a také pravidelně zasílány na server.
 
-##### Plánované rozšíření:
+#### Plánované rozšíření:
 - Přidání watchdog mechanismu, který kontroluje aktivitu jednotlivých vláken a restartuje je v případě nečinnosti nebo zamrznutí
 - Heartbeat mechanismus: server real-time monitoruje běh a stav uzlů
 - OTA aktualizace firmware pro možnost vzdálené hromadné aktualizace softwaru uzlů
