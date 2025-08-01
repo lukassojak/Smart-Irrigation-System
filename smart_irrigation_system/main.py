@@ -13,8 +13,6 @@ from smart_irrigation_system.enums import ControllerState
 import time
 # import machine
 
-ENVIRONMENT = Environment.PC
-
 
 # === Configuration ===
 CHECK_INTERVAL = 30
@@ -23,6 +21,7 @@ I2C_SDA = 4  # GPIO pin for I2C SDA
 
 # === Constants ===
 TOLERANCE = 1  # Tolerance in minutes for irrigation time
+ENVIRONMENT = Environment.PC
 
 # === Global Variables ===
 logger = get_logger("smart_irrigation_system.main")
@@ -73,7 +72,9 @@ def main():
             # Check if it's time to irrigate
             current_hour = time.localtime().tm_hour
             current_minute = time.localtime().tm_min
-            logger.debug(f"Evaluating irrigation time. Current time: {current_hour}:{current_minute}, ")
+            # format current time for logging
+            current_time_str = f"{current_hour:02}:{current_minute:02}"
+            logger.debug(f"Evaluating irrigation time. Current time: {current_time_str}, ")
             if (current_hour == irrigation_hour and 
                 abs(current_minute - irrigation_minute) <= TOLERANCE):
                 logger.info("Time to irrigate!")
