@@ -50,9 +50,9 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - Uzel pravidelně zasílá informace o svém stavu na centrální server.
 - Komunikace mezi uzly a centrálním serverem je šifrovaná: MQTT over TLS + HTTPS
 - Systém je navržen jako ***fail-safe***: při neznámém stavu nebo výpadku napájení nedojde k nekontrolovanému spuštění závlahy.
-- Každý zavlažovací okruh je řízen samostatným vláknem, teré je bezpečně ukončeno při přerušení. V případě přerušení, nebo nečekané chyby v programu je ventil vždy bezpečně uzavřen.
+- Každý zavlažovací okruh je řízen samostatným vláknem, které je bezpečně ukončeno při přerušení. V případě přerušení, nebo nečekané chyby v programu je ventil vždy bezpečně uzavřen.
 - Použití ventilu ***Normally-closed*** zajišťuje jeho uzavření, pokud dojde k chybě mimo program.
-- Runtime stavový automat (`IDLE`, `IRRIGATING`, `ERROR`) zabraňuje souběhu konfliktních operací.
+- Runtime stavový automat (`IDLE`, `IRRIGATING`, `WAITING`, `ERROR`) zabraňuje souběhu konfliktních operací.
 - Ukládání stavů do JSON se umožňuje systému bezpečně zotavit z `Unclean Shutdown` situací.
 - Systém validuje a filtruje extrémní hodnoty ze senzorů a dat o počasí, aby se předešlo přijetí chybných dat.
 - Je zavedeno podrobné ***logování všech operací*** v několika úrovních, logy jsou ukládány lokálně na uzlu a také pravidelně zasílány na server.
