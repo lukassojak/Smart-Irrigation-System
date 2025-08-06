@@ -46,7 +46,12 @@ def main():
     # === Initialization ===
 
     logger.info("Initializing Smart Irrigation System...")
-    controller = IrrigationController()
+    try:
+        controller = IrrigationController()
+    except Exception as e:
+        logger.error(f"Failed to initialize IrrigationController.")
+        return
+
     display = DisplayController(controller)
     pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
     logger.info("Starting Smart Irrigation System on %s environment", ENVIRONMENT.name)

@@ -23,7 +23,8 @@ def load_global_config(filepath: str) -> GlobalConfig:
     except Exception as e:
         if data.get("automation").get("environment") == "production":
             logger.error("Weather API keys are required in production environment.")
-            raise ValueError("Weather API keys are required in production environment.") from e
+            logger.info("empty file 'config_secrets.json' created, please fill it with your API keys.")
+            raise ValueError("Weather API keys are required in production environment") from e
         else:
             # In non-production environments, we can use dummy values
             logger.warning("Using dummy weather API keys in non-production environment.")

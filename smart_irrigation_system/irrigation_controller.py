@@ -66,7 +66,15 @@ class IrrigationController:
         self.zones_config_path = config_zones_path
         self.circuits_list = load_zones_config(config_zones_path)
         self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}   # Create a dictionary of circuits by their ID
-        self.global_config: GlobalConfig = load_global_config(config_global_path)
+        try:
+            self.global_config: GlobalConfig = load_global_config(config_global_path)
+        except FileNotFoundError as e:
+            self.logger.error(f"Global configuration file not found: {e}. Exiting initialization.")
+            raise e
+        except ValueError as e:
+            self.logger.error(f"Error loading global configuration: {e}. Exiting initialization.")
+            raise e
+
         self.global_conditions_provider = self.get_global_conditions_provider()                                 # Initialize the global conditions provider
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH)                                               # Load the circuit state manager with the state file
         atexit.register(self.state_manager.handle_clean_shutdown)
@@ -87,11 +95,16 @@ class IrrigationController:
         # Get the maximum circuit interval_days from the circuits_list
         max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
         if self.global_config.weather_api.api_enabled:
-            self.logger.info("Using RecentWeatherFetcher for global conditions.")
-            return RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
-        else:
-            self.logger.info("Using WeatherSimulator for global conditions.")
-            return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
+            try:
+                fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
+                self.logger.info("Using RecentWeatherFetcher for global conditions.")
+                return fetcher
+            except ValueError as e:
+                self.logger.error(f"Failed to initialize RecentWeatherFetcher: {e}.")
+                # on error, fallback to WeatherSimulator (if environment = 'production' this should not happen)
+
+        self.logger.info("Using WeatherSimulator for global conditions.")
+        return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
 
     def reload_config(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
         """ Reloads the global configuration and zones configuration in runtime. If any error occurs, it will raise an exception and the controller will not be updated. """
@@ -163,12 +176,13 @@ class IrrigationController:
             self.logger.warning("Cannot start automatic irrigation while the controller is not in IDLE state.")
             return
 
+        self.logger.info("Starting automatic irrigation process...")
+
         # Update global conditions before starting irrigation
         self.global_conditions_provider.update_current_conditions()
         current_conditions_str = self.global_conditions_provider.get_conditions_str()
         self.logger.info(f"Global conditions updated: {current_conditions_str}")
 
-        self.logger.info("Starting automatic irrigation process...")
         self.controller_state = ControllerState.IRRIGATING
 
         try:

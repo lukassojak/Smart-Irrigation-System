@@ -70,7 +70,7 @@ class RelayValve:
     def open(self, duration, stop_event) -> Optional[int]:
         """Opens the valve for a specified duration. Returns the duration in seconds if successful, or raises an exception if the valve is closed early."""
 
-        self.logger.info(f"Valve will be opened for {duration} seconds.")
+        self.logger.debug(f"Valve will be opened for {duration} seconds.")
         self.control(RelayValveState.OPEN)
     
         # try-except block provides a fail-safe mechanism to ensure the valve is not left open indefinitely
@@ -86,7 +86,7 @@ class RelayValve:
 
                 time.sleep(0.1)  # Sleep for a short interval to avoid busy-waiting
             else:
-                self.logger.info(f"Closing valve after {duration} seconds as planned")
+                self.logger.debug(f"Closing valve after {duration} seconds as planned")
             return int(elapsed_time)
 
         finally:
