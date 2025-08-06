@@ -64,35 +64,50 @@ class IrrigationController:
         self.logger = get_logger("IrrigationController")
         self.global_config_path = config_global_path
         self.zones_config_path = config_zones_path
-        self.circuits_list = load_zones_config(config_zones_path)
-        self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}   # Create a dictionary of circuits by their ID
+
+        # Load configurations
+        self._load_global_config()
+        self._load_zones_config()
+
+        # Initialize components
+        self.global_conditions_provider = self._initialize_global_conditions_provider()
+        self.state_manager = CircuitStateManager(ZONE_STATE_PATH)
+        atexit.register(self.state_manager.handle_clean_shutdown)
+
+        # Initialize threading
+        self._initialize_threading()
+
+        # Set initial controller state
+        self.controller_state = ControllerState.IDLE  
+        
+        self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
+
+    def _load_global_config(self):
+        """Loads the globalconfiguration."""
         try:
-            self.global_config: GlobalConfig = load_global_config(config_global_path)
+            self.global_config: GlobalConfig = load_global_config(self.global_config_path)
         except FileNotFoundError as e:
             self.logger.error(f"Global configuration file not found: {e}. Exiting initialization.")
             raise e
         except ValueError as e:
             self.logger.error(f"Error loading global configuration: {e}. Exiting initialization.")
             raise e
-
-        self.global_conditions_provider = self.get_global_conditions_provider()                                 # Initialize the global conditions provider
-        self.state_manager = CircuitStateManager(ZONE_STATE_PATH)                                               # Load the circuit state manager with the state file
-        atexit.register(self.state_manager.handle_clean_shutdown)
-        self.controller_state = ControllerState.IDLE                                                            # Initial state of the controller
-
-        if THREADING_SUPPORTED:
-            self.threads = []
-            self.stop_event = threading.Event()
-            self.threads_lock = threading.Lock()
-            self.logger.info("Threading is supported in this environment.")
-        else:
-            self.logger.warning("Threading is not supported in this environment. Using dummy threading implementation.")
         
-        self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
+    def _load_zones_config(self):
+        """Loads the zones configuration and initializes circuits."""
+        try:
+            self.circuits_list = load_zones_config(self.zones_config_path)
+            self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}
+            self.logger.debug("Zones configuration loaded successfully with %d circuits.", len(self.circuits))
+        except FileNotFoundError as e:
+            self.logger.error(f"Zones configuration file not found: {e}. Exiting initialization.")
+            raise e
+        except ValueError as e:
+            self.logger.error(f"Error loading zones configuration: {e}. Exiting initialization.")
+            raise e
 
-    def get_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
+    def _initialize_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
-        # Get the maximum circuit interval_days from the circuits_list
         max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
         if self.global_config.weather_api.api_enabled:
             try:
@@ -105,16 +120,28 @@ class IrrigationController:
 
         self.logger.info("Using WeatherSimulator for global conditions.")
         return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
+    
+    def _initialize_threading(self):
+        """Initializes threading-related components."""
+        if THREADING_SUPPORTED:
+            self.threads = []
+            self.stop_event = threading.Event()
+            self.threads_lock = threading.Lock()
+            self.logger.info("Threading is supported in this environment.")
+        else:
+            self.logger.warning("Threading is not supported in this environment. Using dummy threading implementation.")
+            self.threads = []
+            self.stop_event = DummyEvent()
+            self.threads_lock = DummyLock()
+
+    
+    # ===========================================================================================================
+    # Configuration management
+    # ===========================================================================================================
 
     def reload_config(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
         """ Reloads the global configuration and zones configuration in runtime. If any error occurs, it will raise an exception and the controller will not be updated. """
         pass
-
-    def cleanup(self):
-        """Cleans up the resources used by the irrigation controller"""
-        self.logger.info("Cleaning up resources...")
-        self.stop_irrigation()
-
 
     # ===========================================================================================================
     # Status and information retrieval
@@ -342,14 +369,13 @@ class IrrigationController:
         self.threads.clear()  # Clear the thread list after stopping all threads
         self.logger.info("Stopping circuits done.")
 
-    
+
     # ===========================================================================================================
-    # Global conditions management
+    # Cleanup and shutdown
     # ===========================================================================================================
 
-    def update_global_conditions(self) -> GlobalConditions:
-        """Updates the global conditions with the latest data from the weather server"""
-        self.global_conditions = WeatherSimulator().get_current_conditions()
-        self.logger.debug("Global conditions updated: %s.", self.global_conditions)
-        return self.global_conditions
+    def cleanup(self):
+        """Cleans up the resources used by the irrigation controller"""
+        self.logger.info("Cleaning up resources...")
+        self.stop_irrigation()
     
