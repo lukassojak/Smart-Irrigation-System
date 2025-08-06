@@ -9,7 +9,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 ---
 
-## 🧠 Architektura systému
+## Architektura systému
 
 ### MVP
 - Jeden zavlažovací uzel **Raspberry Pi Zero** pracuje v **standalone režimu** a je zodpovědný za několik zavlažovacích zón.
@@ -67,7 +67,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 - Role-based Access Control pro webovou aplikaci
 ---
 
-## 🔧🚀 Hlavní funkce 
+## Hlavní funkce 
 
 ### MVP
 - **Řízení více zavlažovacích okruhů** – každý Pi Zero může řídit více výstupů (ventilů) s vlastní nezávislou logikou.
@@ -86,7 +86,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 ---
 
-## 📁 Struktura souborů a konfigurace
+## Struktura souborů a konfigurace
 
 - `config_global.json`  
   Obsahuje globální nastavení systému, včetně:
@@ -110,12 +110,21 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
   - Poslední zavlažování (čas, délka)
   - Aktuální aktivita
 
+- `config_secrets.json`
+  Používá se pouze ve vývojovém prostředí. Obsahuje přístupové údaje pro komunikaci se službami třetích stran. Standardně v .gitignore. V případě, že soubor neexistuje, systém soubor vytvoří, vyzve uživatele k vyplnění přístupových údajů a v daném běhu pokračuje s náhodně generovanými daty pro testování.
+  - API klíč pro přístup k datům meteostanice
+  - Aplikační klíč pro ověření v rámci služby meteostanice
+  - MAC adresa konkrétní meteostanice, ze které jsou data získávána.
+
+  > ⚠️ Tento soubor **není určen pro produkční použití**. V ostrém nasazení se citlivé údaje ukládají do systémových proměnných prostředí, které nejsou součástí souborového systému ani verzovacího systému.
+
+
 - `irrigation_log.txt`  
   Běžný víceúrovňový log aktivit, chyb a hlášení pro ladění i dohled.
 
 ---
 
-## 🔌 Požadavky
+## Požadavky
 
 - **Hardware**
   - Raspberry Pi Zero W (1 ks pro každý zavlažovací uzel)
@@ -145,7 +154,7 @@ python3 -m smart_irrigation_system.main
 
 ---
 
-## 🗒️ Poznámky
+## Poznámky
 
 - Termíny **"okruh"** a **"zóna"** jsou v rámci tohoto projektu synonymní.
 

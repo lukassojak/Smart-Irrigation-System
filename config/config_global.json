@@ -16,13 +16,18 @@
     },
     "automation": {
         "enabled": true,
-        "sequential": false,
-        "scheduled_hour": 14,
-        "scheduled_minute": 32,
-        "max_flow_monitoring": true
+        "sequential": true,
+        "scheduled_hour": 9,
+        "scheduled_minute": 42,
+        "max_flow_monitoring": true,
+        "environment": "production"
     },
     "logging": {
         "enabled": true,
         "log_level": "INFO"
+    },
+    "weather_api": {
+        "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
+        "history_url": "https://api.ecowitt.net/api/v3/device/history"
     }
 }

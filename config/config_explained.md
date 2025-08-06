@@ -4,6 +4,7 @@ Tento dokument popisuje strukturu a význam polí v konfiguračních souborech:
 
 - [`config_global.json`](./config_global.json)
 - [`zones_config.json`](./zones_config.json)
+- [`config_secrets.json`](./config_secrets.json)
 
 ---
 
@@ -54,12 +55,22 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
     - `history_based`: Zavlažování pokračuje v nastavený čas podle konfigurace, nedostupná data o počasí pro výpočet objemu zavlažení jsou nahrazena průměrem zavlažení z posledních 3 dnů pro každý okruh.
     - `base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 100% bazálního množství.
     - `half_base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 50% bazálního množství.
+- `environment`: Tato položka určuje **běhové prostředí systému**. Na základě hodnoty mohou různé části aplikace měnit své chování – např. používat simulovaná data, odlišné API adresy, deaktivovat reálné GPIO výstupy apod.
+    - `development`: Vývojové prostředí. Povolen je simulovaný režim, rozšířené logování, debug výstupy.
 
 ### logging:
 Ovládá chování výstupu logování na klientském zařízení.
 
 - `enabled`: Zapne/vypne logování
 - `log_level`: Úroveň výstupu (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`)
+
+### weather_api:
+Konfigurace URL adres pro přístup k datům meteostanice a předpovědi počasí.
+
+- `realtime_url`: URL pro aktuální data meteostanice
+- `history_url`: URL pro historická data meteostanice
+
+> Pro funkčnost systému přizpůsobení zálivky vzhledem k počasí od posledního zalévání je nutné vyplnit v konfiguraci současně obě hodnoty: `realtime_url` i `history_url`. Pokud jedna z hodnot chybí nebo není dostupná, dojde k fallbacku na bazální režim zavlažování (bez ohledu na počasí). V připadě aktivního testovacího režimu dojde k fallbacku na náhodný generátor počasí pro simulaci podmínek.
 
 ---
 
@@ -81,7 +92,7 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 - `drippers_summary`: Slovník, kde klíče jsou průtoky kapkovačů v **litrech za hodinu** (jako řetězce, např. "2", "8", "12", "15", ..) a hodnoty jsou počty těchto kapkovačů v daném okruhu.
 
 
-**DŮLEŽITÉ: Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání a validaci konfigurace.**
+> ⚠️ Všechny hodnoty průtoků kapkovačů (drippers_summary - klíče) musí být celá čísla (integer). Desetinná čísla nebo jiné formáty nejsou podporovány a povedou k chybě při načítání a validaci konfigurace.**
 
 
 ### local_correction_factors:
@@ -92,3 +103,23 @@ Modifikace chování daného okruhu vůči globálním korekcím.
 - `temperature`: Např. terasa na betonu se silněji zahřívá, takže má smysl zvýšit vliv teploty.
 
 Tyto hodnoty doplňují globální koeficienty – nejsou náhradou. Globální a lokální korekční koeficienty se mezi sebou násobí. Pokud např. globální hodnota pro `rain` je -0.5 a lokální je také -0.5, pak celková citlivost na déšť bude -0.25.
+
+---
+
+## 🔑 `config_secrets.json`
+
+Soubor [config_secrets.json](./config_secrets.json) obsahuje citlivé přístupové údaje (např. API klíče) potřebné pro komunikaci se službami třetích stran, jako je například Ecowitt weather server.
+
+- `api_key`: API klíč pro přístup k datům serveru meteostanice
+- `application_key`: Aplikační klíč pro ověření v rámci služby meteostanice
+- `device_mac`: MAC adresa konkrétní meteostanice, ze které jsou data získávána
+
+```json
+{
+    "api_key": "your_api_key_here",
+    "application_key": "your_application_key_here",
+    "device_mac": "your_weather_station_mac_address_here"
+}
+```
+
+> ⚠️ Tento soubor **není určen pro produkční použití**. V ostrém nasazení se citlivé údaje ukládají do systémových proměnných prostředí, které nejsou součástí souborového systému ani verzovacího systému.

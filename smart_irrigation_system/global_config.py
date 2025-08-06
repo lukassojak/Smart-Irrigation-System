@@ -40,6 +40,18 @@ class LoggingSettings:
     enabled: bool
     log_level: LogLevel
 
+@dataclass
+class WeatherApi:
+    """
+    A class to hold the configuration for the weather API.
+    """
+    api_enabled: bool
+    realtime_url: str
+    history_url: str
+    api_key: str
+    application_key: str
+    device_mac: str
+
 
 @dataclass
 class GlobalConfig:
@@ -51,6 +63,7 @@ class GlobalConfig:
     irrigation_limits: IrrigationLimits
     automation: AutomationSettings
     logging: LoggingSettings
+    weather_api: WeatherApi
 
     @staticmethod
     def from_dict(data: dict) -> 'GlobalConfig':
@@ -83,5 +96,13 @@ class GlobalConfig:
             logging=LoggingSettings(
                 enabled=data["logging"]["enabled"],
                 log_level=LogLevel(data["logging"]["log_level"])
+            ),
+            weather_api=WeatherApi(
+                api_enabled=data["weather_api"]["api_enabled"],
+                realtime_url=data["weather_api"]["realtime_url"],
+                history_url=data["weather_api"]["history_url"],
+                api_key=data["weather_api"]["api_key"],
+                application_key=data["weather_api"]["application_key"],
+                device_mac=data["weather_api"]["device_mac"]
             )
         )

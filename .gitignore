@@ -175,6 +175,10 @@ cython_debug/
 .vscode/
 
 
+# Weather API output (test files)
+recent_weather_data_*.json
+
 # other
 #  If you have other files that you want to ignore, you can add them here.
 notes.txt
+config_secrets.json

@@ -35,7 +35,6 @@ class RelayValve:
                         return
                     # Uncomment the next line when running on Raspberry Pi
                     # GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to open the valve
-                    self.logger.info(f"OPEN-VALVE")
                     self.state = RelayValveState.OPEN
                     self.logger.debug(f"RelayValve state changed to OPEN on pin {self.pin}")
                     return
@@ -45,7 +44,6 @@ class RelayValve:
                         return
                     # Uncomment the next line when running on Raspberry Pi
                     # GPIO.output(self.pin, GPIO.LOW)   # Set the pin to LOW to close the valve
-                    self.logger.info(f"CLOSE-VALVE")
                     self.state = RelayValveState.CLOSED
                     self.logger.debug(f"RelayValve state changed to CLOSED on pin {self.pin}")
                     return  # Exit the loop after successful state change
@@ -95,5 +93,6 @@ class RelayValve:
             self.control(RelayValveState.CLOSED)
             if (elapsed_time + TOLERANCE) < duration and not stop_event.is_set():
                 # If the valve was closed early without a stop event, log an error
-                self.logger.error(f"Valve {self.pin} was closed early after {int(elapsed_time)} seconds, expected {duration} seconds.")
-                raise Exception(f"Valve {self.pin} was closed early after {int(elapsed_time)} seconds, expected {duration} seconds.")
+                raise Exception(
+                    f"Valve {self.pin} was closed early after {int(elapsed_time)} seconds, expected {duration} seconds."
+                )

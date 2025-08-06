@@ -21,6 +21,8 @@ class CircuitStateManager():
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
         self._rebuild_circuit_index()
+        self.init_circuit_states()                              
+
         self.logger.info(f"CircuitStateManager initialized")
 
     
@@ -170,3 +172,20 @@ class CircuitStateManager():
         }
         self.state["circuits"].append(new_entry)
         self._rebuild_circuit_index()
+
+    
+    def init_circuit_states(self) -> None:
+        """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
+        for circuit in self.state.get("circuits", []):
+            if circuit.get("irrigation_state") != "shutdown":
+                self.logger.warning(f"Unclean shutdown detected on circuit {circuit.get('id')}.")
+            circuit["irrigation_state"] = "idle"
+        self.save_state()
+
+    
+    def handle_clean_shutdown(self) -> None:
+        """Sets all circuits to 'shutdown' state during a clean exit."""
+        for circuit in self.state.get("circuits", []):
+            circuit["irrigation_state"] = "shutdown"
+        self.save_state()
+        self.logger.debug("All circuits set to 'shutdown' state during clean exit.")

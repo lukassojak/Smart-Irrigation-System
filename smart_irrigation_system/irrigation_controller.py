@@ -1,3 +1,5 @@
+
+# check if threading is supported in the current environment
 try:
     import threading
     THREADING_SUPPORTED = True
@@ -26,23 +28,27 @@ except ImportError:
 
 import time
 from typing import Dict, Any
+import atexit
 
 from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.global_conditions import GlobalConditions
 from smart_irrigation_system.weather_simulator import WeatherSimulator
+from smart_irrigation_system.recent_weather_fetcher import RecentWeatherFetcher
 from smart_irrigation_system.global_config import GlobalConfig
 from smart_irrigation_system.config_loader import load_global_config, load_zones_config
 from smart_irrigation_system.enums import IrrigationState, ControllerState
 from smart_irrigation_system.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.logger import get_logger
 
+# Seed for the weather simulator to ensure reproducibility in tests
+WEATHER_SIMULATOR_SEED = 42
 
 # Paths to configuration files
-
 CONFIG_GLOBAL_PATH = "./config/config_global.json"
 CONFIG_ZONES_PATH =  "./config/zones_config.json"
 ZONE_STATE_PATH = "./data/zones_state.json"
 
+# Constants for irrigation process
 MAX_WAIT_TIME = 60  # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
 WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
 
@@ -58,11 +64,12 @@ class IrrigationController:
         self.logger = get_logger("IrrigationController")
         self.global_config_path = config_global_path
         self.zones_config_path = config_zones_path
-        self.global_conditions: GlobalConditions = WeatherSimulator().get_current_conditions()                  # Initialize with current weather conditions
         self.circuits_list = load_zones_config(config_zones_path)
         self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}   # Create a dictionary of circuits by their ID
         self.global_config: GlobalConfig = load_global_config(config_global_path)
+        self.global_conditions_provider = self.get_global_conditions_provider()                                 # Initialize the global conditions provider
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH)                                               # Load the circuit state manager with the state file
+        atexit.register(self.state_manager.handle_clean_shutdown)
         self.controller_state = ControllerState.IDLE                                                            # Initial state of the controller
 
         if THREADING_SUPPORTED:
@@ -74,6 +81,17 @@ class IrrigationController:
             self.logger.warning("Threading is not supported in this environment. Using dummy threading implementation.")
         
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
+
+    def get_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
+        """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
+        # Get the maximum circuit interval_days from the circuits_list
+        max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
+        if self.global_config.weather_api.api_enabled:
+            self.logger.info("Using RecentWeatherFetcher for global conditions.")
+            return RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
+        else:
+            self.logger.info("Using WeatherSimulator for global conditions.")
+            return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
 
     def reload_config(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
         """ Reloads the global configuration and zones configuration in runtime. If any error occurs, it will raise an exception and the controller will not be updated. """
@@ -92,7 +110,7 @@ class IrrigationController:
     def get_status_summary(self) -> Dict[str, Any]:
         """Returns a summary of the current status of the irrigation controller for DisplayManager"""
         summary = {
-            "global_conditions": self.global_conditions.to_dict(),
+            "global_conditions": self.global_conditions_provider.get_current_conditions().to_dict(),
             "circuits": {circuit.id: circuit.get_status_summary() for circuit in self.circuits.values()},
             "global_config": self.global_config.to_dict(),
             "circuit_states": {circuit.id: circuit.state.value for circuit in self.circuits.values()},
@@ -145,6 +163,11 @@ class IrrigationController:
             self.logger.warning("Cannot start automatic irrigation while the controller is not in IDLE state.")
             return
 
+        # Update global conditions before starting irrigation
+        self.global_conditions_provider.update_current_conditions()
+        current_conditions_str = self.global_conditions_provider.get_conditions_str()
+        self.logger.info(f"Global conditions updated: {current_conditions_str}")
+
         self.logger.info("Starting automatic irrigation process...")
         self.controller_state = ControllerState.IRRIGATING
 
@@ -169,7 +192,7 @@ class IrrigationController:
             try:
                 self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
                 self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
-                duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
+                duration = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
                 # maybe better to check the state not by the duration, but by the stop_event.is_set() or circuit.state
                 if circuit.state == IrrigationState.STOPPED:
                     assert self.stop_event.is_set(), "Circuit state is STOPPED, but stop_event is not set. This should not happen."
@@ -210,24 +233,18 @@ class IrrigationController:
 
             if circuit.is_irrigation_allowed(self.state_manager):
                 # Check the current consumption against the main valve max flow limit
-
-                # POTENTIAL IMPROVEMENT: Separate scheduler for flow monitoring would be better,
-                # so that it can monitor the flow independently of the irrigation process.
-                # Also, it would be better to monitor the flow in a separate thread, so that it can run concurrently with the irrigation process.
-                # ! The scheduler would prevent a highly demanding circuit from blocking the irrigation of less demanding circuits.
                 try:
                     wait_time = 0
                     # NOTE: This is a blocking call, it will wait until the flow capacity is available
-                    # if the circuit's consumption is high, it will block the irrigation of other circuits until the flow capacity is available
                     while (self.global_config.automation.max_flow_monitoring
                             and self.get_current_consumption() + circuit.get_circuit_consumption()
                             > self.global_config.irrigation_limits.main_valve_max_flow):
                         if wait_time >= MAX_WAIT_TIME:
                             self.state_manager.update_irrigation_result(circuit, "skipped", 0)
                             raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
-
-                        print(f"I-Controller: Waiting for more flow capacity for circuit {circuit.id} ...")
-                        print(f"Current consumption: {self.get_current_consumption()} L/h, Circuit consumption: {circuit.get_circuit_consumption()} L/h")
+                        
+                        self.logger.debug(f"Waiting for flow capacity for circuit {circuit.id}...")
+                        self.logger.info(f"Current consumption: {self.get_current_consumption()} L/h, Circuit consumption: {circuit.get_circuit_consumption()} L/h")
                         time.sleep(WAIT_INTERVAL_SECONDS)  # Wait for 1 second before checking again
                         wait_time += WAIT_INTERVAL_SECONDS
 
@@ -277,7 +294,7 @@ class IrrigationController:
                 try:
                     self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
                     self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
-                    duration = circuit.irrigate_automatic(self.global_config, self.update_global_conditions(), self.stop_event)
+                    duration = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
                     if circuit.state == IrrigationState.STOPPED:
                         assert self.stop_event.is_set(), "Circuit state is STOPPED, but stop_event is not set. This should not happen."
                         self.logger.warning(f"Irrigation for circuit {circuit.id} was interrupted.")

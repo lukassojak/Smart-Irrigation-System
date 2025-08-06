@@ -3,13 +3,42 @@ from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.drippers import Drippers
 from smart_irrigation_system.correction_factors import CorrectionFactors
 from smart_irrigation_system.global_config import GlobalConfig
+from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.secrets import get_secret
 from typing import Tuple, List
+
+# Initialize logger
+logger = get_logger("config_loader")
+
 
 def load_global_config(filepath: str) -> GlobalConfig:
     with open(filepath, "r") as f:
         data = json.load(f)
 
     _is_valid_global_config(data)       # if invalid, raises ValueError
+    # Add weather_api secrets to the dictionary
+    try:
+        api_key, application_key, device_mac = get_secret("api_key"), get_secret("application_key"), get_secret("device_mac")
+        api_enabled = True
+    except Exception as e:
+        if data.get("automation").get("environment") == "production":
+            logger.error("Weather API keys are required in production environment.")
+            raise ValueError("Weather API keys are required in production environment.") from e
+        else:
+            # In non-production environments, we can use dummy values
+            logger.warning("Using dummy weather API keys in non-production environment.")
+            api_key, application_key, device_mac = "dummy_api_key", "dummy_application_key", "00:00:00:00:00:00"
+            api_enabled = False
+    
+    data["weather_api"] = {
+        "api_enabled": api_enabled,
+        "realtime_url": data["weather_api"].get("realtime_url"),
+        "history_url": data["weather_api"].get("history_url"),
+        "api_key": api_key,
+        "application_key": application_key,
+        "device_mac": device_mac
+    }
+
     return GlobalConfig.from_dict(data)
 
 
@@ -152,7 +181,8 @@ def _is_valid_global_config(data: dict):
         "correction_factors",
         "irrigation_limits",
         "automation",
-        "logging"
+        "logging",
+        "weather_api"
     ]
     for section in required_sections:
         if section not in data:
@@ -194,6 +224,8 @@ def _is_valid_global_config(data: dict):
         raise ValueError("automation.scheduled_minute must be an int")
     if not isinstance(auto.get("max_flow_monitoring"), bool):
         raise ValueError("automation.max_flow_monitoring must be a boolean")
+    if not isinstance(auto.get("environment"), str):
+        raise ValueError("automation.environment must be a string")
 
     # Validate logging
     log = data["logging"]
@@ -201,6 +233,13 @@ def _is_valid_global_config(data: dict):
         raise ValueError("logging.enabled must be a boolean")
     if log.get("log_level") not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
         raise ValueError("logging.log_level must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    
+    # Validate weather_api
+    weather_api = data.get("weather_api", {})
+    if not isinstance(weather_api.get("realtime_url"), str):
+        raise ValueError("weather_api.realtime_url must be a string")
+    if not isinstance(weather_api.get("history_url"), str):
+        raise ValueError("weather_api.history_url must be a string")
 
 
 # maybe useless

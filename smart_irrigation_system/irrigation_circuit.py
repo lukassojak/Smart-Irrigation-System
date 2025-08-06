@@ -169,7 +169,6 @@ class IrrigationCircuit:
             elapsed_time = self.valve.open(duration, stop_event)
             return elapsed_time
         except Exception as e:
-            # propagate the error to the caller - to indicate that the irrigation failed
             # NOTE: elapsed time won't be set in this case. This should be solved in future (the circuit state manager does not have a way to handle this yet)
             self.state = IrrigationState.ERROR
             self.logger.error(f"Error during irrigation: {e}")
