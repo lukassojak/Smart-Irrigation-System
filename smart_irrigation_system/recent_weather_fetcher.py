@@ -5,12 +5,23 @@ from smart_irrigation_system.global_config import GlobalConfig
 from smart_irrigation_system.global_conditions import GlobalConditions
 from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.secrets import get_secret
+from smart_irrigation_system.ecowitt_api import (
+    temperature_api_call,
+    hide_confidential_params,
+    save_json
+)
+from smart_irrigation_system.weather_data_processor import (
+    calculate_avg_temperature,
+    calculate_total_rainfall,
+    calculate_avg_daily_sunlight
+)
 
-TEMPERATURE_TIME_RESOLUTION = 30 # in minutes, supported values: 5, 30, 240, 1440
-MAX_DATA_AGE = 30 * 60 # 30 minutes in seconds; maximum age of data to consider valid, for older data a new API call is made
-
-CELSIUS = "1"
-FAHRENHEIT = "2"
+from smart_irrigation_system.weather_config import (
+    TEMPERATURE_TIME_RESOLUTION,
+    MAX_DATA_AGE,
+    CELSIUS,
+    FAHRENHEIT,
+)
 
 class RecentWeatherFetcher:
     def __init__(self, global_config: GlobalConfig, max_interval_days: int):
@@ -99,32 +110,25 @@ class RecentWeatherFetcher:
     def get_avg_temperature(self, interval_days: int) -> float:
         """Fetches the average temperature over the specified interval."""
         if self.data_expired() or not self.cached_temperatures:
-            try:
-                self.cache_temperatures()
-            except Exception as e:
-                self.logger.error("Error fetching temperatures, temperature won't be used in calculations.")
-                return self.global_config.standard_conditions.temperature_celsius
+            self.cache_temperatures()
         
-        if not self.cached_temperatures:
-            self.logger.error("No temperatures available in cache, using standard conditions.")
-            return self.global_config.standard_conditions.temperature_celsius
+        relevant_temperatures = self.cached_temperatures[-(interval_days * 24 * 60 // TEMPERATURE_TIME_RESOLUTION):]
         
-        relevant_temperatures = self.cached_temperatures[-(interval_days * 24 * 60 // TEMPERATURE_TIME_RESOLUTION):]    
         if not relevant_temperatures:
-            self.logger.error("No relevant temperatures available for the specified interval, using standard conditions.")
+            self.logger.warning("No cached temperatures available for the specified interval, using standard conditions.")
             return self.global_config.standard_conditions.temperature_celsius
-        avg_temperature = sum(relevant_temperatures) / len(relevant_temperatures)
-        return avg_temperature
+        
+        return calculate_avg_temperature(relevant_temperatures)
     
     def get_total_rainfall(self, interval_days: int) -> float:
         """Fetches the total rainfall over the specified interval."""
-        # Placeholder for actual implementation
-        return 5.0
+        rainfall_data = [5.0] * interval_days # Example placeholder data, replace with actual API call
+        return calculate_total_rainfall(rainfall_data)
     
     def get_avg_daily_sunlight_hours(self, interval_days: int) -> float:
         """Fetches the average daily sunlight hours over the specified interval."""
-        # Placeholder for actual implementation
-        return 10.0
+        sunlight_data = [10.0] * interval_days
+        return calculate_avg_daily_sunlight(sunlight_data, interval_days)
 
     def cache_temperatures(self) -> None:
         """Fetches the temperatures for the last <max_interval_days> days and caches them."""
@@ -156,29 +160,16 @@ class RecentWeatherFetcher:
             "temp_unitid": CELSIUS,
         }
 
-        safe_params = self.hide_confidential_params(params, ["api_key", "application_key", "mac"])
-
+        safe_params = hide_confidential_params(params, ["api_key", "application_key", "mac"])
         url = self.global_config.weather_api.history_url
         self.logger.debug(f"Performing API call to {url} with params: {safe_params}")
-        response = requests.get(url, params=params)
-
-        # Status code -1 indicates too frequent API calls in a short time - wait and retry
-
-        if response.status_code != 200:
-            self.logger.error(f"Failed to fetch temperature data: {response.status_code} - {response.text}")
-            raise Exception("Failed to fetch temperature data from API.")
-        data = response.json()
-        self.save_json(data)  # Save the raw data for debugging purposes
+        data = temperature_api_call(url, params)
+        save_json(data)  # Save the raw data for debugging purposes
         try:
-            temperatures_dict = data.get("data").get("outdoor").get("temperature").get("list", [])
+            return data.get("data").get("outdoor").get("temperature").get("list", [])
         except KeyError as e:
-            self.logger.error(f"Unexpected response format: {data}")
             raise ValueError("Unexpected response format from temperature API.")
-
-        self.logger.debug(f"Successfully fetched temperature data.")
-        return temperatures_dict
         
-
     
     def get_cycle_type(self) -> str:
         """Returns the data resolution in string format (e.g., '30min')."""
@@ -193,18 +184,3 @@ class RecentWeatherFetcher:
         else:
             raise ValueError("Unsupported TEMPERATURE_TIME_RESOLUTION value.")
         
-    
-    def hide_confidential_params(self, params: dict, keys_to_hide: list[str]) -> dict:
-        """Returns a copy of the params dictionary with specified keys hidden."""
-        safe_params = params.copy()
-        for key in keys_to_hide:
-            if key in safe_params:
-                safe_params[key] = "***"
-        return safe_params
-    
-
-    def save_json(self, data):
-        filename = f"recent_weather_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=4)
-        self.logger.debug(f"Saved JSON data to {filename}")
