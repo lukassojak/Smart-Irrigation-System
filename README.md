@@ -132,11 +132,12 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
   - Napájení
   - Dosah WiFi sítě / Ethernetové připojení
   - Hardwarové I/O pro uzel (volitelně)
-  - Raspberry Pi 4 (centrální server)
+  - Raspberry Pi 4+ (centrální server)
 
 - **Software**
-  - Python 3
-  - Používané knihovny: `json`, `time`, `datetime`, `threading`, `os`, `logging`, `luma.oled`
+  - Python 3.10+ (CPython) s podporou standardních knihoven
+  - RPi.GPIO (volitelně, používá se na Raspberry Pi; fallback implementace je dostupná pro testování)
+  - luma.core, luma.oled, pillow, requests, smbus2, cbor2
 
 ---
 

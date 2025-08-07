@@ -49,7 +49,7 @@ CONFIG_ZONES_PATH =  "./config/zones_config.json"
 ZONE_STATE_PATH = "./data/zones_state.json"
 
 # Constants for irrigation process
-MAX_WAIT_TIME = 60  # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
+MAX_WAIT_TIME = 60 * 30    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
 WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
 
 
