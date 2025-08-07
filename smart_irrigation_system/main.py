@@ -49,7 +49,7 @@ def main():
     try:
         controller = IrrigationController()
     except Exception as e:
-        logger.error(f"Failed to initialize IrrigationController.")
+        logger.error(f"Failed to initialize IrrigationController: {e}")
         return
 
     display = DisplayController(controller)

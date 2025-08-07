@@ -18,7 +18,7 @@
         "enabled": true,
         "sequential": true,
         "scheduled_hour": 17,
-        "scheduled_minute": 6,
+        "scheduled_minute": 42,
         "max_flow_monitoring": true,
         "environment": "production"
     },

@@ -30,7 +30,7 @@ class RecentWeatherFetcher:
         self._use_standard_conditions: bool = False
 
         # Check if the API is enabled
-        if not self.global_config.weather_api.enabled:
+        if not self.global_config.weather_api.api_enabled:
             self.logger.warning("Weather API is not enabled. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
             self._use_standard_conditions = True
 

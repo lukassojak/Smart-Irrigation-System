@@ -86,6 +86,7 @@ class IrrigationController:
         """Loads the globalconfiguration."""
         try:
             self.global_config: GlobalConfig = load_global_config(self.global_config_path)
+            self.logger.debug("Global configuration loaded successfully.")
         except FileNotFoundError as e:
             self.logger.error(f"Global configuration file not found: {e}. Exiting initialization.")
             raise e
@@ -108,8 +109,9 @@ class IrrigationController:
 
     def _initialize_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
+        self.logger.debug("Initializing global conditions provider...")
         max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
-        use_recent_weather_fetcher = self.global_config.environment == "production" or self.global_config.weather_api.api_enabled
+        use_recent_weather_fetcher = self.global_config.automation.environment == "production" or self.global_config.weather_api.api_enabled
         if use_recent_weather_fetcher:
             fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
             self.logger.info("Using RecentWeatherFetcher for global conditions.")
