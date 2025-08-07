@@ -17,10 +17,10 @@
     "automation": {
         "enabled": true,
         "sequential": true,
-        "scheduled_hour": 13,
-        "scheduled_minute": 8,
+        "scheduled_hour": 17,
+        "scheduled_minute": 6,
         "max_flow_monitoring": true,
-        "environment": "development"
+        "environment": "production"
     },
     "logging": {
         "enabled": true,

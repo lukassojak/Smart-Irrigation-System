@@ -109,14 +109,11 @@ class IrrigationController:
     def _initialize_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
         max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
-        if self.global_config.weather_api.api_enabled:
-            try:
-                fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
-                self.logger.info("Using RecentWeatherFetcher for global conditions.")
-                return fetcher
-            except ValueError as e:
-                self.logger.error(f"Failed to initialize RecentWeatherFetcher: {e}.")
-                # on error, fallback to WeatherSimulator (if environment = 'production' this should not happen)
+        use_recent_weather_fetcher = self.global_config.environment == "production" or self.global_config.weather_api.api_enabled
+        if use_recent_weather_fetcher:
+            fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
+            self.logger.info("Using RecentWeatherFetcher for global conditions.")
+            return fetcher
 
         self.logger.info("Using WeatherSimulator for global conditions.")
         return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)

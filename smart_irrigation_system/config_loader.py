@@ -16,14 +16,13 @@ def load_global_config(filepath: str) -> GlobalConfig:
         data = json.load(f)
 
     _is_valid_global_config(data)       # if invalid, raises ValueError
-    # Add weather_api secrets to the dictionary
     try:
         api_key, application_key, device_mac = get_secret("api_key"), get_secret("application_key"), get_secret("device_mac")
         api_enabled = True
     except Exception as e:
         if data.get("automation").get("environment") == "production":
             logger.error("Weather API keys are required in production environment.")
-            logger.info("empty file 'config_secrets.json' created, please fill it with your API keys.")
+            logger.info("Empty file 'config_secrets.json' created, please fill it with your API keys.")
             raise ValueError("Weather API keys are required in production environment") from e
         else:
             # In non-production environments, we can use dummy values
@@ -225,6 +224,8 @@ def _is_valid_global_config(data: dict):
         raise ValueError("automation.scheduled_minute must be an int")
     if not isinstance(auto.get("max_flow_monitoring"), bool):
         raise ValueError("automation.max_flow_monitoring must be a boolean")
+    if not isinstance(auto.get("environment"), str):
+        raise ValueError("automation.environment must be a string")
     if not isinstance(auto.get("environment"), str):
         raise ValueError("automation.environment must be a string")
 

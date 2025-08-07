@@ -23,21 +23,35 @@ from smart_irrigation_system.weather_config import (
 
 class RecentWeatherFetcher:
     def __init__(self, global_config: GlobalConfig, max_interval_days: int):
-        if not global_config.weather_api.api_enabled:
-            # If the weather API is not enabled, do not initialize the fetcher
-            raise ValueError("Weather API is not enabled in the global configuration.")
-
         self.logger = get_logger("RecentWeatherFetcher")
         self.global_config: GlobalConfig = global_config
         self.max_interval_days: int = max_interval_days     # Maximum interval in days between irrigation events
         self.current_conditions: GlobalConditions = None
+        self._use_standard_conditions: bool = False
+
+        # Check if the API is enabled
+        if not self.global_config.weather_api.enabled:
+            self.logger.warning("Weather API is not enabled. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
+            self._use_standard_conditions = True
 
         # Validate API secrets
         if not test_api_secrets_valid(self, global_config):
-            raise ValueError("Check API secrets in the global configuration")
+            self.logger.error("Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
+            self._use_standard_conditions = True
+        else:
+            self.logger.info("API secrets validated successfully.")
 
-        self.logger.info("RecentWeatherFetcher initialized with weather API enabled.")
+        # Initialize current conditions with standard conditions for fallback
+        self._standard_conditions = GlobalConditions(
+                temperature=self.global_config.standard_conditions.temperature_celsius,
+                rain_mm=self.global_config.standard_conditions.rain_mm,
+                sunlight_hours=self.global_config.standard_conditions.sunlight_hours,
+                timestamp=datetime.now()
+            )
 
+        self.logger.info("RecentWeatherFetcher initialized.")
+
+        # Cache for temperatures
         self._last_cache_update: datetime = datetime.min
         self._cached_temperatures: list[float] = []
 
@@ -68,6 +82,10 @@ class RecentWeatherFetcher:
 
     def get_current_conditions(self) -> GlobalConditions:
         """Returns the current weather conditions, updating them if necessary."""
+        if self._use_standard_conditions:
+            self.logger.error("Cannot fetch current conditions. Using standard conditions as fallback.")
+            return self._standard_conditions
+    
         current_conditions = self.current_conditions
         if self.current_conditions is None or self._data_expired():
             self.logger.debug("Current conditions are None or data expired, updating cached temperatures.")
@@ -78,20 +96,18 @@ class RecentWeatherFetcher:
 
     def update_current_conditions(self) -> GlobalConditions:
         """Updates the current weather conditions by fetching data from the API."""
-        # For now, we will fetch the average temperature for the last 24 hours
+        if self._use_standard_conditions:
+            self.logger.error("Cannot update current conditions. Using standard conditions as fallback.")
+            return self._standard_conditions
+
+        # For now, fetch the average temperature for the last 24 hours
         if self._data_expired() or not self.cached_temperatures:
             try:
                 self._cache_temperatures()
             except Exception as e:
                 self.logger.error(f"Error fetching temperatures: {e}")
                 self.logger.warning("Using standard conditions as fallback.")
-                standard_conditions_fallback = GlobalConditions(
-                    temperature=self.global_config.standard_conditions.temperature_celsius,
-                    rain_mm=self.global_config.standard_conditions.rain_mm,
-                    sunlight_hours=self.global_config.standard_conditions.sunlight_hours,
-                    timestamp=datetime.now()
-                )
-                return standard_conditions_fallback
+                return self._standard_conditions
         
         avg_temperature = self._get_avg_temperature(interval_days=1)
         total_rainfall = self._get_total_rainfall(interval_days=1)

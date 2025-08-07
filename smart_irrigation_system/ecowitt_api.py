@@ -105,7 +105,6 @@ def test_api_secrets_valid(fetcher, global_config) -> bool:
         try:
             data = response.json()
             if data.get("code") == 0:
-                fetcher.logger.info("API secrets validated successfully.")
                 return True
             elif data.get("code") == -1:
                 fetcher.logger.error("Cannot validate API secrets: Too frequent requests.")
