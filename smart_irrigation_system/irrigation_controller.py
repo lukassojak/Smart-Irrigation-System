@@ -114,10 +114,10 @@ class IrrigationController:
         use_recent_weather_fetcher = self.global_config.automation.environment == "production" or self.global_config.weather_api.api_enabled
         if use_recent_weather_fetcher:
             fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
-            self.logger.info("Using RecentWeatherFetcher for global conditions.")
+            self.logger.info("Global conditions provider initialized as RecentWeatherFetcher.")
             return fetcher
 
-        self.logger.info("Using WeatherSimulator for global conditions.")
+        self.logger.info("Global conditions provider initialized as WeatherSimulator with seed %d.", WEATHER_SIMULATOR_SEED)
         return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
     
     def _initialize_threading(self):

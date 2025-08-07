@@ -1,26 +1,26 @@
 {
-    "last_updated": "2025-08-06T14:17:29",
+    "last_updated": "2025-08-07T18:50:49",
     "circuits": [
         {
             "id": "1",
             "irrigation_state": "shutdown",
-            "last_irrigation": "2025-07-06T14:15:10",
+            "last_irrigation": "2025-08-07T18:48:12",
             "last_result": "success",
-            "last_duration": 90
+            "last_duration": 82
         },
         {
             "id": "2",
             "irrigation_state": "shutdown",
-            "last_irrigation": "2025-07-06T14:16:53",
+            "last_irrigation": "2025-08-07T18:49:37",
             "last_result": "success",
-            "last_duration": 100
+            "last_duration": 84
         },
         {
             "id": "3",
             "irrigation_state": "shutdown",
-            "last_irrigation": "2025-07-06T14:17:29",
+            "last_irrigation": "2025-08-07T18:50:49",
             "last_result": "success",
-            "last_duration": 0
+            "last_duration": 70
         }
     ]
 }

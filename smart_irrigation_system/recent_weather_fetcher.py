@@ -25,7 +25,7 @@ class RecentWeatherFetcher:
     def __init__(self, global_config: GlobalConfig, max_interval_days: int):
         self.logger = get_logger("RecentWeatherFetcher")
         self.global_config: GlobalConfig = global_config
-        self.max_interval_days: int = max_interval_days     # Maximum interval in days between irrigation events
+        self.max_interval_days: int = max_interval_days     # Maximum interval in days between irrigation events in config
         self.current_conditions: GlobalConditions = None
         self._use_standard_conditions: bool = False
 
