@@ -1,0 +1,84 @@
+2025-08-08 08:49:53,807 | smart_irrigation_system.main | INFO | Initializing Smart Irrigation System...
+2025-08-08 08:49:53,813 | IrrigationController | DEBUG | Global configuration loaded successfully.
+2025-08-08 08:49:53,815 | RelayValve-1 | INFO | RelayValve initialized on pin 1
+2025-08-08 08:49:53,815 | IrrigationCircuit-1 | INFO | Irrigation Circuit 1 initialized with state IDLE.
+2025-08-08 08:49:53,815 | RelayValve-2 | INFO | RelayValve initialized on pin 2
+2025-08-08 08:49:53,815 | IrrigationCircuit-2 | INFO | Irrigation Circuit 2 initialized with state IDLE.
+2025-08-08 08:49:53,816 | RelayValve-3 | INFO | RelayValve initialized on pin 3
+2025-08-08 08:49:53,816 | IrrigationCircuit-3 | INFO | Irrigation Circuit 3 initialized with state IDLE.
+2025-08-08 08:49:53,816 | IrrigationController | DEBUG | Zones configuration loaded successfully with 3 circuits.
+2025-08-08 08:49:53,817 | IrrigationController | DEBUG | Initializing global conditions provider...
+2025-08-08 08:49:53,817 | RecentWeatherFetcher | DEBUG | Testing API secrets validity with URL: https://api.ecowitt.net/api/v3/device/history
+2025-08-08 08:49:54,562 | RecentWeatherFetcher | ERROR | Invalid API secrets: Invalid application key.
+2025-08-08 08:49:54,562 | RecentWeatherFetcher | ERROR | Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.
+2025-08-08 08:49:54,562 | RecentWeatherFetcher | INFO | RecentWeatherFetcher initialized.
+2025-08-08 08:49:54,563 | IrrigationController | INFO | Global conditions provider initialized as RecentWeatherFetcher.
+2025-08-08 08:49:54,567 | CircuitStateManager | INFO | CircuitStateManager initialized
+2025-08-08 08:49:54,568 | IrrigationController | INFO | Threading is supported in this environment.
+2025-08-08 08:49:54,568 | IrrigationController | INFO | Environment: development
+2025-08-08 08:49:54,568 | IrrigationController | INFO | IrrigationController initialized with 3 circuits.
+2025-08-08 08:49:54,583 | Button-17 | WARNING | Button initialized, but GPIO support is not available. Using dummy GPIO.
+2025-08-08 08:49:54,583 | smart_irrigation_system.main | INFO | Starting Smart Irrigation System on PC environment.
+2025-08-08 08:49:54,584 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:49, 
+2025-08-08 08:49:54,584 | smart_irrigation_system.main | DEBUG | Next irrigation in 2 minutes.
+2025-08-08 08:50:23,336 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:50, 
+2025-08-08 08:50:23,337 | smart_irrigation_system.main | DEBUG | Current time 08:50 matches irrigation time 08:51 within tolerance of 1 minutes.
+2025-08-08 08:50:23,339 | IrrigationController | INFO | Starting automatic irrigation process...
+2025-08-08 08:50:23,339 | RecentWeatherFetcher | ERROR | Cannot update current conditions. Using standard conditions as fallback.
+2025-08-08 08:50:23,339 | IrrigationController | INFO | Global conditions updated: No current weather conditions available.
+2025-08-08 08:50:23,340 | IrrigationController | INFO | Performing sequential irrigation...
+2025-08-08 08:50:23,343 | IrrigationController | INFO | Starting irrigation for circuit 1...
+2025-08-08 08:50:23,343 | RecentWeatherFetcher | ERROR | Cannot fetch current conditions. Using standard conditions as fallback.
+2025-08-08 08:50:23,343 | IrrigationCircuit-1 | DEBUG | Base target water amount is 30.0 liters (even area mode).
+2025-08-08 08:50:23,343 | IrrigationCircuit-1 | DEBUG | Adjusted water amount is 30.0 liters. Total adjustment is 0.0.
+2025-08-08 08:50:23,344 | IrrigationCircuit-1 | INFO | Starting irrigation for 129 seconds.
+2025-08-08 08:50:23,344 | IrrigationCircuit-1 | DEBUG | State changed to IRRIGATING.
+2025-08-08 08:50:23,344 | RelayValve-1 | DEBUG | Valve will be opened for 129 seconds.
+2025-08-08 08:50:23,345 | RelayValve-1 | DEBUG | RelayValve state changed to OPEN on pin 1
+2025-08-08 08:52:32,442 | RelayValve-1 | DEBUG | Closing valve after 129 seconds as planned
+2025-08-08 08:52:32,443 | RelayValve-1 | DEBUG | RelayValve state changed to CLOSED on pin 1
+2025-08-08 08:52:32,443 | IrrigationCircuit-1 | DEBUG | State changed to FINISHED.
+2025-08-08 08:52:32,444 | IrrigationCircuit-1 | INFO | Irrigation finished successfully.
+2025-08-08 08:52:32,446 | IrrigationCircuit-1 | DEBUG | State changed to IDLE.
+2025-08-08 08:52:32,458 | IrrigationController | INFO | Starting irrigation for circuit 2...
+2025-08-08 08:52:32,459 | RecentWeatherFetcher | ERROR | Cannot fetch current conditions. Using standard conditions as fallback.
+2025-08-08 08:52:32,459 | IrrigationCircuit-2 | DEBUG | Base target water amount is 6.0 liters (even area mode).
+2025-08-08 08:52:32,460 | IrrigationCircuit-2 | DEBUG | Adjusted water amount is 6.0 liters. Total adjustment is 0.0.
+2025-08-08 08:52:32,460 | IrrigationCircuit-2 | INFO | Starting irrigation for 270 seconds.
+2025-08-08 08:52:32,460 | IrrigationCircuit-2 | DEBUG | State changed to IRRIGATING.
+2025-08-08 08:52:32,460 | RelayValve-2 | DEBUG | Valve will be opened for 270 seconds.
+2025-08-08 08:52:32,461 | RelayValve-2 | DEBUG | RelayValve state changed to OPEN on pin 2
+2025-08-08 08:57:02,535 | RelayValve-2 | DEBUG | Closing valve after 270 seconds as planned
+2025-08-08 08:57:02,536 | RelayValve-2 | DEBUG | RelayValve state changed to CLOSED on pin 2
+2025-08-08 08:57:02,537 | IrrigationCircuit-2 | DEBUG | State changed to FINISHED.
+2025-08-08 08:57:02,538 | IrrigationCircuit-2 | INFO | Irrigation finished successfully.
+2025-08-08 08:57:02,540 | IrrigationCircuit-2 | DEBUG | State changed to IDLE.
+2025-08-08 08:57:02,541 | IrrigationCircuit-3 | DEBUG | Interval days have not passed since the last irrigation. Last irrigation time: 2025-08-08 08:46:04.
+2025-08-08 08:57:02,541 | IrrigationController | INFO | Circuit 3 does not need irrigation at the moment.
+2025-08-08 08:57:02,555 | IrrigationController | INFO | Sequential irrigation process completed successfully.
+2025-08-08 08:57:02,555 | IrrigationController | INFO | Automatic irrigation process completed successfully.
+2025-08-08 08:58:01,034 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:58, 
+2025-08-08 08:58:01,035 | smart_irrigation_system.main | DEBUG | Next irrigation in 1433 minutes.
+2025-08-08 08:58:31,073 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:58, 
+2025-08-08 08:58:31,075 | smart_irrigation_system.main | DEBUG | Next irrigation in 1433 minutes.
+2025-08-08 08:58:59,829 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:58, 
+2025-08-08 08:58:59,830 | smart_irrigation_system.main | DEBUG | Next irrigation in 1433 minutes.
+2025-08-08 08:59:28,501 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:59, 
+2025-08-08 08:59:28,502 | smart_irrigation_system.main | DEBUG | Next irrigation in 1432 minutes.
+2025-08-08 08:59:57,180 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 08:59, 
+2025-08-08 08:59:57,181 | smart_irrigation_system.main | DEBUG | Next irrigation in 1432 minutes.
+2025-08-08 09:00:25,912 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 09:00, 
+2025-08-08 09:00:25,913 | smart_irrigation_system.main | DEBUG | Next irrigation in 1431 minutes.
+2025-08-08 09:00:54,625 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 09:00, 
+2025-08-08 09:00:54,626 | smart_irrigation_system.main | DEBUG | Next irrigation in 1431 minutes.
+2025-08-08 09:01:23,309 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 09:01, 
+2025-08-08 09:01:23,310 | smart_irrigation_system.main | DEBUG | Next irrigation in 1430 minutes.
+2025-08-08 09:01:51,996 | smart_irrigation_system.main | DEBUG | Evaluating irrigation time. Current time: 09:01, 
+2025-08-08 09:01:51,996 | smart_irrigation_system.main | DEBUG | Next irrigation in 1430 minutes.
+2025-08-08 09:02:01,041 | smart_irrigation_system.main | INFO | Keyboard interrupt received. Exiting...
+2025-08-08 09:02:01,042 | IrrigationController | INFO | Cleaning up resources...
+2025-08-08 09:02:01,042 | IrrigationController | INFO | Stopping all irrigation processes...
+2025-08-08 09:02:01,043 | IrrigationController | INFO | Stopping circuits done.
+2025-08-08 09:02:01,044 | smart_irrigation_system.main | INFO | Smart Irrigation System stopped.
+2025-08-08 09:02:01,045 | smart_irrigation_system.main | DEBUG | Current memory usage: 852.49 KB; Peak: 948.29 KB
+2025-08-08 09:02:01,049 | CircuitStateManager | DEBUG | All circuits set to 'shutdown' state during clean exit.
