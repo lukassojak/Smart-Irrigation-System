@@ -8,7 +8,7 @@ TEMPERATURE_TIME_RESOLUTION = 30
 # Maximum age of cached weather data in seconds after which it is considered expired.
 # Recommended to set this to a value that is at least the same as the average irrigation time for the whole irrigation node.
 # Default value is 30 minutes. (30 * 60 seconds)
-MAX_DATA_AGE = 90
+MAX_DATA_AGE = 30 * 60
 
 # Temperature unit identifiers for API calls.
 CELSIUS = "1"

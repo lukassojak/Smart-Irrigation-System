@@ -175,6 +175,13 @@ cython_debug/
 .vscode/
 
 
+
+# Temporarly ignore config files and state files
+config_global.json
+zones_config.json
+zones_state.json
+
+
 # Weather API output (test files)
 recent_weather_data_*.json
 

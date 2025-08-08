@@ -54,7 +54,7 @@ def main():
 
     display = DisplayController(controller)
     pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
-    logger.info("Starting Smart Irrigation System on %s environment", ENVIRONMENT.name)
+    logger.info("Starting Smart Irrigation System on %s environment.", ENVIRONMENT.name)
 
     daily_irrigation_time: time.struct_time = controller.get_daily_irrigation_time()
     irrigation_hour = daily_irrigation_time.tm_hour

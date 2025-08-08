@@ -88,7 +88,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 ## Struktura souborů a konfigurace
 
-- `config_global.json`  
+- [`config_global.json`](./config/config_global.json)  
   Obsahuje globální nastavení systému, včetně:
   - Čas denního automatického spuštění
   - Povolení/zakázání automatického režimu
@@ -96,7 +96,7 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
   - Obecné konstanty
   - Další informace v [`config_explained.md`](./config/config_explained.md)
 
-- `zones_config.json`  
+- [`zones_config.json`](./config/zones_config.json)
   Konfigurace všech zavlažovacích zón. Pro každou zónu:
   - Název a ID
   - Výstupní pin (GPIO)
@@ -111,7 +111,8 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
   - Aktuální aktivita
 
 - `config_secrets.json`
-  Používá se pouze ve vývojovém prostředí. Obsahuje přístupové údaje pro komunikaci se službami třetích stran. Standardně v .gitignore. V případě, že soubor neexistuje, systém soubor vytvoří, vyzve uživatele k vyplnění přístupových údajů a v daném běhu pokračuje s náhodně generovanými daty pro testování.
+  Používá se pouze ve vývojovém prostředí. Systém jej automaticky vytvoří (při spuštění s `api_enabled = true` v [`config_global.json`](./config/config_global.json)), pokud neexistuje.
+  Obsahuje přístupové údaje pro komunikaci se službami třetích stran. Standardně v .gitignore. V případě, že soubor neexistuje, systém soubor vytvoří, vyzve uživatele k vyplnění přístupových údajů a v daném běhu pokračuje s náhodně generovanými daty pro testování.
   - API klíč pro přístup k datům meteostanice
   - Aplikační klíč pro ověření v rámci služby meteostanice
   - MAC adresa konkrétní meteostanice, ze které jsou data získávána.
@@ -120,8 +121,19 @@ Systém MVP je navržen jako rozšiřitelný základ pro distribuovaný systém 
 
 
 - `irrigation_log.txt`  
-  Běžný víceúrovňový log aktivit, chyb a hlášení pro ladění i dohled.
+  íceúrovňový log aktivit, chyb a hlášení. V současné fázi vývoje je logování **verbose** (úroveň DEBUG) pro potřeby ladění a testování.
 
+---
+
+### Ukázkové logy běhů systému
+
+Ve složce [`examples/log_samples/`](examples/log_samples/) jsou k dispozici tři ukázkové výpisy logů z běhů systému:
+
+| Soubor | Scénář | Popis |
+|--------|--------|-------|
+| [`run_success_sequential.log`](examples/log_samples/run_success_sequential.log) | Úspěšný běh – sekvenční zavlažování | Ventily se spouštějí postupně podle konfigurace jednotlivých okruhů. |
+| [`run_success_concurrent.log`](examples/log_samples/run_success_concurrent.log) | Úspěšný běh – souběžné zavlažování | Více okruhů běží současně díky paralelnímu zpracování (multi-threading). |
+| [`run_failure_api_validation.log`](examples/log_samples/run_failure_api_validation.log) | Chybový běh – selhání validace API dat | Simulace neplatných API klíčů, systém přechází do režimu s defaultními (standardními) podmínkami a dokončuje zavlažování. |
 ---
 
 ## Požadavky

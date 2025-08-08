@@ -80,6 +80,7 @@ class IrrigationController:
         # Set initial controller state
         self.controller_state = ControllerState.IDLE  
         
+        self.logger.info("Environment: %s", self.global_config.automation.environment)
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
 
     def _load_global_config(self):
