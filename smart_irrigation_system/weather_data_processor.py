@@ -6,9 +6,17 @@ def calculate_avg_temperature(temperatures: list[float]) -> float:
         raise ValueError("No temperatures available to calculate average.")
     return sum(temperatures) / len(temperatures)
 
-def calculate_total_rainfall(rainfall_data: list[float]) -> float:
+def calculate_total_rainfall(rainfall_data: dict[float]) -> float:
     """Calculates the total rainfall from a list of rainfall data."""
-    return sum(rainfall_data)
+    if not rainfall_data:
+        raise ValueError("No rainfall data available to calculate total.")
+    first_value = rainfall_data[0]
+    last_value = rainfall_data[-1]
+    if first_value > last_value:
+        raise ValueError("Rainfall data is not in chronological order.")
+    return last_value - first_value
+
+    
 
 def calculate_avg_daily_sunlight(sunlight_data: list[float], interval_days: int) -> float:
     """Calculates the average daily sunlight hours."""

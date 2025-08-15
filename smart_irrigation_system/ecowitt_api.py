@@ -2,11 +2,16 @@ from datetime import datetime, timedelta
 import requests
 import json
 import os
+import copy
 
 from smart_irrigation_system.weather_config import (
     TEMPERATURE_TIME_RESOLUTION,
+    RAINFALL_TIME_RESOLUTION,
     MAX_DATA_AGE,
-    CELSIUS
+    CELSIUS,
+    MM,
+    CycleType,
+    ApiCallType
 )
 
 def perform_api_call(url: str, params: dict) -> dict:
@@ -29,7 +34,7 @@ def temperature_api_call(fetcher, start_date: datetime, end_date: datetime) -> d
         "mac": fetcher.global_config.weather_api.device_mac,
         "start_date": start_date.strftime("%Y-%m-%d %H:%M:%S"),
         "end_date": end_date.strftime("%Y-%m-%d %H:%M:%S"),
-        "cycle_type": get_cycle_type(),
+        "cycle_type": get_cycle_type(ApiCallType.TEMPERATURE),
         "call_back": "outdoor.temperature",
         "temp_unitid": CELSIUS,
     }
@@ -38,12 +43,110 @@ def temperature_api_call(fetcher, start_date: datetime, end_date: datetime) -> d
     url = fetcher.global_config.weather_api.history_url
     fetcher.logger.debug(f"Performing API call to {url} with params: {safe_params}")
     data = perform_api_call(url, params)
-    save_json(data=data)  # Save the raw data for debugging purposes
+
+    # Make a copy of the data and replace epoch timestamps with human-readable dates for debugging
+    data_to_save = copy.deepcopy(data)  # Use deepcopy to avoid modifying the original data
+    try:
+        temperature_list = data_to_save.get("data", {}).get("outdoor", {}).get("temperature", {}).get("list", {})
+        if isinstance(temperature_list, dict):  # Ensure "list" is a dictionary
+            data_to_save["data"]["outdoor"]["temperature"]["list"] = {
+                datetime.fromtimestamp(int(epoch)).strftime("%Y-%m-%d %H:%M:%S"): value
+                for epoch, value in temperature_list.items()
+            }
+        else:
+            fetcher.logger.error(f"Unexpected data structure for temperature list: {temperature_list}")
+    except Exception as e:
+        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+    save_json(data=data_to_save, filename_prefix="recent_temperature_data")
+
     try:
         return data.get("data").get("outdoor").get("temperature").get("list", [])
     except KeyError as e:
         raise ValueError("Unexpected response format from temperature API.")
 
+
+def rainfall_api_call_history(fetcher, start_date: datetime, end_date: datetime) -> dict[str, str]:
+    """Performs an API call to fetch rainfall data."""
+    params = {
+        "application_key": fetcher.global_config.weather_api.application_key,
+        "api_key": fetcher.global_config.weather_api.api_key,
+        "mac": fetcher.global_config.weather_api.device_mac,
+        "start_date": start_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_date": end_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "cycle_type": get_cycle_type(ApiCallType.RAINFALL),
+        "call_back": "rainfall.yearly",
+        "rainfall_unitid": MM,
+    }
+
+    safe_params = hide_confidential_params(params, ["api_key", "application_key", "mac"])
+    url = fetcher.global_config.weather_api.history_url
+    fetcher.logger.debug(f"Performing API call to {url} with params: {safe_params}")
+    data = perform_api_call(url, params)
+
+    # Make a copy of the data and replace epoch timestamps with human-readable dates for debugging
+    data_to_save = copy.deepcopy(data)  # Use deepcopy to avoid modifying the original data
+    try:
+        rainfall_list = data_to_save.get("data", {}).get("rainfall", {}).get("yearly", {}).get("list", {})
+        if isinstance(rainfall_list, dict):  # Ensure "list" is a dictionary
+            data_to_save["data"]["rainfall"]["yearly"]["list"] = {
+                datetime.fromtimestamp(int(epoch)).strftime("%Y-%m-%d %H:%M:%S"): value
+                for epoch, value in rainfall_list.items()
+            }
+        else:
+            fetcher.logger.error(f"Unexpected data structure for rainfall list: {rainfall_list}")
+    except Exception as e:
+        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+    save_json(data=data_to_save, filename_prefix="recent_rainfall_data")
+
+    try:
+        return data.get("data").get("rainfall").get("yearly", {}).get("list", [])
+    except KeyError as e:
+        raise ValueError("Unexpected response format from rainfall API.")
+    
+def all_api_call_real_time(fetcher) -> dict[str, list]:
+    """Performs an API call to fetch real-time data for temperature and rainfall."""
+    params = {
+        "application_key": fetcher.global_config.weather_api.application_key,
+        "api_key": fetcher.global_config.weather_api.api_key,
+        "mac": fetcher.global_config.weather_api.device_mac,
+        "call_back": "outdoor.temperature,rainfall.yearly",
+        "temp_unitid": CELSIUS,
+        "rainfall_unitid": MM,
+    }
+
+    safe_params = hide_confidential_params(params, ["api_key", "application_key", "mac"])
+    url = fetcher.global_config.weather_api.realtime_url
+    fetcher.logger.debug(f"Performing API call to {url} with params: {safe_params}")
+    data = perform_api_call(url, params)
+
+    # Make a copy of the data and replace epoch timestamps with human-readable dates for debugging
+    data_to_save = copy.deepcopy(data)  # Use deepcopy to avoid modifying the original data
+    try:
+        # Convert the "time" fields to human-readable format
+        data_to_save["data"]["outdoor"]["temperature"]["time"] = datetime.fromtimestamp(
+            int(data["data"]["outdoor"]["temperature"]["time"])
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        data_to_save["data"]["rainfall"]["yearly"]["time"] = datetime.fromtimestamp(
+            int(data["data"]["rainfall"]["yearly"]["time"])
+        ).strftime("%Y-%m-%d %H:%M:%S")
+    except KeyError as e:
+        fetcher.logger.error(f"Error converting timestamps to human-readable format: {e}")
+    except ValueError as e:
+        fetcher.logger.error(f"Invalid timestamp value: {e}")
+    except Exception as e:
+        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+    save_json(data=data_to_save, filename_prefix="real_time_weather_data")
+
+
+    try:
+        temperature_data = data.get("data").get("outdoor", {}).get("temperature", {}).get("value", None)
+        rainfall_data = data.get("data").get("rainfall", {}).get("yearly", {}).get("value", None)
+        return {
+            "temperature": temperature_data,
+            "rainfall": rainfall_data
+        }
+    except KeyError as e:
+        raise ValueError("Unexpected response format from real-time API.")
 
 
 
@@ -64,24 +167,21 @@ def save_json(data: dict, filename_prefix: str = "recent_weather_data", folder: 
     # Construct the full file path
     filename = f"{filename_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     file_path = os.path.join(folder, filename)
-    
+
     # Save the JSON data to the file
     with open(file_path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def get_cycle_type() -> str:
-    """Returns the data resolution in string format (e.g., '30min') for API parameters."""
-    if TEMPERATURE_TIME_RESOLUTION == 5:
-        return "5min"
-    elif TEMPERATURE_TIME_RESOLUTION == 30:
-        return "30min"
-    elif TEMPERATURE_TIME_RESOLUTION == 240:
-        return "4hour"
-    elif TEMPERATURE_TIME_RESOLUTION == 1440:
-        return "1day"
+def get_cycle_type(api_call_type: ApiCallType) -> str:
+    """Returns the cycle type based on the configured time resolution."""
+    if api_call_type == ApiCallType.TEMPERATURE:
+        return CycleType.from_resolution(TEMPERATURE_TIME_RESOLUTION)
+    elif api_call_type == ApiCallType.RAINFALL:
+        return CycleType.from_resolution(RAINFALL_TIME_RESOLUTION)
     else:
-        raise ValueError("Unsupported TEMPERATURE_TIME_RESOLUTION value.")
+        raise ValueError(f"Unsupported API call type: {api_call_type}. Supported types are: {list(ApiCallType)}")
     
+
 
 def test_api_secrets_valid(fetcher, global_config) -> bool:
     """On initialization, checks if the API secrets are valid."""

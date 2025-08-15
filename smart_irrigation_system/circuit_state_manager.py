@@ -166,6 +166,7 @@ class CircuitStateManager():
         
         new_entry = {
             "id": str(circuit.id),
+            "irrigation_state": "idle",
             "last_irrigation": None,
             "last_result": None,
             "last_duration": 0
