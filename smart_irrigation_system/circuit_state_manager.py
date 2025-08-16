@@ -23,7 +23,7 @@ class CircuitStateManager():
         self._rebuild_circuit_index()
         self.init_circuit_states()                              
 
-        self.logger.info(f"CircuitStateManager initialized")
+        self.logger.info(f"CircuitStateManager initialized.")
 
     
     def _rebuild_circuit_index(self):

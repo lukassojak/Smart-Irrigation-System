@@ -18,8 +18,5 @@ def calculate_total_rainfall(rainfall_data: dict[float]) -> float:
 
     
 
-def calculate_avg_daily_sunlight(sunlight_data: list[float], interval_days: int) -> float:
-    """Calculates the average daily sunlight hours."""
-    if interval_days <= 0:
-        raise ValueError("Interval days must be greater than zero.")
-    return sum(sunlight_data) / interval_days
+def calculate_total_solar(solar_data: list[float]) -> float:
+    pass

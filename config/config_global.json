@@ -1,13 +1,13 @@
 {
     "standard_conditions": {
-        "sunlight_hours": 12.0,
+        "solar_total": 4.5,
         "rain_mm": 0.0,
         "temperature_celsius": 18.0
     },
     "correction_factors": {
-        "sunlight": 0.02,
+        "solar": 0.2,
         "rain": -0.3,
-        "temperature": 0.2
+        "temperature": 0.1
     },
     "irrigation_limits": {
         "min_percent": 0,
@@ -16,9 +16,9 @@
     },
     "automation": {
         "enabled": true,
-        "sequential": false,
+        "sequential": true,
         "scheduled_hour": 14,
-        "scheduled_minute": 28,
+        "scheduled_minute": 18,
         "max_flow_monitoring": true,
         "environment": "development"
     },

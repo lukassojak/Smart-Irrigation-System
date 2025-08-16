@@ -15,9 +15,9 @@ Tento soubor obsahuje globální konfiguraci, která ovlivňují všechny okruhy
 ### standard_conditions:
 Referenční hodnoty počasí, při kterých je zavlažování považováno za ideální (očekávané) a používá se 100% očekávaného výtoku - bazální stav.
 
-- `sunlight_hours`: Celkový počet hodin slunečního svitu za posledních 24 hodin (od posledního zavlažování)
-- `ŗain_mm`: Celkový úhrn srážek za posledních 24 hodin (od posledního zavlažování)
-- `temperature_celsius`: Průměrná teplota za posledních 24 hodin (od posledního zavlažování)
+- `solar_total`: Celková energie slunečního záření za 24 hodin v kWh/m².
+- `ŗain_mm`: Celkový úhrn srážek za 24 hodin v mm.
+- `temperature_celsius`: Průměrná teplota od posledního zavlažování.
 
 Tyto hodnoty slouží jako výchozí bod pro výpočty – aktuální podmínky se porovnávají s těmito a výsledný rozdíl se násobí koeficienty.
 
@@ -26,7 +26,7 @@ Koeficienty, které určují, jak moc ovlivní odchylka od ideálních podmínek
 Pro **přímou úměru** (více, než referenční hodnota v `standard_conditions` = více zalévání) se koeficienty zapisují kladné.
 Pro **nepřímou úměru** (více, než referenční hodnota = méně zalévání) se koeficienty zapisují záporné.
 
-- `sunlight`: Kolik procent se přidá za každou hodinu slunečního svitu navíc.
+- `solar`: Kolik procent se přidá za každou kWh/m² slunečního záření navíc/méně.
 - `rain`: Kolik procent se přidá za každý mm srážek navíc/méně.
 - `temperature`: Kolik procent se přidá za každý stupeň Celsia navíc.
 
@@ -96,13 +96,12 @@ Tento soubor obsahuje seznam všech zavlažovacích okruhů a jejich specifický
 
 
 ### local_correction_factors:
-Modifikace chování daného okruhu vůči globálním korekcím.
+Modifikace chování daného okruhu vůči globálním korekcím. Jedná se o lineární model, který umožňuje přizpůsobit vliv počasí na konkrétní okruh. Tyto hodnoty se sčítají s globálními koeficienty z [`config_global.json`](./config_global.json).
 
-- `sunlight`: Např. pokud je v trvalém stínu, může být záporný – méně vody navzdory globálnímu slunci.
+- `solar`: Lokální koeficient pro sluneční záření. Např. terasa na betonu se silněji zahřívá, takže má smysl zvýšit vliv slunečního záření.
 - `rain`: Některé části mohou být více vystavené srážkám (např. otevřený trávník) → vyšší negativní korekce.
 - `temperature`: Např. terasa na betonu se silněji zahřívá, takže má smysl zvýšit vliv teploty.
 
-Tyto hodnoty doplňují globální koeficienty – nejsou náhradou. Globální a lokální korekční koeficienty se mezi sebou násobí. Pokud např. globální hodnota pro `rain` je -0.5 a lokální je také -0.5, pak celková citlivost na déšť bude -0.25.
 
 ---
 

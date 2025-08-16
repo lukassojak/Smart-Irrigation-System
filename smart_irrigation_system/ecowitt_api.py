@@ -7,9 +7,11 @@ import copy
 from smart_irrigation_system.weather_config import (
     TEMPERATURE_TIME_RESOLUTION,
     RAINFALL_TIME_RESOLUTION,
+    SOLAR_TIME_RESOLUTION,
     MAX_DATA_AGE,
     CELSIUS,
     MM,
+    WATTS_PER_SQUARE_METER,
     CycleType,
     ApiCallType
 )
@@ -99,10 +101,50 @@ def rainfall_api_call_history(fetcher, start_date: datetime, end_date: datetime)
     save_json(data=data_to_save, filename_prefix="recent_rainfall_data")
 
     try:
-        return data.get("data").get("rainfall").get("yearly", {}).get("list", [])
+        return data.get("data").get("rainfall").get("yearly", {}).get("list", {})
     except KeyError as e:
         raise ValueError("Unexpected response format from rainfall API.")
     
+
+def solar_api_call_history(fetcher, start_date: datetime, end_date: datetime) -> dict[str, str]:
+    """Performs an API call to fetch solar energy data."""
+    params = {
+        "application_key": fetcher.global_config.weather_api.application_key,
+        "api_key": fetcher.global_config.weather_api.api_key,
+        "mac": fetcher.global_config.weather_api.device_mac,
+        "start_date": start_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_date": end_date.strftime("%Y-%m-%d %H:%M:%S"),
+        "cycle_type": get_cycle_type(ApiCallType.SOLAR),
+        "call_back": "solar_and_uvi.solar",
+        "solar_irradiance_unitid": WATTS_PER_SQUARE_METER,
+    }
+
+    safe_params = hide_confidential_params(params, ["api_key", "application_key", "mac"])
+    url = fetcher.global_config.weather_api.history_url
+    fetcher.logger.debug(f"Performing API call to {url} with params: {safe_params}")
+    data = perform_api_call(url, params)
+
+    # Make a copy of the data and replace epoch timestamps with human-readable dates for debugging
+    data_to_save = copy.deepcopy(data)  # Use deepcopy to avoid modifying the original data
+    try:
+        solar_list = data_to_save.get("data", {}).get("solar_and_uvi", {}).get("solar", {}).get("list", {})
+        if isinstance(solar_list, dict):  # Ensure "list" is a dictionary
+            data_to_save["data"]["solar_and_uvi"]["solar"]["list"] = {
+                datetime.fromtimestamp(int(epoch)).strftime("%Y-%m-%d %H:%M:%S"): value
+                for epoch, value in solar_list.items()
+            }
+        else:
+            fetcher.logger.error(f"Unexpected data structure for solar list: {solar_list}")
+    except Exception as e:
+        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+    save_json(data=data_to_save, filename_prefix="recent_solar_data")
+
+    try:
+        return data.get("data").get("solar_and_uvi").get("solar", {}).get("list", {})
+    except KeyError as e:
+        raise ValueError("Unexpected response format from solar API.")
+
+
 def all_api_call_real_time(fetcher) -> dict[str, list]:
     """Performs an API call to fetch real-time data for temperature and rainfall."""
     params = {
@@ -178,6 +220,8 @@ def get_cycle_type(api_call_type: ApiCallType) -> str:
         return CycleType.from_resolution(TEMPERATURE_TIME_RESOLUTION)
     elif api_call_type == ApiCallType.RAINFALL:
         return CycleType.from_resolution(RAINFALL_TIME_RESOLUTION)
+    elif api_call_type == ApiCallType.SOLAR:
+        return CycleType.from_resolution(SOLAR_TIME_RESOLUTION)
     else:
         raise ValueError(f"Unsupported API call type: {api_call_type}. Supported types are: {list(ApiCallType)}")
     

@@ -112,8 +112,8 @@ class IrrigationCircuit:
         base_target_water_amount = self.get_base_target_water_amount()
 
         standard_conditions = global_config.standard_conditions
-        # if there was more sunlight, rain, or temperature than the standard conditions, the delta will be POSITIVE
-        delta_sunlight = global_conditions.sunlight_hours - standard_conditions.sunlight_hours
+        # if there was more solar energy, rain, or temperature than the standard conditions, the delta will be POSITIVE
+        delta_solar = global_conditions.solar_total - standard_conditions.solar_total
         delta_rain = global_conditions.rain_mm - standard_conditions.rain_mm
         delta_temperature = global_conditions.temperature - standard_conditions.temperature_celsius
 
@@ -121,15 +121,20 @@ class IrrigationCircuit:
         l_c = self.local_correction_factors
 
         total_adjustment = (
-            (delta_sunlight * (g_c.sunlight + l_c.factors.get('sunlight', 0.0))) +
+            (delta_solar * (g_c.solar + l_c.factors.get('solar', 0.0))) +
             (delta_rain * (g_c.rain + l_c.factors.get('rain', 0.0))) +
             (delta_temperature * (g_c.temperature + l_c.factors.get('temperature', 0.0)))
+        )
+
+        self.logger.debug(f"Adjustments: Solar: {delta_solar * (g_c.solar + l_c.factors.get('solar', 0.0))}, "
+                            f"Rain: {delta_rain * (g_c.rain + l_c.factors.get('rain', 0.0))}, "
+                            f"Temperature: {delta_temperature * (g_c.temperature + l_c.factors.get('temperature', 0.0))}. "
         )
 
         # Adjust the target water amount based on the total adjustment
         adjusted_water_amount = base_target_water_amount * (1 + total_adjustment)
         adjusted_water_amount = round(adjusted_water_amount, 3)  # Round to 3 decimal places for precision
-        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is {round(total_adjustment, 2)}.")
+        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is +{round(total_adjustment, 2)}.")
 
         # If total adjustment is -1 or less, no irrigation is needed
         if total_adjustment <= -1:

@@ -11,13 +11,13 @@ class LogLevel(str, Enum):
 
 @dataclass
 class StandardConditions:
-    sunlight_hours: float
+    solar_total: float
     rain_mm: float
     temperature_celsius: float
 
 @dataclass
 class CorrectionFactors:
-    sunlight: float
+    solar: float
     rain: float
     temperature: float
 
@@ -73,12 +73,12 @@ class GlobalConfig:
         """
         return GlobalConfig(
             standard_conditions=StandardConditions(
-                sunlight_hours=data["standard_conditions"]["sunlight_hours"],
+                solar_total=data["standard_conditions"]["solar_total"],
                 rain_mm=data["standard_conditions"]["rain_mm"],
                 temperature_celsius=data["standard_conditions"]["temperature_celsius"]
             ),
             correction_factors=CorrectionFactors(
-                sunlight=data["correction_factors"]["sunlight"],
+                solar=data["correction_factors"]["solar"],
                 rain=data["correction_factors"]["rain"],
                 temperature=data["correction_factors"]["temperature"]
             ),

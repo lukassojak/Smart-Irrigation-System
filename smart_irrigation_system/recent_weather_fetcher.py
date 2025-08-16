@@ -8,23 +8,26 @@ from smart_irrigation_system.secrets import get_secret
 from smart_irrigation_system.ecowitt_api import (
     temperature_api_call,
     rainfall_api_call_history,
+    solar_api_call_history,
     all_api_call_real_time,
     test_api_secrets_valid
 )
 from smart_irrigation_system.weather_data_processor import (
     calculate_avg_temperature,
     calculate_total_rainfall,
-    calculate_avg_daily_sunlight
+    calculate_total_solar
 )
 
 from smart_irrigation_system.weather_config import (
     TEMPERATURE_TIME_RESOLUTION,
     RAINFALL_TIME_RESOLUTION,
+    MIN_TEMPERATURE_COUNT,
     MAX_DATA_AGE,
     CELSIUS
 )
 
 
+# Constants for testing purposes
 TEMP_TEST_START_DATE = datetime(2025, 7, 30, 18, 0, 0)
 TEMP_TEST_END_DATE = datetime(2025, 8, 2, 20, 10, 0)
 
@@ -52,18 +55,18 @@ class RecentWeatherFetcher:
         self._standard_conditions = GlobalConditions(
                 temperature=self.global_config.standard_conditions.temperature_celsius,
                 rain_mm=self.global_config.standard_conditions.rain_mm,
-                sunlight_hours=self.global_config.standard_conditions.sunlight_hours,
+                solar_total=self.global_config.standard_conditions.solar_total,
                 timestamp=datetime.now()
             )
 
         self.logger.info("RecentWeatherFetcher initialized.")
 
-        # Cache for temperatures and rainfall
+        # Cache for fetched weather data
         self._last_cache_update: datetime = datetime.min
-        self._cached_temperatures: list[float] = []
-        self._cached_rainfall: dict[datetime, float] = {}
-        self._cached_temperatures_dict: dict[datetime, float] = {}        
-        # NEW: The _cached_rainfall_dict contains the rainfall data as a dictionary with timestamps as keys and rainfall values
+        self._cached_temperatures: dict[datetime, float] = {}
+        self._cached_rainfall: dict[datetime, float] = {}       
+        self._cached_solar: dict[datetime, float] = {}
+        # Real-time rainfall data
         self._cached_real_time_rainfall: float | None = None
 
     @property
@@ -72,7 +75,7 @@ class RecentWeatherFetcher:
         return self._last_cache_update
     
     @property
-    def cached_temperatures(self) -> list[float]:
+    def cached_temperatures(self) -> dict[datetime, float]:
         """Returns the cached temperatures."""
         return self._cached_temperatures
     
@@ -85,10 +88,15 @@ class RecentWeatherFetcher:
     def cached_real_time_rainfall(self) -> float | None:
         """Returns the cached real-time rainfall."""
         return self._cached_real_time_rainfall
+    
+    @property
+    def cached_solar(self) -> dict[datetime, float]:
+        """Returns the cached solar data."""
+        return self._cached_solar
 
 
     @cached_temperatures.setter
-    def cached_temperatures(self, temperatures: list[float]) -> None:
+    def cached_temperatures(self, temperatures: dict[datetime, float]) -> None:
         """Sets the cached temperatures and updates the last cache update timestamp."""
         self._cached_temperatures = temperatures
         self._last_cache_update = datetime.now()
@@ -101,6 +109,13 @@ class RecentWeatherFetcher:
         self._last_cache_update = datetime.now()
         self.logger.debug(f"Cached rainfall updated.")
 
+    @cached_solar.setter
+    def cached_solar(self, solar: dict[datetime, float]) -> None:
+        """Sets the cached solar data and updates the last cache update timestamp."""
+        self._cached_solar = solar
+        self._last_cache_update = datetime.now()
+        self.logger.debug(f"Cached solar data updated.")
+
     @cached_real_time_rainfall.setter
     def cached_real_time_rainfall(self, rainfall: float) -> None:
         """Sets the cached real-time rainfall and updates the last cache update timestamp."""
@@ -109,13 +124,13 @@ class RecentWeatherFetcher:
         self.logger.debug(f"Cached real-time rainfall updated.")
 
 
+
+
     def _data_expired(self) -> bool:
         """Checks if the cached data has expired based on the MAX_DATA_AGE."""
         if self.last_cache_update is None:
             return True
         return self.last_cache_update + timedelta(seconds=MAX_DATA_AGE) < datetime.now()
-
-
 
     def get_current_conditions(self) -> GlobalConditions:
         """Returns the current weather conditions, updating them if necessary."""
@@ -140,22 +155,19 @@ class RecentWeatherFetcher:
         # For now, fetch temperatures and rainfall data only if the data is expired or not cached
         if self._data_expired() or not self.cached_temperatures:
             try:
-                self._cache_temperatures()
-                self._cache_rainfall()
-                self._cache_real_time_weather()
+                self._update_cache()
             except Exception as e:
-                self.logger.error(f"Error fetching data: {e}")
                 self.logger.warning("Using standard conditions as fallback.")
                 return self._standard_conditions
         
         avg_temperature = self._get_avg_temperature(interval_days=1)
         total_rainfall = self._get_total_rainfall(interval_days=1)
-        avg_sunlight_hours = self._get_avg_daily_sunlight_hours(interval_days=1)
+        solar_total = self._get_total_solar(interval_days=1)
         timestamp_retrieved = self.last_cache_update
         self.current_conditions = GlobalConditions(
             temperature=avg_temperature,
             rain_mm=total_rainfall,
-            sunlight_hours=avg_sunlight_hours,
+            solar_total=solar_total,
             timestamp=timestamp_retrieved
         )
         return self.current_conditions
@@ -164,9 +176,10 @@ class RecentWeatherFetcher:
         """Returns a string representation of the current weather conditions."""
         if self.current_conditions is None:
             return "No current weather conditions available."
+        solar_watts = self.current_conditions.solar_total * 1000  # Convert kWh/m² to W/m²
         return (f"Temperature: {self.current_conditions.temperature:.2f} °C, "
                 f"Rain: {self.current_conditions.rain_mm:.2f} mm, "
-                f"Sunlight: {self.current_conditions.sunlight_hours:.2f} hours, "
+                f"Solar: {solar_watts:.2f} W/m², "
                 f"Timestamp: {self.current_conditions.timestamp.isoformat()}")
     
 
@@ -177,13 +190,25 @@ class RecentWeatherFetcher:
         if self._data_expired() or not self.cached_temperatures:
             self._cache_temperatures()
         
-        relevant_temperatures = self.cached_temperatures[-(interval_days * 24 * 60 // TEMPERATURE_TIME_RESOLUTION):]
-        
-        if not relevant_temperatures:
-            self.logger.warning("No cached temperatures available for the specified interval, using standard conditions.")
+        # maybe can be replaced just with datetime.now() - timedelta(days=interval_days)
+        start_date_timestamp = self._get_closest_timestamp_in_dict(
+            datetime.now() - timedelta(days=interval_days), self._cached_temperatures
+        )
+        if start_date_timestamp is None:
+            self.logger.warning("No cached temperature data available for the specified interval, using standard conditions.")
             return self.global_config.standard_conditions.temperature_celsius
         
-        return calculate_avg_temperature(relevant_temperatures)
+        relevant_temperatures = [
+            temp for timestamp, temp in self._cached_temperatures.items()
+            if timestamp >= start_date_timestamp
+        ]
+
+        if len(relevant_temperatures) < MIN_TEMPERATURE_COUNT:
+            self.logger.warning(f"Not enough temperature data points ({len(relevant_temperatures)}) to calculate average. Using standard conditions.")
+            return self.global_config.standard_conditions.temperature_celsius
+        
+        return sum(relevant_temperatures) / len(relevant_temperatures)
+
     
     def _get_total_rainfall(self, interval_days: int) -> float:
         """Fetches the total rainfall over the specified interval."""
@@ -210,32 +235,51 @@ class RecentWeatherFetcher:
         
         return real_time_rainfall - start_date_rainfall
     
-    def _get_avg_daily_sunlight_hours(self, interval_days: int) -> float:
-        """Fetches the average daily sunlight hours over the specified interval."""
-        sunlight_data = [10.0] * interval_days
-        return calculate_avg_daily_sunlight(sunlight_data, interval_days)
+    def _get_total_solar(self, interval_days: int) -> float:
+        """Fetches the total solar radiation over the specified interval. Returns the sum of solar radiation values in kWh/m²."""
+        if self._data_expired() or not self.cached_solar:
+            self._cache_solar()
+
+        start_date_timestamp = self._get_closest_timestamp_in_dict(
+            datetime.now() - timedelta(days=interval_days), self.cached_solar
+        )
+        if start_date_timestamp is None:
+            self.logger.warning("No cached solar data available for the specified interval, using standard conditions.")
+            return self.global_config.standard_conditions.solar_total
+        
+        relevant_solar_data = [
+            solar for timestamp, solar in self.cached_solar.items()
+            if timestamp >= start_date_timestamp
+        ]
+
+        if not relevant_solar_data:
+            self.logger.warning("No relevant solar data found for the specified interval, using standard conditions.")
+            return self.global_config.standard_conditions.solar_total
+        
+        # Return the sum of solar radiation values and convert to kWh/m²
+        total_solar = sum(relevant_solar_data) / 1000  # Convert from Wh/m² to kWh/m²
+        return total_solar
 
 
 
     # Cache management methods
 
-    def _cache_temperatures(self) -> None:
-        """Fetches the temperatures for the last <max_interval_days> days and caches them."""
-        temperatures = temperature_api_call(
-            self,
-            start_date=datetime.now() - timedelta(days=self.max_interval_days),
-            end_date=datetime.now()
-        )
-        temperatures_list = list(temperatures.values())
-        self.logger.debug(f"Fetched list: {temperatures_list}")
-        # convert values to float and filter out invalid entries (e.g., '-', or empty strings)
-        self.cached_temperatures = [
-            float(temp) for temp in temperatures_list if temp.replace('.', '', 1).replace('-', '', 1).isdigit()
-        ]
-        # log the difference in the number of temperatures fetched
-        self.logger.debug(f"Cached {len(self.cached_temperatures)} from {len(temperatures)} temperatures fetched from API.")
+    def _update_cache(self) -> None:
+        """Updates the cache for temperatures and rainfall data."""
+        if self._use_standard_conditions:
+            self.logger.error("Cannot update cache. Using standard conditions as fallback.")
+            return
+        
+        try:
+            self._cache_temperatures()
+            self._cache_rainfall()
+            self._cache_solar()
+            self._cache_real_time_weather()
+            self.logger.debug("Cache updated successfully.")
+        except Exception as e:
+            self.logger.error(f"Error updating cache: {e}")
     
-    def _cache_temperatures_dict(self) -> None:
+    def _cache_temperatures(self) -> None:
         """Fetches the temperatures for the last <max_interval_days> days and caches them as a dictionary."""
         temperatures: dict[str, str] = temperature_api_call(
             self,
@@ -245,14 +289,14 @@ class RecentWeatherFetcher:
         self.logger.debug(f"Fetched temperatures data: {temperatures}")
 
         # convert the temperatures to a dictionary with datetime keys and float values
-        self._cached_temperatures_dict = {
+        self.cached_temperatures = {
             datetime.fromtimestamp(int(timestamp)): float(temp)
             for timestamp, temp in temperatures.items()
             if temp.replace('.', '', 1).replace('-', '', 1).isdigit()
         }
 
         # log the difference in the number of temperatures fetched
-        self.logger.debug(f"Cached {len(self._cached_temperatures_dict)} from {len(temperatures)} temperatures fetched from API.")
+        self.logger.debug(f"Cached {len(self._cached_temperatures)} from {len(temperatures)} temperatures fetched from API.")
 
         
     def _cache_rainfall(self) -> None:
@@ -267,7 +311,7 @@ class RecentWeatherFetcher:
         self.logger.debug(f"Fetched rainfall data: {rainfall_data_sorted}")
 
         # convert the rainfall data to a dictionary with datetime keys and float values
-        self._cached_rainfall = {
+        self.cached_rainfall = {
             datetime.fromtimestamp(int(timestamp)): float(rain)
             for timestamp, rain in rainfall_data_sorted.items()
             if rain.replace('.', '', 1).replace('-', '', 1).isdigit()
@@ -276,13 +320,34 @@ class RecentWeatherFetcher:
         # log the difference in the number of rainfall entries fetched
         self.logger.debug(f"Cached {len(self._cached_rainfall)} from {len(rainfall_data)} rainfall entries fetched from API.")
     
+    def _cache_solar(self) -> None:
+        """Fetches the solar data for the last <max_interval_days> days and caches it as a dictionary."""
+        solar_data: dict[str, str] = solar_api_call_history(
+            self,
+            start_date=datetime.now() - timedelta(days=self.max_interval_days),
+            end_date=datetime.now()
+        )
+        self.logger.debug(f"Fetched solar data: {solar_data}")
+
+        # convert the solar data to a dictionary with datetime keys and float values
+        self.cached_solar = {
+            datetime.fromtimestamp(int(timestamp)): float(solar)
+            for timestamp, solar in solar_data.items()
+            if solar.replace('.', '', 1).replace('-', '', 1).isdigit()
+        }
+
+        # log the difference in the number of solar entries fetched
+        self.logger.debug(f"Cached {len(self._cached_solar)} from {len(solar_data)} solar entries fetched from API.")
+    
     def _cache_real_time_weather(self) -> None:
         """Fetches the real-time weather data and caches it."""
         real_time_data: dict[str, str] = all_api_call_real_time(self)
         # Add the real-time temperature to the cached temperatures dictionary
         if real_time_data and 'temperature' in real_time_data:
             temperature = float(real_time_data['temperature'])
-            self._cached_temperatures.append(temperature)
+            current_cached_temperatures = self.cached_temperatures
+            current_cached_temperatures[datetime.now()] = temperature
+            self.cached_temperatures = current_cached_temperatures
             self.logger.debug(f"Cached real-time temperature: {temperature} °C")
         else:
             self.logger.warning("No real-time temperature data available.")

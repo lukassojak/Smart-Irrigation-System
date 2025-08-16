@@ -15,9 +15,9 @@
                 "15": 40
             },
             "local_correction_factors": {
-                "sunlight": 0.01,
+                "solar": 0.1,
                 "rain": 0.17,
-                "temperature": 0.0
+                "temperature": 0.05
             }
         },
         {
@@ -34,7 +34,7 @@
                 "4": 20
             },
             "local_correction_factors": {
-                "sunlight": 0.0,
+                "solar": 0.0,
                 "rain": 0.1,
                 "temperature": 0.0
             }
@@ -55,7 +55,7 @@
                 "12": 4
             },
             "local_correction_factors": {
-                "sunlight": 0.01,
+                "solar": 0.1,
                 "rain": 0.2,
                 "temperature": 0.0
             }
@@ -76,7 +76,7 @@
                 "2": 6
             },
             "local_correction_factors": {
-                "sunlight": 0.01,
+                "solar": 0.1,
                 "rain": 0.15,
                 "temperature": 0.1
             }

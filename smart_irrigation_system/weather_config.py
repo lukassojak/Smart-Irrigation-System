@@ -7,6 +7,7 @@ from enum import Enum
 # Supported values: 5, 30, 240, 1440 
 TEMPERATURE_TIME_RESOLUTION = 30
 RAINFALL_TIME_RESOLUTION = 240
+SOLAR_TIME_RESOLUTION = 30
 
 
 # Maximum age of cached weather data in seconds after which it is considered expired.
@@ -14,12 +15,19 @@ RAINFALL_TIME_RESOLUTION = 240
 # Default value is 30 minutes. (30 * 60 seconds)
 MAX_DATA_AGE = 30 * 60
 
+# Minimum count of temperature data values to calculate the average temperature.
+MIN_TEMPERATURE_COUNT = 24 * 60 // TEMPERATURE_TIME_RESOLUTION // 2  # At least half a day of data
+
+
 # Temperature unit identifiers for API calls.
 CELSIUS = "1"
 FAHRENHEIT = "2"
 # Rainfall unit identifiers for API calls.
 MM = "12"
 INCHES = "13"
+# Solar radiation unit identifiers for API calls.
+LUX = "15"
+WATTS_PER_SQUARE_METER = "16"
 
 # Cycle types for the weather API.
 class CycleType(Enum):
@@ -42,4 +50,4 @@ class ApiCallType(Enum):
     """Enum for API call types."""
     TEMPERATURE = "temperature"
     RAINFALL = "rainfall"
-    SUNLIGHT = "sunlight"
+    SOLAR = "solar"

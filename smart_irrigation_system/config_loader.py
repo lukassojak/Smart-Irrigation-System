@@ -99,7 +99,7 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     # Set local correction factors
     file_correction_factors = zone.get("local_correction_factors", {})
     correction_factors = CorrectionFactors(
-        sunlight=file_correction_factors.get("sunlight", 55.0),
+        solar=file_correction_factors.get("solar", 55.0),
         rain=file_correction_factors.get("rain", 55.0),
         temperature= file_correction_factors.get("temperature", 55.0)
     )
@@ -164,7 +164,7 @@ def _is_valid_zone(zone: dict) -> Tuple[bool, List[str]]:
     if not isinstance(local_cf, dict):
         errors.append("local_correction_factors must be a dictionary")
     else:
-        for key in ["sunlight", "rain", "temperature"]:
+        for key in ["solar", "rain", "temperature"]:
             if key in local_cf and not isinstance(local_cf[key], (float, int)):
                 errors.append(f"local_correction_factors.{key} must be a number")
     
@@ -190,8 +190,8 @@ def _is_valid_global_config(data: dict):
 
     # Validate standard_conditions
     sc = data["standard_conditions"]
-    if not isinstance(sc.get("sunlight_hours"), (float, int)):
-        raise ValueError("standard_conditions.sunlight_hours must be a number")
+    if not isinstance(sc.get("solar_total"), (float, int)):
+        raise ValueError("standard_conditions.solar_total must be a number")
     if not isinstance(sc.get("rain_mm"), (float, int)):
         raise ValueError("standard_conditions.rain_mm must be a number")
     if not isinstance(sc.get("temperature_celsius"), (float, int)):
@@ -199,7 +199,7 @@ def _is_valid_global_config(data: dict):
 
     # Validate correction_factors
     cf = data["correction_factors"]
-    for key in ["sunlight", "rain", "temperature"]:
+    for key in ["solar", "rain", "temperature"]:
         if not isinstance(cf.get(key), (float, int)):
             raise ValueError(f"correction_factors.{key} must be a number")
 
@@ -270,7 +270,7 @@ def circuit_to_config(circuit: IrrigationCircuit) -> dict:
         "liters_per_minimum_dripper": circuit.liters_per_minimum_dripper,
         "interval_days": circuit.interval_days,
         "drippers_summary": {str(flow_rate): count for flow_rate, count in circuit.drippers.drippers.items()},
-        "local_correction_factors": {"sunlight": circuit.correction_factors.get_factor("sunlight"),
+        "local_correction_factors": {"solar": circuit.correction_factors.get_factor("solar"),
                                      "rain": circuit.correction_factors.get_factor("rain"),
                                      "temperature": circuit.correction_factors.get_factor("temperature")},
     }

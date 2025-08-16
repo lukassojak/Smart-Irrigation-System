@@ -5,9 +5,9 @@ class CorrectionFactors:
     A class to store correction factors for different parameters.
     """
 
-    def __init__(self, sunlight=0.0, rain=0.0, temperature=0.0):
+    def __init__(self, solar=0.0, rain=0.0, temperature=0.0):
         self.factors = {
-            "sunlight": sunlight,
+            "solar": solar,
             "rain": rain,
             "temperature": temperature,
         }
