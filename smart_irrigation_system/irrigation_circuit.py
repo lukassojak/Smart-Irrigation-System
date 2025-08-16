@@ -213,4 +213,19 @@ class IrrigationCircuit:
             self.logger.warning(f"Circuit {self.id} is disabled. Cannot irrigate.")
             return False
         return True
+    
+
+    # ===========================================================================================================
+    # Debugging and testing methods
+    # ===========================================================================================================
+
+    def open_valve(self):
+        """Opens the valve for debugging purposes."""
+        self.valve.control(RelayValveState.OPEN)
+        self.logger.info(f"Valve opened for circuit {self.id}.")
+
+    def close_valve(self):
+        """Closes the valve for debugging purposes."""
+        self.valve.control(RelayValveState.CLOSED)
+        self.logger.info(f"Valve closed for circuit {self.id}.")
         

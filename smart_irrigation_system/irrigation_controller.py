@@ -193,6 +193,19 @@ class IrrigationController:
     # Irrigation management
     # ===========================================================================================================
     
+    def start_automatic_irrigation(self):
+        """Starts automatic irrigation in a separate thread."""
+        if getattr(self, "_auto_irrigation_thread", None) and self._auto_irrigation_thread.is_alive():
+            self.logger.info("Automatic irrigation already running.")
+            return
+
+        def irrigation_thread_func():
+            self.perform_automatic_irrigation()
+
+        self._auto_irrigation_thread = threading.Thread(target=irrigation_thread_func, daemon=True)
+        self._auto_irrigation_thread.start()
+
+
     def perform_automatic_irrigation(self):
         """Performs automatic irrigation based on the global configuration"""
         if not self.global_config.automation.enabled:
@@ -378,4 +391,21 @@ class IrrigationController:
         """Cleans up the resources used by the irrigation controller"""
         self.logger.info("Cleaning up resources...")
         self.stop_irrigation()
+
+
+    # ===========================================================================================================
+    # Debugging and testing methods
+    # ===========================================================================================================
+
+    def open_valves(self):
+        """Opens all valves for debugging purposes"""
+        self.logger.debug("Opening all valves for debugging purposes.")
+        for circuit in self.circuits.values():
+            circuit.open_valve()
+    
+    def close_valves(self):
+        """Closes all valves for debugging purposes"""
+        self.logger.debug("Closing all valves for debugging purposes.")
+        for circuit in self.circuits.values():
+            circuit.close_valve()
     

@@ -1,9 +1,41 @@
+try:
+    import RPi.GPIO as GPIO
+    GPIO_SUPPORTED = True
+# if ImportError or RuntimeError occurs, we will use a dummy GPIO class for testing
+except (ImportError, RuntimeError):
+    GPIO_SUPPORTED = False
+    class GPIO:
+        BCM = None
+        IN = None
+        OUT = None
+        PUD_UP = None
+        LOW = None
+        HIGH = None
+        FALLING = None
+        RISING = None
+        BOTH = None
+        @staticmethod
+        def setmode(mode): pass
+        @staticmethod
+        def setup(pin, mode, pull_up_down=None): pass
+        @staticmethod
+        def output(pin, state): pass
+        @staticmethod
+        def input(pin): return False
+        @staticmethod
+        def add_event_detect(pin, edge, callback=None, bouncetime=None): pass
+        @staticmethod
+        def cleanup(pins=None): pass
+    
+    GPIO = GPIO  # Use the dummy GPIO class for testing
+
+
+
 import time
 from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.enums import RelayValveState
 from typing import Optional
 
-# import RPi.GPIO as GPIO  # Uncomment this line when running on Raspberry Pi
 
 TOLERANCE = 0.5  # Tolerance for time checks, in seconds
 
@@ -13,8 +45,12 @@ class RelayValve:
         # Initialize the relay valve logger with a specific pin number
         self.logger = get_logger(f"RelayValve-{pin}")
         self.pin = pin
-        # GPIO.setmode(GPIO.BCM)  # Uncomment this line when running on Raspberry Pi
-        # GPIO.setup(self.pin, GPIO.OUT)
+        
+        # Initialize GPIO pin for the relay valve
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.pin, GPIO.OUT)  # Set the pin as an output
+        GPIO.output(self.pin, GPIO.LOW)  # Ensure the valve is closed initially
+
         self.state = RelayValveState.CLOSED  # Default state is CLOSED
         self.logger.info(f"RelayValve initialized on pin {self.pin}")
 
@@ -33,8 +69,9 @@ class RelayValve:
                     if self.state == RelayValveState.OPEN:
                         self.logger.warning(f"Valve {self.pin} is already OPEN, no action taken.")
                         return
-                    # Uncomment the next line when running on Raspberry Pi
-                    # GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to open the valve
+                    
+                    GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to open the valve
+
                     self.state = RelayValveState.OPEN
                     self.logger.debug(f"RelayValve state changed to OPEN on pin {self.pin}")
                     return
@@ -42,8 +79,9 @@ class RelayValve:
                     if self.state == RelayValveState.CLOSED:
                         self.logger.warning(f"Valve {self.pin} is already CLOSED, no action taken.")
                         return
-                    # Uncomment the next line when running on Raspberry Pi
-                    # GPIO.output(self.pin, GPIO.LOW)   # Set the pin to LOW to close the valve
+                    
+                    GPIO.output(self.pin, GPIO.LOW)  # Set the pin to LOW to close the valve
+    
                     self.state = RelayValveState.CLOSED
                     self.logger.debug(f"RelayValve state changed to CLOSED on pin {self.pin}")
                     return  # Exit the loop after successful state change

@@ -14,10 +14,12 @@ formatter = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(messag
 # Handler - file output
 file_handler = logging.FileHandler(LOG_FILE)
 file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.DEBUG)  # Set file handler to log DEBUG and above
 
 # Handler - console output
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
+console_handler.setLevel(logging.WARNING)  # Set console handler to log WARNING and above
 
 
 def get_logger(name: str) -> logging.Logger:
