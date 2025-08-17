@@ -1,34 +1,6 @@
 
-# check if threading is supported in the current environment
-try:
-    import threading
-    THREADING_SUPPORTED = True
-except ImportError:
-    THREADING_SUPPORTED = False
-    class DummyThread:
-        def __init__(self, *args, **kwargs): pass
-        def start(self): pass
-
-    class DummyLock:
-        def __enter__(self): pass
-        def __exit__(self, exc_type, exc_val, exc_tb): pass
-
-    class DummyEvent:
-        def set(self): pass
-        def clear(self): pass
-        def is_set(self): return False
-        def wait(self, timeout=None): pass
-
-    threading = type('threading', (), {
-        'Thread': DummyThread,
-        'Lock': DummyLock,
-        'Event': DummyEvent,
-        'current_thread': lambda: "main-thread"
-    })()
-
-import time
+import time, threading, atexit
 from typing import Dict, Any
-import atexit
 
 from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.global_conditions import GlobalConditions
@@ -75,7 +47,9 @@ class IrrigationController:
         atexit.register(self.state_manager.handle_clean_shutdown)
 
         # Initialize threading
-        self._initialize_threading()
+        self.threads = []
+        self.stop_event = threading.Event()
+        self.threads_lock = threading.Lock()
 
         # Set initial controller state
         self.controller_state = ControllerState.IDLE  
@@ -120,19 +94,6 @@ class IrrigationController:
 
         self.logger.info("Global conditions provider initialized as WeatherSimulator with seed %d.", WEATHER_SIMULATOR_SEED)
         return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
-    
-    def _initialize_threading(self):
-        """Initializes threading-related components."""
-        if THREADING_SUPPORTED:
-            self.threads = []
-            self.stop_event = threading.Event()
-            self.threads_lock = threading.Lock()
-            self.logger.info("Threading is supported in this environment.")
-        else:
-            self.logger.warning("Threading is not supported in this environment. Using dummy threading implementation.")
-            self.threads = []
-            self.stop_event = DummyEvent()
-            self.threads_lock = DummyLock()
 
     
     # ===========================================================================================================

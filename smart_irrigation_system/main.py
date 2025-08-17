@@ -22,7 +22,6 @@ I2C_SDA = 4  # GPIO pin for I2C SDA
 
 # === Constants ===
 TOLERANCE = 1  # Tolerance in minutes for irrigation time
-ENVIRONMENT = Environment.PC
 
 # === Global Variables ===
 logger = get_logger("smart_irrigation_system.main")
@@ -173,7 +172,6 @@ def main():
 
     display = DisplayController(controller)
     pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
-    logger.info("Starting Smart Irrigation System on %s environment.", ENVIRONMENT.name)
 
     daily_irrigation_time: time.struct_time = controller.get_daily_irrigation_time()
     stop_event = threading.Event()

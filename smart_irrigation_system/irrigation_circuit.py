@@ -41,6 +41,10 @@ class IrrigationCircuit:
 
         self.logger.info(f"Irrigation Circuit {self.id} initialized with state {self._state.name}.")
 
+
+    # ============================================================================================================
+    # Properties and state management
+    # ============================================================================================================
     
     @property
     def is_currently_irrigating(self):
@@ -62,7 +66,6 @@ class IrrigationCircuit:
             self._state = new_state
             self.logger.debug(f"State changed to {self._state.name}.")
 
-    
     def get_status_summary(self) -> Dict[str, str]:
         """Returns a summary of the irrigation circuit status."""
         return {
@@ -78,13 +81,16 @@ class IrrigationCircuit:
             "drippers_count": str(len(self.drippers)),
         }
 
-
     def get_circuit_consumption(self):
         """Returns the total consumption of all drippers in liters per hour."""
         return self.drippers.get_consumption()
 
 
-    def get_base_target_water_amount(self) -> float:
+    # ============================================================================================================
+    # Water amount and duration calculations
+    # ============================================================================================================
+
+    def _get_base_target_water_amount(self) -> float:
         """Calculates the target water amount for irrigation based on global configuration and conditions."""
         if self.even_area_mode:
             # Calculate the target water amount based on the target mm and zone area
@@ -98,8 +104,7 @@ class IrrigationCircuit:
         
         return round(base_target_water_amount, 3)   # Round to 3 decimal places for precision
 
-
-    def get_target_duration_seconds(self, target_water_amount: float) -> float:
+    def _get_target_duration_seconds(self, target_water_amount: float) -> float:
         """Calculates the target duration of irrigation based on the target water amount and global conditions."""
         total_consumption = self.get_circuit_consumption()
         duration_hours = target_water_amount / total_consumption  # in hours (liters / liters per hour = hours)
@@ -107,9 +112,13 @@ class IrrigationCircuit:
         return round(duration_seconds)
 
 
+    # ============================================================================================================
+    # Irrigation methods
+    # ============================================================================================================
+
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> float:
         """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
-        base_target_water_amount = self.get_base_target_water_amount()
+        base_target_water_amount = self._get_base_target_water_amount()
 
         standard_conditions = global_config.standard_conditions
         # if there was more solar energy, rain, or temperature than the standard conditions, the delta will be POSITIVE
@@ -148,10 +157,9 @@ class IrrigationCircuit:
             self.logger.info(f"Adjusted water amount {adjusted_water_amount} is out of bounds ({min_water_amount}, {max_water_amount}).")
             adjusted_water_amount = max(min_water_amount, min(adjusted_water_amount, max_water_amount))
         
-        duration = self.get_target_duration_seconds(adjusted_water_amount)
-        return self.irrigate(duration, stop_event)
+        duration = self._get_target_duration_seconds(adjusted_water_amount)
+        return self._irrigate(duration, stop_event)
         
-
     def irrigate_manual(self, target_water_amount, stop_event):
         """Starts the manual irrigation process for a specified water amount. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         if target_water_amount <= 0:
@@ -159,12 +167,11 @@ class IrrigationCircuit:
             return
         
         # Calculate the target duration of irrigation based on the target water amount and global conditions
-        target_duration = self.get_target_duration_seconds(target_water_amount)
+        target_duration = self._get_target_duration_seconds(target_water_amount)
 
-        return self.irrigate(target_duration, stop_event)
+        return self._irrigate(target_duration, stop_event)
 
-
-    def irrigate(self, duration, stop_event) -> Optional[int]:
+    def _irrigate(self, duration, stop_event) -> Optional[int]:
         """Starts the irrigation process for a specified duration. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         
         self.logger.info(f"Starting irrigation for {duration} seconds.")
@@ -185,10 +192,13 @@ class IrrigationCircuit:
             elif self.state != IrrigationState.ERROR:
                 self.state = IrrigationState.FINISHED
                 self.logger.info(f"Irrigation finished successfully.")
+    
 
-            # self.valve.control(RelayValveState.CLOSED)  # Maybe redundant, because the valve is already closed in the RelayValve.open() method
-        
-    def interval_days_passed(self, last_irrigation_time: Optional[datetime]) -> bool:
+    # ============================================================================================================
+    # Interval and state checks
+    # ============================================================================================================
+    
+    def _interval_days_passed(self, last_irrigation_time: Optional[datetime]) -> bool:
         """Checks if the interval days have passed since the last irrigation."""
 
         if last_irrigation_time is None:
@@ -206,7 +216,7 @@ class IrrigationCircuit:
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Circuit is not in IDLE state. Current state: {self.state.name}. Cannot irrigate.")
             return False
-        if not self.interval_days_passed(state_manager.get_last_irrigation_time(self)):
+        if not self._interval_days_passed(state_manager.get_last_irrigation_time(self)):
             self.logger.debug(f"Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self)}.")
             return False
         if not self.enabled:

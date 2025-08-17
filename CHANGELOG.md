@@ -8,8 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Known Issues
+- The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.
+
+---
+
+## [0.2.0] - 2025-08-17
+
+### Added
+- Command-line interface (CLI) for interactive control of the irrigation system.
+    - Non-blocking execution for long-running irrigation processes
+    - Provides an interface for testing and monitoring the system over SSH
 - Example log outputs for different scenarios in /examples/log_samples/ directory.
 - Updated `README.md` with logging examples.
+- GPIO support for `RelayValve` class to control irrigation circuits using GPIO pins with fallback to simulated GPIO for testing.
 
 ### Changed
 - `WeatherSimulator` is now not used in production, nor as a fallback for `RecentWeatherFetcher` in development mode. It is only used when explicitly invoked by disabling use of API in development mode.
@@ -22,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RecentWeatherFetcher now handles invalid API secrets gracefully, uses default values (standard weather conditions) when secrets are invalid as a fallback.
 
 ### Removed
+- Threading support validation in `IrrigationController` as the threading is crucial for the system's operation and should not be disabled.
 
 ### Known Issues
 - The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.

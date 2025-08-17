@@ -37,6 +37,7 @@ from smart_irrigation_system.enums import RelayValveState
 from typing import Optional
 
 
+MAX_RETRIES = 3  # Maximum number of retries for state change
 TOLERANCE = 0.5  # Tolerance for time checks, in seconds
 
 
@@ -49,7 +50,7 @@ class RelayValve:
         # Initialize GPIO pin for the relay valve
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.pin, GPIO.OUT)  # Set the pin as an output
-        GPIO.output(self.pin, GPIO.LOW)  # Ensure the valve is closed initially
+        GPIO.output(self.pin, GPIO.HIGH)  # Ensure the valve is closed initially
 
         self.state = RelayValveState.CLOSED  # Default state is CLOSED
         self.logger.info(f"RelayValve initialized on pin {self.pin}")
@@ -61,7 +62,6 @@ class RelayValve:
 
     def control(self, new_state: RelayValveState) -> None:
         """Enables or disables the relay valve to start or stop watering"""
-        MAX_RETRIES = 3  # Maximum number of retries for state change
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
@@ -70,7 +70,7 @@ class RelayValve:
                         self.logger.warning(f"Valve {self.pin} is already OPEN, no action taken.")
                         return
                     
-                    GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to open the valve
+                    GPIO.output(self.pin, GPIO.LOW)  # Set the pin to LOW to open the valve
 
                     self.state = RelayValveState.OPEN
                     self.logger.debug(f"RelayValve state changed to OPEN on pin {self.pin}")
@@ -80,7 +80,7 @@ class RelayValve:
                         self.logger.warning(f"Valve {self.pin} is already CLOSED, no action taken.")
                         return
                     
-                    GPIO.output(self.pin, GPIO.LOW)  # Set the pin to LOW to close the valve
+                    GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to close the valve
     
                     self.state = RelayValveState.CLOSED
                     self.logger.debug(f"RelayValve state changed to CLOSED on pin {self.pin}")
