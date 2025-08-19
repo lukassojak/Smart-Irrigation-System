@@ -113,52 +113,6 @@ def command_loop(controller: IrrigationController, stop_event):
             logger.error(f"Error in command loop: {e}")
 
 
-
-
-def main_loop(controller, display, pause_button, daily_irrigation_time, stop_event):
-    """Main loop for the Smart Irrigation System."""
-    irrigation_hour = daily_irrigation_time.tm_hour
-    irrigation_minute = daily_irrigation_time.tm_min
-    
-    try:
-        while not stop_event.is_set():
-            if controller.get_state() == ControllerState.IRRIGATING:
-                # If irrigating, just update the display and wait
-                display.render()
-                time.sleep(CHECK_INTERVAL)
-                continue
-            if paused:
-                logger.info("System is paused. Waiting for resume...")
-                # If paused, just update the display and wait
-                display.render()
-                time.sleep(CHECK_INTERVAL)
-                continue
-            # Check if it's time to irrigate
-            current_hour = time.localtime().tm_hour
-            current_minute = time.localtime().tm_min
-            # format current time for logging
-            current_time_str = f"{current_hour:02}:{current_minute:02}"
-            if (current_hour == irrigation_hour and 
-                abs(current_minute - irrigation_minute) <= TOLERANCE):
-                logger.debug(f"Current time {current_time_str} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
-                display.render()
-                controller.start_automatic_irrigation()
-                while controller.get_state() == ControllerState.IRRIGATING:
-                    # Wait until irrigation is done
-                    time.sleep(CHECK_INTERVAL)
-            else:
-                time_left = (irrigation_hour - current_hour) * 60 + (irrigation_minute - current_minute)
-                if time_left < 0:
-                    time_left += 24 * 60
-                display.render()
-
-            time.sleep(CHECK_INTERVAL)
-
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received. Exiting...")
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
-
 def main():
     """Main function to start the Smart Irrigation System."""
     tracemalloc.start()
@@ -176,19 +130,12 @@ def main():
     daily_irrigation_time: time.struct_time = controller.get_daily_irrigation_time()
     stop_event = threading.Event()
 
-    # Start the main loop in a separate thread
-    loop_thread = threading.Thread(
-        target=main_loop,
-        args=(controller, display, pause_button, daily_irrigation_time, stop_event),
-        daemon=True
-    )
-    loop_thread.start()
+    # Start the controller main loop
+    controller.start_main_loop()
 
     # Start CLI in the main thread
     command_loop(controller, stop_event)
-
-    # Wait for the main loop to finish
-    loop_thread.join()
+    controller.stop_main_loop()
 
     # Cleanup resources
     controller.cleanup()

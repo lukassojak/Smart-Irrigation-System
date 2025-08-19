@@ -143,7 +143,7 @@ class IrrigationCircuit:
         # Adjust the target water amount based on the total adjustment
         adjusted_water_amount = base_target_water_amount * (1 + total_adjustment)
         adjusted_water_amount = round(adjusted_water_amount, 3)  # Round to 3 decimal places for precision
-        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is +{round(total_adjustment, 2)}.")
+        self.logger.debug(f"Adjusted water amount is {adjusted_water_amount} liters. Total adjustment is {round(total_adjustment, 2)}.")
 
         # If total adjustment is -1 or less, no irrigation is needed
         if total_adjustment <= -1:

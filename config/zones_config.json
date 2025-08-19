@@ -68,7 +68,7 @@
             "even_area_mode": false,
             "target_mm": null,
             "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.3,
+            "liters_per_minimum_dripper": 0.1,
             "interval_days": 1,
             "drippers_summary": {
                 "12": 3,
@@ -76,9 +76,9 @@
                 "2": 6
             },
             "local_correction_factors": {
-                "solar": 0.1,
-                "rain": 0.15,
-                "temperature": 0.1
+                "solar": 0.05,
+                "rain": 0.0,
+                "temperature": 0.02
             }
         }
     ]

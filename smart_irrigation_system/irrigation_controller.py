@@ -24,6 +24,10 @@ ZONE_STATE_PATH = "./data/zones_state.json"
 MAX_WAIT_TIME = 60 * 30    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
 WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
 
+# Constants for automatic irrigation main loop
+CHECK_INTERVAL = 30  # seconds, how often to check the time for irrigation
+TOLERANCE = 1  # minutes, tolerance for irrigation time, if the current time is within this tolerance of the scheduled time, irrigation will be started
+
 
 class IrrigationController:
     """The main irrigation controller that manages all the irrigation circuits. Pattern: Singleton"""
@@ -51,8 +55,13 @@ class IrrigationController:
         self.stop_event = threading.Event()
         self.threads_lock = threading.Lock()
 
+        # Initialize automatic irrigation management
+        self._timer_thread = None  # Thread for checking irrigation time
+        self._timer_stop_event = threading.Event()  # Event to stop the timer thread
+        self._timer_pause_event = threading.Event()  # Event to pause the timer thread
+
         # Set initial controller state
-        self.controller_state = ControllerState.IDLE  
+        self.controller_state = ControllerState.IDLE
         
         self.logger.info("Environment: %s", self.global_config.automation.environment)
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
@@ -352,6 +361,61 @@ class IrrigationController:
         """Cleans up the resources used by the irrigation controller"""
         self.logger.info("Cleaning up resources...")
         self.stop_irrigation()
+
+    
+    # ===========================================================================================================
+    # Main loop for automatic irrigation management
+    # ===========================================================================================================
+
+    def start_main_loop(self):
+        """Starts the main loop for automatic irrigation management. Only one instance of the main loop can run at a time."""
+        if self._timer_thread and self._timer_thread.is_alive():
+            self.logger.info("Main loop already running.")
+            return
+        
+        self.logger.info("Starting main loop for automatic irrigation management...")
+        self._timer_stop_event.clear()
+        self._timer_pause_event.clear()
+        self._timer_thread = threading.Thread(target=self._main_loop_func, daemon=True)
+        self._timer_thread.start()
+
+    def stop_main_loop(self):
+        """Stops the main loop for automatic irrigation management"""
+        self.logger.info("Stopping main loop...")
+        self._timer_stop_event.set()
+        if self._timer_thread and self._timer_thread.is_alive():
+            self._timer_thread.join()
+    
+    def pause_main_loop(self):
+        """Pauses the main loop for automatic irrigation management"""
+        self.logger.info("Pausing main loop...")
+        self._timer_pause_event.set()
+    
+    def resume_main_loop(self):
+        """Resumes the main loop for automatic irrigation management"""
+        self.logger.info("Resuming main loop...")
+        self._timer_pause_event.clear()
+    
+    def _main_loop_func(self):
+        irrigation_hour = self.global_config.automation.scheduled_hour
+        irrigation_minute = self.global_config.automation.scheduled_minute
+
+        while not self._timer_stop_event.is_set():
+            if self._timer_pause_event.is_set():
+                self.logger.info("Main loop is paused.")
+                while self._timer_pause_event.is_set() and not self._timer_stop_event.is_set():
+                    time.sleep(CHECK_INTERVAL)
+    
+            current_time = time.localtime()
+            if (current_time.tm_hour == irrigation_hour and 
+                abs(current_time.tm_min - irrigation_minute) <= TOLERANCE):
+                self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
+                self.start_automatic_irrigation()   # non-blocking call to start irrigation
+                # Wait until the irrigation is done or the time is out of tolerance
+                while (self.get_state() == ControllerState.IRRIGATING or abs(current_time.tm_min - irrigation_minute) <= TOLERANCE) and not self._timer_stop_event.is_set():
+                    time.sleep(CHECK_INTERVAL)
+
+            time.sleep(CHECK_INTERVAL)  # Wait for the next check
 
 
     # ===========================================================================================================
