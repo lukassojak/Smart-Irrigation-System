@@ -25,7 +25,7 @@ MAX_WAIT_TIME = 60 * 30    # seconds, should be time long enough for most of cir
 WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
 
 # Constants for automatic irrigation main loop
-CHECK_INTERVAL = 30  # seconds, how often to check the time for irrigation
+CHECK_INTERVAL = 5  # seconds, how often to check the time for irrigation
 TOLERANCE = 1  # minutes, tolerance for irrigation time, if the current time is within this tolerance of the scheduled time, irrigation will be started
 
 
@@ -49,6 +49,8 @@ class IrrigationController:
         self.global_conditions_provider = self._initialize_global_conditions_provider()
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH)
         atexit.register(self.state_manager.handle_clean_shutdown)
+        for circuit in self.circuits_list:
+            circuit.last_irrigation_time = self.state_manager.get_last_irrigation_time(circuit)
 
         # Initialize threading
         self.threads = []
@@ -59,6 +61,9 @@ class IrrigationController:
         self._timer_thread = None  # Thread for checking irrigation time
         self._timer_stop_event = threading.Event()  # Event to stop the timer thread
         self._timer_pause_event = threading.Event()  # Event to pause the timer thread
+
+        # Consumption tracking
+        self.current_consumption = 0.0  # Total consumption of all irrigating circuits in liters per hour
 
         # Set initial controller state
         self.controller_state = ControllerState.IDLE
@@ -117,15 +122,77 @@ class IrrigationController:
     # Status and information retrieval
     # ===========================================================================================================
 
-    def get_status_summary(self) -> Dict[str, Any]:
-        """Returns a summary of the current status of the irrigation controller for DisplayManager"""
-        summary = {
-            "global_conditions": self.global_conditions_provider.get_current_conditions().to_dict(),
-            "circuits": {circuit.id: circuit.get_status_summary() for circuit in self.circuits.values()},
-            "global_config": self.global_config.to_dict(),
-            "circuit_states": {circuit.id: circuit.state.value for circuit in self.circuits.values()},
+    def get_status(self) -> dict:
+        """
+        Returns comprehensive snapshot of the irrigation controller's status.:
+        {
+            'auto_enabled': True/False,
+            'auto_paused': True/False,  # whether the automatic irrigation is paused
+            'auto_stopped': True/False,  # whether the automatic irrigation is stopped
+            'sequential': True/False,  # whether the automatic irrigation is sequential or concurrent
+            'scheduled_time': str, # scheduled time for automatic irrigation in HH:MM format
+            'controller_state': 'IDLE'/'IRRIGATING'/'ERROR',  # current state of the controller   
+            'cache_update': datetime,
+            'cached_global_conditions': GlobalConditions,  # cached global weather conditions, if available
+            'zones': [
+                {
+                    'id': 1,
+                    'name': 'Front Lawn',
+                    'state': 'IDLE'/'IRRIGATING'/'WAITING'/'ERROR',
+                    'progress': 0-100,     # current irrigation progress in percentage
+                    'last_run': datetime,
+                    'duration': timedelta,
+                    'pin': 17,
+                    'error': 'message if any',
+                },
+                ...
+            ]
+            'logs': [...],
+            'current_consumption': 0.0,  # total consumption of all irrigating circuits in liters per hour
         }
-        return summary
+        """
+
+        # Fetch global conditions
+        cached_conditions_str = self.global_conditions_provider.get_conditions_str()
+
+        # Prepare zones status
+        zones_status = []
+        for circuit in self.circuits.values():
+            zones_status.append({
+                'id': circuit.id,
+                'name': circuit.name,
+                'state': circuit.state.name,
+                'pin': circuit.valve.pin,
+            })
+
+        scheduled_time = f"{self.global_config.automation.scheduled_hour:02}:{self.global_config.automation.scheduled_minute:02}"
+        status = {
+            'auto_enabled': self.global_config.automation.enabled,
+            'auto_paused': self._timer_pause_event.is_set(),
+            'auto_stopped': self._timer_stop_event.is_set(),
+            'scheduled_time': scheduled_time,
+            'sequential': self.global_config.automation.sequential,
+            'controller_state': self.controller_state.name,
+            'cache_update': self.global_conditions_provider.last_cache_update,
+            'cached_global_conditions': cached_conditions_str.split(", Timestamp:")[0],
+            'zones': zones_status,
+            'current_consumption': self.get_current_consumption(),
+        }
+
+        return status
+    
+    def get_circuit_progress(self, circuit_number: int) -> tuple[float, float]:
+        """Returns the current progress and target water amount for a given circuit."""
+        if circuit_number not in self.circuits:
+            raise ValueError(f"Circuit number {circuit_number} does not exist.")
+        
+        circuit = self.circuits[circuit_number]
+        if circuit.state != IrrigationState.IRRIGATING:
+            return 0.0, 0.0
+        
+        _, _, _, target_water_amount, current_water_amount = circuit.get_progress
+        return target_water_amount, current_water_amount
+        
     
     def get_daily_irrigation_time(self) -> time.struct_time:
         """Returns the daily irrigation time based on the global configuration"""
@@ -146,11 +213,9 @@ class IrrigationController:
     def get_current_consumption(self) -> float:
         """Returns the total consumption of all irrigating circuits in liters per hour"""
         total_consumption = 0.0
-        with self.threads_lock:
-            for circuit in self.circuits.values():
-                if circuit.is_currently_irrigating:
-                    total_consumption += circuit.get_circuit_consumption()
-        
+        for circuit in self.circuits.values():
+            if circuit.is_currently_irrigating:
+                total_consumption += circuit.get_circuit_consumption()
         return total_consumption
     
     def get_irrigating_count(self) -> int:
@@ -340,7 +405,13 @@ class IrrigationController:
 
     def stop_irrigation(self):
         """Stops all irrigation processes"""
+        if self.controller_state == ControllerState.IDLE:
+            self.logger.info("No irrigation processes are running. Nothing to stop.")
+            return
+
+        self.controller_state = ControllerState.STOPPING
         self.logger.info("Stopping all irrigation processes...")
+
         self.stop_event.set()
 
         with self.threads_lock:
@@ -350,6 +421,8 @@ class IrrigationController:
             thread.join()  # Wait for all threads to finish
         
         self.threads.clear()  # Clear the thread list after stopping all threads
+
+        self.controller_state = ControllerState.IDLE
         self.logger.info("Stopping circuits done.")
 
 
@@ -381,6 +454,7 @@ class IrrigationController:
 
     def stop_main_loop(self):
         """Stops the main loop for automatic irrigation management"""
+        # TODO: blocking call to stop the main loop, should be non-blocking
         self.logger.info("Stopping main loop...")
         self._timer_stop_event.set()
         if self._timer_thread and self._timer_thread.is_alive():

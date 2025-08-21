@@ -36,7 +36,7 @@ pip3 install -r requirements.txt
 
 ## 6. WiFi watchdog
 - The WiFi watchdog script is used to **monitor the WiFi connection and restart it if it goes down**. It helps to ensure that the irrigation system remains connected to the network, especially in case of temporary WiFi outages.
-- Copy the [fwifi_watchdog.sh](tools/wifi_watchdog.sh) script to `/usr/local/bin/`.
+- Copy the [wifi_watchdog.sh](../tools/wifi_watchdog.sh) script to `/usr/local/bin/`.
 - Add the script to the crontab to run regularly:
 ```bash
 crontab -e

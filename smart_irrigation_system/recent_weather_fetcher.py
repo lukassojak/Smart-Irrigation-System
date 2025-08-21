@@ -181,8 +181,6 @@ class RecentWeatherFetcher:
                 f"Rain: {self.current_conditions.rain_mm:.2f} mm, "
                 f"Solar: {solar_watts:.2f} W/m², "
                 f"Timestamp: {self.current_conditions.timestamp.isoformat()}")
-    
-
 
     
     def _get_avg_temperature(self, interval_days: int) -> float:

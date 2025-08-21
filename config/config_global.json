@@ -16,9 +16,9 @@
     },
     "automation": {
         "enabled": true,
-        "sequential": true,
-        "scheduled_hour": 14,
-        "scheduled_minute": 18,
+        "sequential": false,
+        "scheduled_hour": 8,
+        "scheduled_minute": 56,
         "max_flow_monitoring": true,
         "environment": "development"
     },

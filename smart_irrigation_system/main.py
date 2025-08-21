@@ -1,6 +1,5 @@
 # tracemalloc - for debugging performance issues
 import tracemalloc
-import threading
 
 from smart_irrigation_system.irrigation_controller import IrrigationController
 from smart_irrigation_system.enums import Environment
@@ -8,6 +7,7 @@ from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.button import Button
 from smart_irrigation_system.display_controller import DisplayController
 from smart_irrigation_system.enums import ControllerState
+from smart_irrigation_system.irrigation_cli import IrrigationCLI
 
 
 # import atexit, os - for cleanup and unclean shutdown logging
@@ -51,7 +51,6 @@ def command_loop(controller: IrrigationController, stop_event):
                 if controller.get_state() == ControllerState.IRRIGATING:
                     print("Stopping irrigation before exiting...")
                     controller.stop_irrigation()
-                stop_event.set()  # Signal the main loop to stop
                 break
             elif cmd == "help":
                 print("Available commands:")
@@ -127,14 +126,14 @@ def main():
     display = DisplayController(controller)
     pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
 
-    daily_irrigation_time: time.struct_time = controller.get_daily_irrigation_time()
-    stop_event = threading.Event()
-
     # Start the controller main loop
     controller.start_main_loop()
 
     # Start CLI in the main thread
-    command_loop(controller, stop_event)
+    # command_loop(controller, stop_event)
+    cli = IrrigationCLI(controller, refresh_interval=0.1)
+    cli.run()
+
     controller.stop_main_loop()
 
     # Cleanup resources

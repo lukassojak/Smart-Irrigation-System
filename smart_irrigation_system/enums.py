@@ -3,6 +3,7 @@ from enum import Enum
 class ControllerState(Enum):
     IDLE = "idle"
     IRRIGATING = "irrigating"
+    STOPPING = "stopping"                     # Stopping irrigation
     ERROR = "error"
 
 

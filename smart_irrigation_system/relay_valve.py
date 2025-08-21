@@ -34,7 +34,7 @@ except (ImportError, RuntimeError):
 import time
 from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.enums import RelayValveState
-from typing import Optional
+from typing import Optional, Callable
 
 
 MAX_RETRIES = 3  # Maximum number of retries for state change
@@ -42,7 +42,7 @@ TOLERANCE = 0.5  # Tolerance for time checks, in seconds
 
 
 class RelayValve:
-    def __init__(self, pin):
+    def __init__(self, pin: int):
         # Initialize the relay valve logger with a specific pin number
         self.logger = get_logger(f"RelayValve-{pin}")
         self.pin = pin
@@ -54,10 +54,6 @@ class RelayValve:
 
         self.state = RelayValveState.CLOSED  # Default state is CLOSED
         self.logger.info(f"RelayValve initialized on pin {self.pin}")
-
-    def get_state(self) -> RelayValveState:
-        """Returns the current state of the relay valve"""
-        return self.state
 
 
     def control(self, new_state: RelayValveState) -> None:
@@ -95,6 +91,7 @@ class RelayValve:
                 self.logger.error(f"Unexpected error while controlling valve: {e}")
                 time.sleep(1)  # Wait before retrying
                 retry_count += 1
+            
 
         # If all retries fail and valve cannot be CLOSED, log a critical error and raise an exception
         if self.state == RelayValveState.OPEN:
@@ -105,8 +102,10 @@ class RelayValve:
             raise Exception(f"Failed to open valve {self.pin} after {MAX_RETRIES} retries. Please check the hardware.")
 
 
-    def open(self, duration, stop_event) -> Optional[int]:
-        """Opens the valve for a specified duration. Returns the duration in seconds if successful, or raises an exception if the valve is closed early."""
+    def open(self, duration: int, stop_event, progress_callback: Optional[Callable[[float], None]] = None) -> int:
+        """Opens the valve for a specified duration. 
+           Calls callback with progress updates if provided.
+           Returns the duration in seconds if successful, or raises an exception if the valve is closed early."""
 
         self.logger.debug(f"Valve will be opened for {duration} seconds.")
         self.control(RelayValveState.OPEN)
@@ -117,6 +116,9 @@ class RelayValve:
             elapsed_time = 0
             while time.time() - start_time < duration:
                 elapsed_time = time.time() - start_time
+                # Call the progress callback if provided
+                if progress_callback:
+                    progress_callback(elapsed_time)
                 if stop_event.is_set():
                     self.logger.info(f"Closing valve early due to stop event after {time.time() - start_time:.0f} seconds")
                     # return elapsed time if the stop event is triggered
