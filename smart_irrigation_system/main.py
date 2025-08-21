@@ -131,7 +131,7 @@ def main():
 
     # Start CLI in the main thread
     # command_loop(controller, stop_event)
-    cli = IrrigationCLI(controller, refresh_interval=0.1)
+    cli = IrrigationCLI(controller, refresh_interval=0.05)
     cli.run()
 
     controller.stop_main_loop()

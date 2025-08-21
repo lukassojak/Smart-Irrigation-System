@@ -7,6 +7,7 @@ from smart_irrigation_system.global_config import GlobalConfig
 from smart_irrigation_system.global_conditions import GlobalConditions
 from smart_irrigation_system.circuit_state_manager import CircuitStateManager
 from datetime import datetime, timedelta
+import time
 from typing import Optional, Dict
 from smart_irrigation_system.logger import get_logger
 
@@ -42,7 +43,7 @@ class IrrigationCircuit:
 
         # Real-time metrics
         self._target_duration: Optional[int] = None  # Target duration of irrigation in seconds
-        self._current_duration: Optional[int] = None  # Current duration of irrigation in seconds
+        self._current_duration: Optional[int] = 0  # Current duration of irrigation in seconds
 
         self.logger.info(f"Irrigation Circuit {self.id} initialized with state {self._state.name}.")
 
@@ -72,7 +73,7 @@ class IrrigationCircuit:
         target_water_amount = self._target_duration * self.get_circuit_consumption() / 3600.0 if self._target_duration is not None else 0.0
         
         # Calculate the current water amount based on the current duration and consumption
-        current_water_amount = (self.get_circuit_consumption() * (self._current_duration / 3600)) if self._current_duration is not None else 0.0
+        current_water_amount = (self.get_circuit_consumption() * (self._current_duration / 3600))
 
         current_duration = self._current_duration if self._current_duration is not None else 0
         target_duration = self._target_duration if self._target_duration is not None else 0
@@ -212,7 +213,53 @@ class IrrigationCircuit:
 
         return self._irrigate(target_duration, stop_event)
 
-    def _irrigate(self, duration, stop_event) -> Optional[int]:
+    def _irrigate(self, duration: int, stop_event) -> Optional[int]:
+        """Private method to handle the irrigation process. Starts the irrigation for a specified duration and updates the state accordingly."""
+        def update_progress(elapsed):
+            """Updates the real-time metrics during irrigation."""
+            self._current_duration = elapsed
+
+        def wait_for_irrigation_completion():
+            """Waits for the irrigation to complete or be stopped and updates progress."""
+            nonlocal elapsed_time
+            while time.time() - start_time < duration:
+                elapsed_time = time.time() - start_time
+                update_progress(elapsed_time)
+                if stop_event.is_set():
+                    self.logger.info(f"Irrigation stopped by user after {int(elapsed_time)} seconds.")
+                    self.state = IrrigationState.STOPPED
+                    return None
+                time.sleep(0.05)
+
+        if self.state != IrrigationState.IDLE:
+            self.logger.warning(f"Circuit {self.id} is not in IDLE state. Current state: {self.state.name}. Cannot start irrigation.")
+            return None
+        
+        self.logger.info(f"Starting irrigation for {duration} seconds.")
+        self.state = IrrigationState.IRRIGATING
+        self.last_irrigation_time = datetime.now()
+        self._target_duration = duration
+        elapsed_time = 0
+        start_time = time.time()  # Record the start time of irrigation
+
+        try:
+            self.valve.state = RelayValveState.OPEN  # Open the valve to start irrigation
+            wait_for_irrigation_completion()
+            self.valve.state = RelayValveState.CLOSED  # Close the valve after irrigation
+            return int(elapsed_time)  # Return the total elapsed time in seconds
+        
+        except Exception as e:
+            self.state = IrrigationState.ERROR
+            self.logger.error(f"Error during irrigation: {e}")
+            raise e
+        
+        finally:
+            if self.state != IrrigationState.ERROR and not stop_event.is_set():
+                self.state = IrrigationState.FINISHED
+                self.logger.info(f"Irrigation finished successfully after {int(elapsed_time)} seconds.")
+
+    # deprecated method for opening the valve for a specific duration
+    def _irrigate_deprecated(self, duration: int, stop_event) -> Optional[int]:
         """Starts the irrigation process for a specified duration. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         def update_progress(elapsed):
             """Updates the real-time metrics during irrigation."""

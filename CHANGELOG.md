@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Known Issues
+
+---
+
+## [0.3.0] - 2025-08-21
+*First interactive CLI release with live monitoring and full hardware setup support for irrigation nodes, including utilities and documentation.*
+
+### Added
 - [docs/](docs/) directory with detailed documentation on the hardware setup and usage instructions.
 - [tools/](tools/) directory with utility scripts for managing the irrigation node (e.g., WiFi monitoring and auto-restart).
 - Updated CLI with live dashboard for monitoring the irrigation system status, including:
@@ -21,12 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Current and target water amount
     - Elapsed and target watering time
     - Percentage of completion
+- Updated `_irrigate()` method in IrrigationCircuit to handle timed irrigation and progress updates using RelayValve.state setter.
+- Added inner function in `_irrigate()` for irrigation loop and progress update.
 
 ### Changed
 - Main loop for automatic irrigation logic is now moved to `IrrigationController` class, allowing for better control and testing and responsibility separation. The loop is now non-blocking, allowing for other tasks to run concurrently.
 - The main loop can be turned off, paused, or resumed via the CLI.
+- Refactored RelayValve to use `_state` private attribute with a `state` property (getter/setter).
+- Introduced private method `_set_gpio_state()` in RelayValve to encapsulate GPIO handling and retries.
+- Removed `.open()` method from RelayValve; moved timed irrigation logic to IrrigationCircuit.
 
 ### Fixed
+- Ensured RelayValve state changes go through property setter for consistent logging and control.
 
 ### Removed
 

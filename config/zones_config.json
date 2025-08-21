@@ -89,11 +89,11 @@
             "even_area_mode": false,
             "target_mm": null,
             "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.1,
+            "liters_per_minimum_dripper": 0.07,
             "interval_days": 1,
             "drippers_summary": {
-                "12": 5,
-                "8": 1
+                "12": 15,
+                "8": 5
             },
             "local_correction_factors": {
                 "solar": 0.05,

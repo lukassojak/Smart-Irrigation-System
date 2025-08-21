@@ -116,7 +116,7 @@ class IrrigationCLI:
                 progress_percentage = int((current_water_amount / target_water_amount) * 75)
                 progress_bar = f"[{'█' * progress_percentage}{'-' * (75 - progress_percentage)}]"
             else:
-                progress_bar = "[--------------------]"  # Default progress bar for zero target
+                progress_bar = "[---------------------------------------------------------------]"
             
             # Add formatted row to content
             tasks_panel_content.append(

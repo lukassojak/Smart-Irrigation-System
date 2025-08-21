@@ -52,8 +52,32 @@ class RelayValve:
         GPIO.setup(self.pin, GPIO.OUT)  # Set the pin as an output
         GPIO.output(self.pin, GPIO.HIGH)  # Ensure the valve is closed initially
 
-        self.state = RelayValveState.CLOSED  # Default state is CLOSED
+        self._state = RelayValveState.CLOSED  # Default state is CLOSED
         self.logger.info(f"RelayValve initialized on pin {self.pin}")
+    
+    @property
+    def state(self) -> RelayValveState:
+        """Returns the current state of the relay valve"""
+        return self._state
+    
+    @state.setter
+    def state(self, new_state: RelayValveState) -> None:
+        """Sets the state of the relay valve and updates the GPIO pin accordingly.
+           If the change fails, it will retry up to MAX_RETRIES times."""
+        if new_state not in (RelayValveState.OPEN, RelayValveState.CLOSED):
+            raise ValueError(f"Invalid state: {new_state}. Must be OPEN or CLOSED.")
+        self.control(new_state)  # Use the control method to set the state with retries
+    
+    def _set_gpio_state(self, new_state: RelayValveState) -> None:
+        """Sets the GPIO pin according to the new desired state"""
+        if new_state == RelayValveState.OPEN:
+            GPIO.output(self.pin, GPIO.LOW)
+            self._state = RelayValveState.OPEN
+            self.logger.debug(f"RelayValve state changed to OPEN on pin {self.pin}")
+        elif new_state == RelayValveState.CLOSED:
+            GPIO.output(self.pin, GPIO.HIGH)
+            self._state = RelayValveState.CLOSED
+            self.logger.debug(f"RelayValve state changed to CLOSED on pin {self.pin}")
 
 
     def control(self, new_state: RelayValveState) -> None:
@@ -61,26 +85,12 @@ class RelayValve:
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
-                if new_state == RelayValveState.OPEN:
-                    if self.state == RelayValveState.OPEN:
-                        self.logger.warning(f"Valve {self.pin} is already OPEN, no action taken.")
-                        return
-                    
-                    GPIO.output(self.pin, GPIO.LOW)  # Set the pin to LOW to open the valve
-
-                    self.state = RelayValveState.OPEN
-                    self.logger.debug(f"RelayValve state changed to OPEN on pin {self.pin}")
+                if new_state == self.state:
+                    self.logger.warning(f"Valve {self.pin} is already in state {new_state}. No action taken.")
                     return
-                else:
-                    if self.state == RelayValveState.CLOSED:
-                        self.logger.warning(f"Valve {self.pin} is already CLOSED, no action taken.")
-                        return
-                    
-                    GPIO.output(self.pin, GPIO.HIGH)  # Set the pin to HIGH to close the valve
-    
-                    self.state = RelayValveState.CLOSED
-                    self.logger.debug(f"RelayValve state changed to CLOSED on pin {self.pin}")
-                    return  # Exit the loop after successful state change
+                
+                self._set_gpio_state(new_state)
+                return
                 
             except RuntimeError as e:
                 time.sleep(1)  # Wait before retrying
@@ -91,17 +101,17 @@ class RelayValve:
                 self.logger.error(f"Unexpected error while controlling valve: {e}")
                 time.sleep(1)  # Wait before retrying
                 retry_count += 1
-            
 
         # If all retries fail and valve cannot be CLOSED, log a critical error and raise an exception
-        if self.state == RelayValveState.OPEN:
-            self.logger.critical(f"Failed to close valve {self.pin} after {MAX_RETRIES} retries. Please check the hardware.")
-            raise Exception(f"Failed to close valve {self.pin} after {MAX_RETRIES} retries. Please check the hardware.")
-        else:
-            self.logger.error(f"Failed to open valve {self.pin} after {MAX_RETRIES} retries. Please check the hardware.")
-            raise Exception(f"Failed to open valve {self.pin} after {MAX_RETRIES} retries. Please check the hardware.")
+        self.logger.critical(
+            f"Failed to change valve {self.pin} to {new_state.name} after {MAX_RETRIES} retries. Please check hardware."
+        )
+        raise Exception(f"Failed to change valve {self.pin} to {new_state.name} after {MAX_RETRIES} retries.")
+    
 
 
+
+    # deprecated method for opening the valve for a specific duration
     def open(self, duration: int, stop_event, progress_callback: Optional[Callable[[float], None]] = None) -> int:
         """Opens the valve for a specified duration. 
            Calls callback with progress updates if provided.
