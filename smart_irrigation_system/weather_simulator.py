@@ -15,7 +15,7 @@ class WeatherSimulator:
         """Returns a string representation of the current weather conditions."""
         return (f"Temperature: {self.current_conditions.temperature:.2f} °C, "
                 f"Rain: {self.current_conditions.rain_mm:.2f} mm, "
-                f"Sunlight: {self.current_conditions.sunlight_hours:.2f} hours, "
+                f"Solar: {self.current_conditions.solar_total:.2f} W/m², "
                 f"Timestamp: {self.current_conditions.timestamp.isoformat()}")
 
     def get_current_conditions(self) -> GlobalConditions:

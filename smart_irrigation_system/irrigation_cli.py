@@ -6,6 +6,7 @@ from rich.align import Align
 from rich.text import Text
 import threading
 import time, logging, datetime
+from typing import Optional
 
 from smart_irrigation_system.irrigation_controller import IrrigationController
 from smart_irrigation_system.logger import get_dashboard_log_handler
@@ -13,9 +14,11 @@ from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.enums import ControllerState
 
 class IrrigationCLI:
-    def __init__(self, controller: IrrigationController, refresh_interval=0.1, max_logs=20, sleep_timeout=30):
+    def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,
+                max_logs=20, sleep_timeout=30):
         self.controller = controller
-        self.refresh_interval = refresh_interval
+        self.refresh_interval_idle = refresh_interval_idle
+        self.refresh_interval_active = refresh_interval_active
         self.running = True
         self.console = Console()
         self.logs = []  # own log storage
@@ -43,6 +46,8 @@ class IrrigationCLI:
         if len(self.logs) > self.max_logs:
             self.logs.pop(0)
 
+
+
     def run(self):
         # Start the input thread
         self.input_thread.start()
@@ -63,9 +68,9 @@ class IrrigationCLI:
 
                 # Adaptive refresh interval based on controller state
                 if self.controller.get_state() == ControllerState.IRRIGATING:
-                    refresh_interval = 0.1
+                    refresh_interval = self.refresh_interval_active
                 else:
-                    refresh_interval = self.refresh_interval
+                    refresh_interval = self.refresh_interval_idle
 
                 live.update(dashboard, refresh=True)
                 time.sleep(refresh_interval)
@@ -203,7 +208,7 @@ class IrrigationCLI:
         sys_table.add_row("Mode", f"{'AUTO' if status['auto_enabled'] else 'MANUAL'} "
                                   f"{'(OFF)' if status['auto_stopped'] else '(ON)'}"
                                   f"{' - paused' if status['auto_paused'] else ''}", f"version {version}")
-        sys_table.add_row("Irrigation Mode", f"{'Sequential' if status['sequential'] else 'Concurrent'} ")
+        sys_table.add_row("Irrigation mode", f"{'Sequential' if status['sequential'] else 'Concurrent'} ")
         
         # add current time
         current_time = datetime.datetime.now().strftime("%H:%M:%S")
@@ -211,26 +216,69 @@ class IrrigationCLI:
         sys_table.add_row("Scheduled time", f"{status['scheduled_time']}" if status['auto_enabled'] else "N/A")
         # add empty row for spacing
         sys_table.add_row("", "")
-        sys_table.add_row("Cached Weather", status['cached_global_conditions'])
-        sys_table.add_row("Last Weather Update", str(status['cache_update']))
+        sys_table.add_row("Cached weather", status['cached_global_conditions'])
+        sys_table.add_row("Last weather update", str(status['cache_update']))
         # add empty row for spacing
         sys_table.add_row("", "")
-        sys_table.add_row("Consumption", f"{status['current_consumption']:.2f} L/h")
-        sys_table.add_row("Controller State", f"{state_icons.get(status['controller_state'], '?')} {status['controller_state']}")
+        current_consumption = status['current_consumption']
+        if current_consumption > 1000:
+            cc_str = Text(f"{current_consumption:.2f} L/h", style="#eb8934")
+        elif current_consumption > 500:
+            cc_str = Text(f"{current_consumption:.2f} L/h", style="yellow")
+        elif current_consumption > 0:
+            cc_str = Text(f"{current_consumption:.2f} L/h", style="green")
+        else:
+            cc_str = Text("0.00 L/h", style="dim")
+        sys_table.add_row("Current consumption", cc_str)
+        sys_table.add_row("Controller state", f"{state_icons.get(status['controller_state'], '?')} {status['controller_state']}")
 
         # 2) Zones
         zones_table = Table(title="Zones", expand=True)
         zones_table.add_column("ID", justify="center")
         zones_table.add_column("Name")
-        zones_table.add_column("Last Irrigation")
+        zones_table.add_column("Last irrigation time")
+        zones_table.add_column("Last volume")
+        zones_table.add_column("Base volume")
+        zones_table.add_column("Last result")
         zones_table.add_column("State", justify="center")
         zones_table.add_column("Pin", justify="center")
 
 
         for z in status['zones']:
             icon = state_icons.get(z['state'], "?")
-            i_t = self.controller.get_circuit(z['id']).last_irrigation_time
-            zones_table.add_row(str(z['id']), z['name'], i_t.strftime("%H:%M:%S") if i_t else "N/A",
+            base_volume: float = self.controller.get_circuit(z['id']).base_target_water_amount
+            bv_str = f"{base_volume:.2f} L" if base_volume is not None else "N/A"
+            time: Optional[datetime] = self.controller.get_circuit(z['id']).last_irrigation_time
+            if time is None:
+                t_str: Text = Text("N/A", style="dim")
+            # if the date is today, show only time
+            elif time.date() == datetime.datetime.now().date():
+                t_str: Text = Text(time.strftime("Today %H:%M:%S"))
+            else:
+                # if the date is not today, show full date and time in dim style
+                t_str: Text = Text(time.strftime("%d.%m.%Y %H:%M:%S"), style="dim")
+
+            vol = self.controller.get_circuit(z['id']).last_irrigation_volume
+            if vol is None:
+                v_str: Text = Text("N/A", style="dim")
+            elif vol > base_volume:
+                v_str: Text = Text(f"{vol:.2f} L", style="#eb8934")
+            else:
+                v_str: Text = Text(f"{vol:.2f} L", style="green")
+            
+            result = self.controller.get_circuit(z['id'])._last_irrigation_result
+            if result is None:
+                r_str = Text("N/A", style="dim")
+            elif result == "success":
+                r_str = Text("Success", style="green")
+            elif result == "skipped":
+                r_str = Text("Skipped")
+            elif result == "interrupted":
+                r_str = Text("Interrupted", style="yellow")
+            elif result == "error":
+                r_str = Text("Error", style="red")
+
+            zones_table.add_row(str(z['id']), z['name'], t_str, v_str, bv_str, r_str,
                                 f"{icon} {z['state']}", str(z['pin']))
 
         # 3) Current tasks panel - live progress bar of irrigating zones
@@ -285,11 +333,11 @@ class IrrigationCLI:
         # 5) System log panel
         logs_rich = []
         level_styles = {
-            "INFO": "bold green",
-            "WARNING": "bold yellow",
-            "ERROR": "bold red",
+            "INFO": "green",
+            "WARNING": "#eb8934",
+            "ERROR": "red",
             "CRITICAL": "bold white on red",
-            "DEBUG": "dim cyan",
+            "DEBUG": "cyan",
         }
 
         for level, raw in self.log_handler.logs:
@@ -303,7 +351,7 @@ class IrrigationCLI:
                 style = level_styles.get(level, "white")
 
                 line = Text(f"[{level}] ", style=style)
-                line.append(f"{timestamp[11:]} | {module} | {message[:80]}", style="white")
+                line.append(f"{timestamp[11:]} | {module} | {message[:80]}", style="dim white")
 
                 logs_rich.append(line)
             except Exception as e:

@@ -32,7 +32,6 @@ class IrrigationCircuit:
         # Ask Drippers for the dripper with the minimum flow rate in liters per hour in configuration
 
         self.interval_days = interval_days
-        self.last_irrigation_time: Optional[datetime] = None
         self.sensors = [SoilMoistureSensorPair(pin1, pin2) for pin1, pin2 in sensor_pins] if sensor_pins else []
 
         self.drippers = drippers                                        # Instance of Drippers to manage dripper flow rates
@@ -44,6 +43,11 @@ class IrrigationCircuit:
         # Real-time metrics
         self._target_duration: Optional[int] = None  # Target duration of irrigation in seconds
         self._current_duration: Optional[int] = 0  # Current duration of irrigation in seconds
+
+        # Temporary variables for historical data
+        self._last_irrigation_time: Optional[datetime] = None
+        self._last_irrigation_duration: Optional[int] = None  # seconds
+        self._last_irrigation_result: Optional[str] = None  # "success", "skipped", "interrupted", "error", None
 
         self.logger.info(f"Irrigation Circuit {self.id} initialized with state {self._state.name}.")
 
@@ -65,18 +69,16 @@ class IrrigationCircuit:
     @property
     def get_progress(self) -> tuple[float, int, int, float, float]:
         """Returns the current irrigation progress as a tuple of (percentage, target duration, current duration, target water amount, current water amount)."""
-        
+        current_duration = self._current_duration
+        target_duration = self._target_duration if self._target_duration is not None else 0
         # Calculate the percentage of irrigation completed
-        percentage = (self._current_duration / self._target_duration) * 100.0 if self._target_duration is not None else 0.0
+        percentage = (current_duration / self._target_duration) * 100.0 if target_duration is not None else 0.0
         
         # Calculate the target water amount based on the target duration and consumption
-        target_water_amount = self._target_duration * self.get_circuit_consumption() / 3600.0 if self._target_duration is not None else 0.0
+        target_water_amount = target_duration * self.get_circuit_consumption() / 3600.0 if target_duration is not None else 0.0
         
         # Calculate the current water amount based on the current duration and consumption
-        current_water_amount = (self.get_circuit_consumption() * (self._current_duration / 3600))
-
-        current_duration = self._current_duration if self._current_duration is not None else 0
-        target_duration = self._target_duration if self._target_duration is not None else 0
+        current_water_amount = (self.get_circuit_consumption() * (current_duration / 3600))
         
         return (percentage, target_duration, current_duration, target_water_amount, current_water_amount)
     
@@ -84,6 +86,18 @@ class IrrigationCircuit:
     def last_irrigation_time(self) -> Optional[datetime]:
         """Returns the last irrigation time."""
         return self._last_irrigation_time
+    
+    @property
+    def last_irrigation_duration(self) -> Optional[int]:
+        """Returns the last irrigation duration in seconds."""
+        return self._last_irrigation_duration
+    
+    @property
+    def last_irrigation_volume(self) -> Optional[float]:
+        """Returns the last irrigation volume in liters."""
+        if self.last_irrigation_duration is None or self.get_circuit_consumption() is None:
+            return None
+        return self.last_irrigation_duration * self.get_circuit_consumption() / 3600.0
 
     # state setter
     @state.setter
@@ -92,20 +106,33 @@ class IrrigationCircuit:
         with self._irrigating_lock:
             self._state = new_state
             self.logger.debug(f"State changed to {self._state.name}.")
+        if new_state == IrrigationState.STOPPED:
+            self._last_irrigation_result = "interrupted"
+        elif new_state == IrrigationState.FINISHED:
+            self._last_irrigation_result = "success"
+        elif new_state == IrrigationState.ERROR:
+            self._last_irrigation_result = "error"
+        
     
     @last_irrigation_time.setter
     def last_irrigation_time(self, new_time: Optional[datetime]):
         """Sets the last irrigation time."""
         self._last_irrigation_time = new_time
         self.logger.debug(f"Last irrigation time set to {self._last_irrigation_time}.")
+
+    @last_irrigation_duration.setter
+    def last_irrigation_duration(self, new_duration: Optional[int]):
+        """Sets the last irrigation duration in seconds."""
+        self._last_irrigation_duration = new_duration
+        self.logger.debug(f"Last irrigation duration set to {self._last_irrigation_duration} seconds.")
     
-    def init_last_irrigation_time(self, circuit_state_manager: CircuitStateManager):
+    def init_last_irrigation_data(self, circuit_state_manager: CircuitStateManager):
         """Initializes the last irrigation time from the circuit state manager."""
         self._last_irrigation_time = circuit_state_manager.get_last_irrigation_time(self)
-        if self._last_irrigation_time is None:
-            self.logger.debug("Last irrigation time is not set. It will be set to None.")
-        else:
-            self.logger.debug(f"Last irrigation time initialized to {self._last_irrigation_time}.")
+        self._last_irrigation_duration = circuit_state_manager.get_last_irrigation_duration(self)
+        self._last_irrigation_result = circuit_state_manager.get_last_irrigation_result(self)
+
+
 
 
     def get_status_summary(self) -> Dict[str, str]:
@@ -131,8 +158,9 @@ class IrrigationCircuit:
     # ============================================================================================================
     # Water amount and duration calculations
     # ============================================================================================================
-
-    def _get_base_target_water_amount(self) -> float:
+    
+    @property
+    def base_target_water_amount(self) -> float:
         """Calculates the target water amount for irrigation based on global configuration and conditions."""
         if self.even_area_mode:
             # Calculate the target water amount based on the target mm and zone area
@@ -160,7 +188,7 @@ class IrrigationCircuit:
 
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> float:
         """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
-        base_target_water_amount = self._get_base_target_water_amount()
+        base_target_water_amount = self.base_target_water_amount
 
         standard_conditions = global_config.standard_conditions
         # if there was more solar energy, rain, or temperature than the standard conditions, the delta will be POSITIVE
@@ -257,6 +285,7 @@ class IrrigationCircuit:
             if self.state != IrrigationState.ERROR and not stop_event.is_set():
                 self.state = IrrigationState.FINISHED
                 self.logger.info(f"Irrigation finished successfully after {int(elapsed_time)} seconds.")
+            self._last_irrigation_duration = int(elapsed_time)  # Update the last irrigation duration
 
     # deprecated method for opening the valve for a specific duration
     def _irrigate_deprecated(self, duration: int, stop_event) -> Optional[int]:

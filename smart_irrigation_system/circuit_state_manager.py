@@ -108,6 +108,28 @@ class CircuitStateManager():
         if result:
             return datetime.fromisoformat(result)
         return None
+
+    def get_last_irrigation_duration(self, circuit: "IrrigationCircuit") -> Optional[int]:
+        """Returns the last irrigation duration for a given circuit."""
+        circuit_index = self.circuit_index.get(circuit.id)
+        if circuit_index is None:
+            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
+            return None
+        result = self.state.get("circuits", {})[circuit_index].get("last_duration")
+        if result is not None:
+            return int(result)
+        return None
+    
+    def get_last_irrigation_result(self, circuit: "IrrigationCircuit") -> Optional[str]:
+        """Returns the last irrigation result for a given circuit."""
+        circuit_index = self.circuit_index.get(circuit.id)
+        if circuit_index is None:
+            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
+            return None
+        result = self.state.get("circuits", {})[circuit_index].get("last_result")
+        if result is not None:
+            return str(result)
+        return None
     
     def irrigation_started(self, circuit: "IrrigationCircuit") -> None:
         """Updates the last irrigation time to the current time for a given circuit.

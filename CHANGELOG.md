@@ -8,15 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Enhanced CLI with new features for better user experience and system monitoring.
 
 ### Changed
 
 ### Fixed
+- WeatherSimulator initialization fixed.
 
 ### Removed
 
 ### Known Issues
 - On CTRL+C, the CLI does not exit gracefully and when irrigation is running, it may not stop.
+- The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.
+- `max_flow_monitoring` feature does not work correctly at the moment. This will be addressed in a future release.
+- The log viewer in the CLI does not currently show system logs.
 
 ---
 

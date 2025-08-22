@@ -50,7 +50,7 @@ class IrrigationController:
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH)
         atexit.register(self.state_manager.handle_clean_shutdown)
         for circuit in self.circuits_list:
-            circuit.last_irrigation_time = self.state_manager.get_last_irrigation_time(circuit)
+            circuit.init_last_irrigation_data(self.state_manager)  # Initialize last irrigation data for each circuit
 
         # Initialize threading
         self.threads = []

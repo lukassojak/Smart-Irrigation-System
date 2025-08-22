@@ -16,7 +16,8 @@ I2C_SCL = 5  # GPIO pin for I2C SCL
 I2C_SDA = 4  # GPIO pin for I2C SDA
 
 # === Constants ===
-REFRESH_INTERVAL = 1  # Refresh interval for the CLI in seconds
+REFRESH_INTERVAL_IDLE = 0.5  # Refresh interval for the CLI in seconds when idle
+REFRESH_INTERVAL_ACTIVE = 0.05  # Refresh interval for the CLI in seconds when active
 
 # === Global Variables ===
 logger = get_logger("smart_irrigation_system.main")
@@ -51,7 +52,8 @@ def main():
 
     # Start CLI in the main thread
     # command_loop(controller, stop_event)
-    cli = IrrigationCLI(controller, refresh_interval=REFRESH_INTERVAL)
+    cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
+                        refresh_interval_active=REFRESH_INTERVAL_ACTIVE)
     cli.run()
 
     controller.stop_main_loop()
