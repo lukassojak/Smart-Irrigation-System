@@ -29,6 +29,8 @@ def get_dashboard_log_handler(max_logs=5):
     global _dashboard_log_handler
     if _dashboard_log_handler is None:
         _dashboard_log_handler = DashboardLogHandler(max_logs=max_logs)
+        _dashboard_log_handler.setFormatter(formatter)
+        _dashboard_log_handler.setLevel(logging.INFO)
     return _dashboard_log_handler
 
 

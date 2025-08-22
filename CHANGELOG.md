@@ -16,6 +16,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- On CTRL+C, the CLI does not exit gracefully and when irrigation is running, it may not stop.
+
+---
+
+## [0.3.1] - 2025-08-22
+*Performance and stability improvements for the interactive CLI*
+
+### Added
+- Sleep mode for the CLI to reduce CPU usage when not used.
+- Adaptive refresh rate for the CLI dashboard based on system activity, reducing CPU usage when the system is idle.
+
+### Changed
+
+### Fixed
+- CLI dashboard now correctly displays recent logs.
+
+### Removed
+
+### Known Issues
+- On CTRL+C, the CLI does not exit gracefully and when irrigation is running, it may not stop.
+- The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.
+- `max_flow_monitoring` feature does not work correctly at the moment. This will be addressed in a future release.
+- The log viewer in the CLI does not currently show system logs.
 
 ---
 

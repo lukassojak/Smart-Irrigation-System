@@ -125,31 +125,7 @@ class IrrigationController:
     def get_status(self) -> dict:
         """
         Returns comprehensive snapshot of the irrigation controller's status.:
-        {
-            'auto_enabled': True/False,
-            'auto_paused': True/False,  # whether the automatic irrigation is paused
-            'auto_stopped': True/False,  # whether the automatic irrigation is stopped
-            'sequential': True/False,  # whether the automatic irrigation is sequential or concurrent
-            'scheduled_time': str, # scheduled time for automatic irrigation in HH:MM format
-            'controller_state': 'IDLE'/'IRRIGATING'/'ERROR',  # current state of the controller   
-            'cache_update': datetime,
-            'cached_global_conditions': GlobalConditions,  # cached global weather conditions, if available
-            'zones': [
-                {
-                    'id': 1,
-                    'name': 'Front Lawn',
-                    'state': 'IDLE'/'IRRIGATING'/'WAITING'/'ERROR',
-                    'progress': 0-100,     # current irrigation progress in percentage
-                    'last_run': datetime,
-                    'duration': timedelta,
-                    'pin': 17,
-                    'error': 'message if any',
-                },
-                ...
-            ]
-            'logs': [...],
-            'current_consumption': 0.0,  # total consumption of all irrigating circuits in liters per hour
-        }
+
         """
 
         # Fetch global conditions
