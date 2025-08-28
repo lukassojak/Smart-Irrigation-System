@@ -37,7 +37,8 @@ class IrrigationCircuit:
         self.drippers = drippers                                        # Instance of Drippers to manage dripper flow rates
         self.local_correction_factors = correction_factors                    # Instance of CorrectionFactors for local adjustments
 
-        self._state = IrrigationState.IDLE                               # Initial state of the irrigation circuit
+
+        self._state = IrrigationState.IDLE if self.enabled else IrrigationState.DISABLED
         self._irrigating_lock = threading.Lock()
 
         # Real-time metrics
@@ -132,9 +133,6 @@ class IrrigationCircuit:
         self._last_irrigation_duration = circuit_state_manager.get_last_irrigation_duration(self)
         self._last_irrigation_result = circuit_state_manager.get_last_irrigation_result(self)
 
-
-
-
     def get_status_summary(self) -> Dict[str, str]:
         """Returns a summary of the irrigation circuit status."""
         return {
@@ -165,12 +163,10 @@ class IrrigationCircuit:
         if self.even_area_mode:
             # Calculate the target water amount based on the target mm and zone area
             base_target_water_amount = self.target_mm * self.zone_area_m2    # in mm * m^2 = liters
-            self.logger.debug(f"Base target water amount is {base_target_water_amount} liters (even area mode).")
         else:
             # Calculate the target water amount based on the liters per minimum dripper
             duration = self.liters_per_minimum_dripper / self.drippers.get_minimum_dripper_flow()   # in hours (liters per minimum dripper / liters per hour = hours)
             base_target_water_amount = self.get_circuit_consumption() * duration  # in liters per hour * hours = liters
-            self.logger.debug(f"Base target water amount is {base_target_water_amount} liters (non-even area mode).")
         
         return round(base_target_water_amount, 3)   # Round to 3 decimal places for precision
 
@@ -189,6 +185,7 @@ class IrrigationCircuit:
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> float:
         """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         base_target_water_amount = self.base_target_water_amount
+        self.logger.debug(f"Base target water amount is {base_target_water_amount} liters (even area mode: {self.even_area_mode}).")
 
         standard_conditions = global_config.standard_conditions
         # if there was more solar energy, rain, or temperature than the standard conditions, the delta will be POSITIVE

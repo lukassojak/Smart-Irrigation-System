@@ -17,7 +17,7 @@ I2C_SDA = 4  # GPIO pin for I2C SDA
 
 # === Constants ===
 REFRESH_INTERVAL_IDLE = 0.5  # Refresh interval for the CLI in seconds when idle
-REFRESH_INTERVAL_ACTIVE = 0.05  # Refresh interval for the CLI in seconds when active
+REFRESH_INTERVAL_ACTIVE = 0.1  # Refresh interval for the CLI in seconds when active
 
 # === Global Variables ===
 logger = get_logger("smart_irrigation_system.main")

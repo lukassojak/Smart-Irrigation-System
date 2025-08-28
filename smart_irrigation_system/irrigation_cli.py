@@ -15,7 +15,7 @@ from smart_irrigation_system.enums import ControllerState
 
 class IrrigationCLI:
     def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,
-                max_logs=20, sleep_timeout=30):
+                max_logs=20, sleep_timeout=300):
         self.controller = controller
         self.refresh_interval_idle = refresh_interval_idle
         self.refresh_interval_active = refresh_interval_active
@@ -33,6 +33,9 @@ class IrrigationCLI:
 
         # Help
         self.showing_help = False
+
+        # History of irrigation
+        self.showing_history = False
 
         self.log_handler = get_dashboard_log_handler(max_logs=max_logs)
         logging.getLogger().addHandler(self.log_handler)
@@ -124,6 +127,10 @@ class IrrigationCLI:
                     self.showing_help = False
                     self.last_activity = time.time()
                     continue
+                elif self.showing_history:
+                    self.showing_history = False
+                    self.last_activity = time.time()
+                    continue
 
                 self.last_activity = time.time()  # Update last activity time
                 self.input_cmd = cmd
@@ -146,19 +153,25 @@ class IrrigationCLI:
             self.add_log("Stop irrigation.")
         elif cmd == "auto on":
             self.controller.start_main_loop()
-            self.add_log("Enable automatic loop.")
+            self.add_log("Enable auto mode.")
         elif cmd == "auto off":
             self.controller.stop_main_loop()
-            self.add_log("Disable automatic loop.")
+            self.add_log("Disable auto mode.")
         elif cmd == "auto pause":
             self.controller.pause_main_loop()
-            self.add_log("Pause automatic loop.")
+            self.add_log("Pause auto mode. Next scheduled irrigation will be skipped.")
         elif cmd == "auto resume":
             self.controller.resume_main_loop()
-            self.add_log("Resume automatic loop.")
+            self.add_log("Resume auto mode. Next scheduled irrigation will be executed.")
         elif cmd in ("quit", "shutdown", "exit"):
             self.add_log("Shutdown system.")
             self.cleanup()
+        elif cmd == "history":
+            self.showing_history = True
+            history_panel = self.render_history()
+            self.console.print(history_panel)
+            self.console.input("Press 'Enter' to return to dashboard.")
+            self.showing_history = False
         elif cmd == "help":
             self.showing_help = True
             self.render_help()
@@ -172,12 +185,12 @@ class IrrigationCLI:
     def render_help(self):
         """ Render help information for the CLI commands."""
         commands = [
-                "irrigate - Start automatic irrigation",
+                "irrigate - Start automatic irrigation now",
                 "stop - Stop all irrigation",
                 "auto on - Enable automatic mode",
                 "auto off - Disable automatic mode",
-                "auto pause - Pause automatic mode",
-                "auto resume - Resume automatic mode",
+                "auto pause - Pause automatic mode (Next scheduled irrigation will be skipped)",
+                "auto resume - Resume automatic mode (Next scheduled irrigation will be executed)",
                 "quit/exit/shutdown - Exit the dashboard and shutdown system",
                 "help - Show help information",
             ]
@@ -198,7 +211,8 @@ class IrrigationCLI:
             "IRRIGATING": "💧",
             "WAITING": "⏳",
             "STOPPING": "⏹️",
-            "ERROR": "❌"
+            "ERROR": "❌",
+            "DISABLED": "🚫",
         }
 
         # 1) System status
@@ -217,18 +231,12 @@ class IrrigationCLI:
         # add empty row for spacing
         sys_table.add_row("", "")
         sys_table.add_row("Cached weather", status['cached_global_conditions'])
-        sys_table.add_row("Last weather update", str(status['cache_update']))
+        sys_table.add_row("Last weather cache update", str(status['cache_update']))
         # add empty row for spacing
         sys_table.add_row("", "")
         current_consumption = status['current_consumption']
-        if current_consumption > 1000:
-            cc_str = Text(f"{current_consumption:.2f} L/h", style="#eb8934")
-        elif current_consumption > 500:
-            cc_str = Text(f"{current_consumption:.2f} L/h", style="yellow")
-        elif current_consumption > 0:
-            cc_str = Text(f"{current_consumption:.2f} L/h", style="green")
-        else:
-            cc_str = Text("0.00 L/h", style="dim")
+        current_consumption_color = self.get_consumption_color(current_consumption, status['input_flow_capacity'])
+        cc_str = Text(f"{current_consumption:.2f} L/h", style=current_consumption_color)
         sys_table.add_row("Current consumption", cc_str)
         sys_table.add_row("Controller state", f"{state_icons.get(status['controller_state'], '?')} {status['controller_state']}")
 
@@ -240,7 +248,7 @@ class IrrigationCLI:
         zones_table.add_column("Last volume")
         zones_table.add_column("Base volume")
         zones_table.add_column("Last result")
-        zones_table.add_column("State", justify="center")
+        zones_table.add_column("State")
         zones_table.add_column("Pin", justify="center")
 
 
@@ -351,7 +359,10 @@ class IrrigationCLI:
                 style = level_styles.get(level, "white")
 
                 line = Text(f"[{level}] ", style=style)
-                line.append(f"{timestamp[11:]} | {module} | {message[:80]}", style="dim white")
+                if level == "CRITICAL":
+                    line.append(f"{timestamp[11:]} | {module} | {message[:80]}", style="bold white on red")
+                else:
+                    line.append(f"{timestamp[11:]} | {module} | {message[:80]}", style="dim white")
 
                 logs_rich.append(line)
             except Exception as e:
@@ -377,6 +388,34 @@ class IrrigationCLI:
         dashboard.add_row(cmd_logs_panel)
         dashboard.add_row(Align.center(help_text, vertical="middle"))  # Centered help text
         return dashboard
+    
+    def render_history(self):
+        """Render the irrigation history table."""
+        history_table = Table(title="Irrigation History", expand=True)
+        history_table.add_column("Date")
+        history_table.add_column("Weather")
+        history_table.add_column("Zone 1")
+        history_table.add_column("Zone 2")
+        history_table.add_column("Zone 3")
+
+        return Panel(history_table, title="Irrigation History", expand=True)
+
+    def get_consumption_color(self, consumption: float, capacity: float) -> str:
+        """Get color based on consumption percentage."""
+        if consumption <= 0:
+            return "dim"
+        elif capacity <= 0:
+            return "red"
+        percentage = (consumption / capacity) * 100
+        if percentage < 50:
+            return "green"
+        elif percentage < 80:
+            return "yellow"
+        elif percentage < 100:
+            return "#eb8934"
+        else:
+            return "red"
+
 
 
     # ===========================================================================================================

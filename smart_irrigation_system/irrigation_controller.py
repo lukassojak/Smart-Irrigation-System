@@ -153,6 +153,7 @@ class IrrigationController:
             'cached_global_conditions': cached_conditions_str.split(", Timestamp:")[0],
             'zones': zones_status,
             'current_consumption': self.get_current_consumption(),
+            'input_flow_capacity': self.global_config.irrigation_limits.main_valve_max_flow,
         }
 
         return status
@@ -247,7 +248,7 @@ class IrrigationController:
             self.logger.error(f"Error during automatic irrigation: {e}")
             self.controller_state = ControllerState.ERROR
         else:
-            self.logger.info("Automatic irrigation process completed successfully.")
+            self.logger.info("Automatic irrigation process completed.")
             self.controller_state = ControllerState.IDLE
 
     def start_irrigation_circuit(self, circuit: IrrigationCircuit):
@@ -319,7 +320,6 @@ class IrrigationController:
                     continue
             else:
                 self.logger.info(f"Circuit {circuit.id} does not need irrigation at the moment.")
-                self.state_manager.update_irrigation_result(circuit, "skipped", 0)
         
         # Wait for all threads to finish
         self.logger.debug("Waiting for all irrigation threads to finish...")
@@ -347,7 +347,6 @@ class IrrigationController:
 
                 if not circuit.is_irrigation_allowed(self.state_manager):
                     self.logger.info(f"Circuit {circuit.id} does not need irrigation at the moment.")
-                    self.state_manager.update_irrigation_result(circuit, "skipped", 0)
                     continue
 
                 # Check the current consumption against the main valve max flow limit
@@ -376,7 +375,7 @@ class IrrigationController:
             self.logger.error(f"Error during sequential irrigation: {e}")
             self.controller_state = ControllerState.ERROR
         else:
-            self.logger.info("Sequential irrigation process completed successfully.")
+            self.logger.info("Sequential irrigation process completed.")
             self.controller_state = ControllerState.IDLE
 
     def stop_irrigation(self):
@@ -422,7 +421,7 @@ class IrrigationController:
             self.logger.info("Main loop already running.")
             return
         
-        self.logger.info("Starting main loop for automatic irrigation management...")
+        self.logger.info("Starting main loop...")
         self._timer_stop_event.clear()
         self._timer_pause_event.clear()
         self._timer_thread = threading.Thread(target=self._main_loop_func, daemon=True)
@@ -437,12 +436,12 @@ class IrrigationController:
             self._timer_thread.join()
     
     def pause_main_loop(self):
-        """Pauses the main loop for automatic irrigation management"""
+        """Pauses the main loop for the next irrigation check"""
         self.logger.info("Pausing main loop...")
         self._timer_pause_event.set()
     
     def resume_main_loop(self):
-        """Resumes the main loop for automatic irrigation management"""
+        """Resumes the main loop after pausing"""
         self.logger.info("Resuming main loop...")
         self._timer_pause_event.clear()
     
@@ -451,21 +450,22 @@ class IrrigationController:
         irrigation_minute = self.global_config.automation.scheduled_minute
 
         while not self._timer_stop_event.is_set():
-            if self._timer_pause_event.is_set():
-                self.logger.info("Main loop is paused.")
-                while self._timer_pause_event.is_set() and not self._timer_stop_event.is_set():
-                    time.sleep(CHECK_INTERVAL)
-    
             current_time = time.localtime()
-            if (current_time.tm_hour == irrigation_hour and 
+            if (self.get_state() == ControllerState.IDLE and
+                current_time.tm_hour == irrigation_hour and 
                 abs(current_time.tm_min - irrigation_minute) <= TOLERANCE):
+                # If main loop is paused, skip current irrigation and resume
+                if self._timer_pause_event.is_set():
+                    self.logger.info("Main loop is paused, skipping current irrigation check.")
+                    self.resume_main_loop()  # Resume the main loop after pause
+                    time.sleep(TOLERANCE * 60)  # Wait for the next check after pause
+                    continue  # Skip the current iteration
+
                 self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
                 self.start_automatic_irrigation()   # non-blocking call to start irrigation
-                # Wait until the irrigation is done or the time is out of tolerance
-                while (self.get_state() == ControllerState.IRRIGATING or abs(current_time.tm_min - irrigation_minute) <= TOLERANCE) and not self._timer_stop_event.is_set():
-                    time.sleep(CHECK_INTERVAL)
-
             time.sleep(CHECK_INTERVAL)  # Wait for the next check
+        
+        self.logger.info("Main loop stopped.")
 
 
     # ===========================================================================================================

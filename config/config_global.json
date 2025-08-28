@@ -1,11 +1,11 @@
 {
     "standard_conditions": {
-        "solar_total": 4.5,
+        "solar_total": 6.5,
         "rain_mm": 0.0,
-        "temperature_celsius": 12.0
+        "temperature_celsius": 18.0
     },
     "correction_factors": {
-        "solar": 0.2,
+        "solar": 0.1,
         "rain": -0.05,
         "temperature": 0.1
     },
@@ -17,8 +17,8 @@
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 8,
-        "scheduled_minute": 56,
+        "scheduled_hour": 23,
+        "scheduled_minute": 0,
         "max_flow_monitoring": true,
         "environment": "development"
     },

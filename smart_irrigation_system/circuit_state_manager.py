@@ -102,7 +102,7 @@ class CircuitStateManager():
         """Returns the last irrigation time for a given circuit."""
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
+            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
             return None
         result = self.state.get("circuits", {})[circuit_index].get("last_irrigation")
         if result:
@@ -113,7 +113,7 @@ class CircuitStateManager():
         """Returns the last irrigation duration for a given circuit."""
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
+            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
             return None
         result = self.state.get("circuits", {})[circuit_index].get("last_duration")
         if result is not None:
@@ -124,7 +124,7 @@ class CircuitStateManager():
         """Returns the last irrigation result for a given circuit."""
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
-            self.logger.error(f"Circuit with ID {circuit.id} not found in state.")
+            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
             return None
         result = self.state.get("circuits", {})[circuit_index].get("last_result")
         if result is not None:

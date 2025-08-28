@@ -9,19 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Enhanced CLI with new features for better user experience and system monitoring.
+- Circuit 'DISABLED' state support in CLI and core logic.
 
 ### Changed
+- The IrrigationCircuit now initializes state as 'DISABLED' if the zone is not enabled in the configuration, otherwise 'IDLE'.
 
 ### Fixed
 - WeatherSimulator initialization fixed.
+- Resolved potential endless loop in `IrrigationController` occuring after first automatic irrigation run.
+- Updated logic to skip next irrigation check (AUTO paused)
 
 ### Removed
 
 ### Known Issues
 - On CTRL+C, the CLI does not exit gracefully and when irrigation is running, it may not stop.
-- The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.
+- The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the future release.
 - `max_flow_monitoring` feature does not work correctly at the moment. This will be addressed in a future release.
-- The log viewer in the CLI does not currently show system logs.
 
 ---
 
@@ -43,7 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On CTRL+C, the CLI does not exit gracefully and when irrigation is running, it may not stop.
 - The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the next release.
 - `max_flow_monitoring` feature does not work correctly at the moment. This will be addressed in a future release.
-- The log viewer in the CLI does not currently show system logs.
 
 ---
 

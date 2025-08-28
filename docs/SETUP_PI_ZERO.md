@@ -34,13 +34,21 @@ cd Smart-Irrigation-System
 pip3 install -r requirements.txt
 ```
 
-## 6. WiFi watchdog
+## 6. WiFi setup
+
+### 6.1 Install WiFi watchdog script
 - The WiFi watchdog script is used to **monitor the WiFi connection and restart it if it goes down**. It helps to ensure that the irrigation system remains connected to the network, especially in case of temporary WiFi outages.
 - Copy the [wifi_watchdog.sh](../tools/wifi_watchdog.sh) script to `/usr/local/bin/`.
 - Add the script to the crontab to run regularly:
 ```bash
 crontab -e
 * * * * * /usr/local/bin/wifi_watchdog.sh
+```
+
+### 6.2 Set up WiFi power management
+- Disable WiFi power management to prevent the WiFi adapter from going into power-saving mode, which can cause connectivity issues.
+```bash
+sudo iw wlan0 set power_save off
 ```
 
 ## 7. Run the irrigation system

@@ -8,12 +8,13 @@ class ControllerState(Enum):
 
 
 class IrrigationState(Enum):
-    IDLE = "idle"                           # No irrigation is currently happening
+    IDLE = "idle"                           # No irrigation is currently happening, circuit is ready
     WAITING_FOR_FLOW = "waiting_for_flow"   # Waiting for the main valve flow capacity to be available
     IRRIGATING = "irrigating"               # Currently irrigating
     FINISHED = "finished"                   # Irrigation has finished
     ERROR = "error"                         # An error occurred
     STOPPED = "stopped"                     # Irrigation has been stopped by the user
+    DISABLED = "disabled"                   # Irrigation circuit is disabled
 
 
 class RelayValveState(Enum):
