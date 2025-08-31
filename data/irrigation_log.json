@@ -1,0 +1,37 @@
+{
+    "2025-08-31": [
+        {
+            "circuit_id": 5,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-08-31T13:56:24.954116",
+            "completed_duration": 13,
+            "target_duration": 14,
+            "actual_water_amount": 0.854,
+            "target_water_amount": 0.856,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-08-31T13:56:24.943316",
+            "completed_duration": 57,
+            "target_duration": 58,
+            "actual_water_amount": 13.511,
+            "target_water_amount": 13.533,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-08-31T14:07:09",
+            "completed_duration": 12,
+            "target_duration": 13,
+            "actual_water_amount": 0.792,
+            "target_water_amount": 0.794,
+            "error": null
+        }
+    ]
+}

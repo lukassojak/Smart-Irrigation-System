@@ -15,10 +15,11 @@ from smart_irrigation_system.logger import get_logger
 # Seed for the weather simulator to ensure reproducibility in tests
 WEATHER_SIMULATOR_SEED = 42
 
-# Paths to configuration files
+# Paths to configuration and data files
 CONFIG_GLOBAL_PATH = "./config/config_global.json"
 CONFIG_ZONES_PATH =  "./config/zones_config.json"
 ZONE_STATE_PATH = "./data/zones_state.json"
+IRRIGATION_LOG_PATH = "./data/irrigation_log.json"
 
 # Constants for irrigation process
 MAX_WAIT_TIME = 60 * 30    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
@@ -47,7 +48,7 @@ class IrrigationController:
 
         # Initialize components
         self.global_conditions_provider = self._initialize_global_conditions_provider()
-        self.state_manager = CircuitStateManager(ZONE_STATE_PATH)
+        self.state_manager = CircuitStateManager(ZONE_STATE_PATH, IRRIGATION_LOG_PATH)
         atexit.register(self.state_manager.handle_clean_shutdown)
         for circuit in self.circuits_list:
             circuit.init_last_irrigation_data(self.state_manager)  # Initialize last irrigation data for each circuit
@@ -78,10 +79,10 @@ class IrrigationController:
             self.logger.debug("Global configuration loaded successfully.")
         except FileNotFoundError as e:
             self.logger.error(f"Global configuration file not found: {e}. Exiting initialization.")
-            raise e
+            raise Exception("Global configuration file not found.") from e
         except ValueError as e:
             self.logger.error(f"Error loading global configuration: {e}. Exiting initialization.")
-            raise e
+            raise Exception("Error loading global configuration. Check the configuration file format.") from es
         
     def _load_zones_config(self):
         """Loads the zones configuration and initializes circuits."""
@@ -91,10 +92,10 @@ class IrrigationController:
             self.logger.debug("Zones configuration loaded successfully with %d circuits.", len(self.circuits))
         except FileNotFoundError as e:
             self.logger.error(f"Zones configuration file not found: {e}. Exiting initialization.")
-            raise e
+            raise Exception("Zones configuration file not found.") from e
         except ValueError as e:
             self.logger.error(f"Error loading zones configuration: {e}. Exiting initialization.")
-            raise e
+            raise Exception("Error loading zones configuration. Check the configuration file format.") from e
 
     def _initialize_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
@@ -254,32 +255,18 @@ class IrrigationController:
     def start_irrigation_circuit(self, circuit: IrrigationCircuit):
         """Starts the irrigation process for a specified circuit in a new thread"""
         def thread_target():
-
-            try:
-                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
-                self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
-                duration = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
-                # maybe better to check the state not by the duration, but by the stop_event.is_set() or circuit.state
-                if circuit.state == IrrigationState.STOPPED:
-                    assert self.stop_event.is_set(), "Circuit state is STOPPED, but stop_event is not set. This should not happen."
-                    self.logger.warning(f"Irrigation for circuit {circuit.id} was interrupted.")
-                    self.state_manager.update_irrigation_result(circuit, "interrupted", duration)
-                else:
-                    self.state_manager.update_irrigation_result(circuit, "success", duration)
-            except Exception as e:
-                self.logger.error(f"Unexpected error during irrigation of circuit {circuit.id}: {e}")
-                self.state_manager.update_irrigation_result(circuit, "error", 0)
-            finally:
-                # after the irrigation is done, OR after interruption, remove the thread from the list
-                with self.threads_lock:
-                    current = threading.current_thread()
-                    try:
-                        self.threads.remove(current)
-                    except ValueError:
-                        self.logger.warning(f"Thread {current.name} not found in the threads list. It might have already been removed.")
-                
-                    # Update the circuit state after irrigation
-                    circuit.state = IrrigationState.IDLE if not circuit.state == IrrigationState.ERROR else IrrigationState.ERROR
+            self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
+            self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
+            result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
+            self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
+            self.state_manager.irrigation_finished(circuit, result)
+            # after the irrigation is done, OR after interruption, remove the thread from the list
+            with self.threads_lock:
+                current = threading.current_thread()
+                try:
+                    self.threads.remove(current)
+                except ValueError:
+                    self.logger.warning(f"Thread {current.name} not found in the threads list. It might have already been removed.")
 
         t = threading.Thread(target=thread_target)
         with self.threads_lock:
@@ -355,22 +342,12 @@ class IrrigationController:
                     self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.get_circuit_consumption()} L/h) to start irrigation, skipping it.")
                     self.state_manager.update_irrigation_result(circuit, "skipped", 0)
                     continue
-                try:
-                    self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
-                    self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
-                    duration = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
-                    if circuit.state == IrrigationState.STOPPED:
-                        assert self.stop_event.is_set(), "Circuit state is STOPPED, but stop_event is not set. This should not happen."
-                        self.logger.warning(f"Irrigation for circuit {circuit.id} was interrupted.")
-                        self.state_manager.update_irrigation_result(circuit, "interrupted", duration)
-                    else:
-                        self.state_manager.update_irrigation_result(circuit, "success", duration)
-                except Exception as e:
-                    self.logger.error(f"Unexpected error during irrigation of circuit {circuit.id}: {e}")
-                    self.state_manager.update_irrigation_result(circuit, "error", 0)
-                finally:
-                    # Update the circuit state after irrigation
-                    circuit.state = IrrigationState.IDLE
+
+                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
+                self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
+                result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
+                self.state_manager.update_irrigation_result(circuit, result)
+
         except Exception as e:
             self.logger.error(f"Error during sequential irrigation: {e}")
             self.controller_state = ControllerState.ERROR
@@ -448,21 +425,27 @@ class IrrigationController:
     def _main_loop_func(self):
         irrigation_hour = self.global_config.automation.scheduled_hour
         irrigation_minute = self.global_config.automation.scheduled_minute
+        skipped_cycle = False
 
         while not self._timer_stop_event.is_set():
             current_time = time.localtime()
-            if (self.get_state() == ControllerState.IDLE and
-                current_time.tm_hour == irrigation_hour and 
-                abs(current_time.tm_min - irrigation_minute) <= TOLERANCE):
+            time_diff = (current_time.tm_hour - irrigation_hour) * 60 + (current_time.tm_min - irrigation_minute) # in minutes
+            if (self.get_state() == ControllerState.IDLE and abs(time_diff) <= TOLERANCE):
                 # If main loop is paused, skip current irrigation and resume
                 if self._timer_pause_event.is_set():
-                    self.logger.info("Main loop is paused, skipping current irrigation check.")
-                    self.resume_main_loop()  # Resume the main loop after pause
-                    time.sleep(TOLERANCE * 60)  # Wait for the next check after pause
+                    if not skipped_cycle:
+                        skipped_cycle = True
+                        self.logger.info("Main loop is paused, skipping current irrigation check.")
+                    time.sleep(CHECK_INTERVAL)
                     continue  # Skip the current iteration
 
                 self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
                 self.start_automatic_irrigation()   # non-blocking call to start irrigation
+            elif (self.get_state() == ControllerState.IDLE and skipped_cycle):
+                skipped_cycle = False
+                self._timer_pause_event.clear()
+                self.logger.info("Main loop resumed from pause, next irrigation will be at the scheduled time.")
+
             time.sleep(CHECK_INTERVAL)  # Wait for the next check
         
         self.logger.info("Main loop stopped.")

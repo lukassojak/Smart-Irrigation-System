@@ -1,7 +1,10 @@
 import json
 from typing import Optional, Any
 from datetime import datetime
+
 from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.irrigation_result import IrrigationResult
+from smart_irrigation_system.enums import IrrigationOutcome
 
 
 
@@ -13,10 +16,12 @@ from smart_irrigation_system.logger import get_logger
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
-    def __init__(self, state_file: str):
+    def __init__(self, state_file: str, irrigation_log_file: str):
         self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
+
+        self.irrigation_log_file = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
 
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
@@ -24,6 +29,36 @@ class CircuitStateManager():
         self.init_circuit_states()                              
 
         self.logger.info(f"CircuitStateManager initialized.")
+    
+
+    def log_irrigation_result(self, result: IrrigationResult) -> None:
+        """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
+        try:
+            # Load the existing log file or initialize an empty dictionary
+            try:
+                with open(self.irrigation_log_file, "r") as f:
+                    try:
+                        log_data = json.load(f)
+                    except json.JSONDecodeError:
+                        log_data = {}
+            except FileNotFoundError:
+                log_data = {}
+    
+            # Extract the date from the result's start_time
+            irrigation_date = datetime.fromisoformat(result.to_dict()["start_time"]).date().isoformat()
+    
+            # Ensure the date key exists in the log
+            if irrigation_date not in log_data:
+                log_data[irrigation_date] = []
+    
+            # Append the new result to the list for the date
+            log_data[irrigation_date].append(result.to_dict())
+    
+            # Save the updated log back to the file
+            with open(self.irrigation_log_file, "w") as f:
+                json.dump(log_data, f, indent=4)
+        except Exception as e:
+            self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
 
     
     def _rebuild_circuit_index(self):
@@ -143,14 +178,16 @@ class CircuitStateManager():
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.state["circuits"][circuit_index]["irrigation_state"] = "irrigating"  # Set irrigation state to running
         self.save_state()
+    
+    def irrigation_finished(self, circuit: "IrrigationCircuit", result: IrrigationResult) -> None:
+        """Updates the circuit state based on the given IrrigationResult and records the result."""
+        self.update_irrigation_result(circuit, result.outcome.value, result.completed_duration)
+        self.log_irrigation_result(result)
 
 
     def update_irrigation_result(self, circuit: "IrrigationCircuit", result: str, duration: int) -> None:
         """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""
-        if result not in ["success", "failure", "skipped", "interrupted", "error"]:
-            self.logger.error(f"Invalid result '{result}' for circuit {circuit.id}. Expected one of ['success', 'failure', 'skipped', 'error'].")
-            return
         
         circuit_index = self.circuit_index.get(circuit.id)
         if circuit_index is None:
@@ -162,7 +199,6 @@ class CircuitStateManager():
         self.state["circuits"][circuit_index]["irrigation_state"] = "idle"  # Set irrigation state to idle after irrigation is done
         if result == "skipped":
             # If the result is "skipped", we do not update last_irrigation or last_duration
-            # Because we need to keep the last irrigation time and duration intact to calculate the next irrigation time correctly.
             self.state["circuits"][circuit_index]["last_result"] = result
             self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
             self.save_state()

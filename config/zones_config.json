@@ -24,7 +24,7 @@
             "id": 2,
             "name": "Záhon u skleníku",
             "relay_pin": 2,
-            "enabled": false,
+            "enabled": true,
             "even_area_mode": true,
             "target_mm": 3.0,
             "zone_area_m2": 2.0,
