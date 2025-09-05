@@ -59,8 +59,6 @@ class RecentWeatherFetcher:
                 timestamp=datetime.now()
             )
 
-        self.logger.info("RecentWeatherFetcher initialized.")
-
         # Cache for fetched weather data
         self._last_cache_update: datetime = datetime.min
         self._cached_temperatures: dict[datetime, float] = {}
@@ -68,6 +66,8 @@ class RecentWeatherFetcher:
         self._cached_solar: dict[datetime, float] = {}
         # Real-time rainfall data
         self._cached_real_time_rainfall: float | None = None
+
+        self.logger.info("RecentWeatherFetcher initialized.")
 
     @property
     def last_cache_update(self) -> datetime:

@@ -32,6 +32,274 @@
             "actual_water_amount": 0.792,
             "target_water_amount": 0.794,
             "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-08-31T15:38:32",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0,
+            "target_water_amount": 0,
+            "error": "Timeout: Skipping circuit due to persistent flow overload."
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-08-31T15:38:43",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0,
+            "target_water_amount": 0,
+            "error": "Timeout: Skipping circuit due to persistent flow overload."
+        }
+    ],
+    "2025-09-04": [
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-04T19:47:04",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-04T19:47:14",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 4,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-04T19:47:04",
+            "completed_duration": 24,
+            "target_duration": 335,
+            "actual_water_amount": 0.386,
+            "target_water_amount": 5.211,
+            "error": "'IrrigationCircuit' object has no attribute 'l'"
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-04T19:51:31",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-04T19:51:41",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 2,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-04T19:51:31",
+            "completed_duration": 15,
+            "target_duration": 256,
+            "actual_water_amount": 0.346,
+            "target_water_amount": 5.689,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-04T19:51:31",
+            "completed_duration": 15,
+            "target_duration": 334,
+            "actual_water_amount": 0.243,
+            "target_water_amount": 5.196,
+            "error": null
+        }
+    ],
+    "2025-09-05": [
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-05T22:31:57",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T22:31:57",
+            "completed_duration": 186,
+            "target_duration": 187,
+            "actual_water_amount": 4.155,
+            "target_water_amount": 4.156,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T22:35:04",
+            "completed_duration": 212,
+            "target_duration": 213,
+            "actual_water_amount": 3.313,
+            "target_water_amount": 3.313,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-05T22:38:37",
+            "completed_duration": 9,
+            "target_duration": 27,
+            "actual_water_amount": 0.598,
+            "target_water_amount": 1.65,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-05T22:48:05",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T22:48:05",
+            "completed_duration": 26,
+            "target_duration": 27,
+            "actual_water_amount": 0.599,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-05T22:48:32",
+            "completed_duration": 15,
+            "target_duration": 36,
+            "actual_water_amount": 0.247,
+            "target_water_amount": 0.56,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-05T23:07:09",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:07:09",
+            "completed_duration": 26,
+            "target_duration": 27,
+            "actual_water_amount": 0.598,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:07:36",
+            "completed_duration": 35,
+            "target_duration": 36,
+            "actual_water_amount": 0.559,
+            "target_water_amount": 0.56,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:08:12",
+            "completed_duration": 3,
+            "target_duration": 4,
+            "actual_water_amount": 0.244,
+            "target_water_amount": 0.244,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "failed",
+            "start_time": "2025-09-05T23:10:39",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "Timeout: Flow overload"
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:10:39",
+            "completed_duration": 26,
+            "target_duration": 27,
+            "actual_water_amount": 0.598,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:11:06",
+            "completed_duration": 35,
+            "target_duration": 36,
+            "actual_water_amount": 0.56,
+            "target_water_amount": 0.56,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-05T23:11:42",
+            "completed_duration": 3,
+            "target_duration": 4,
+            "actual_water_amount": 0.244,
+            "target_water_amount": 0.244,
+            "error": null
         }
     ]
 }

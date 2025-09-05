@@ -10,10 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Refactored `IrrigationCircuit` to include runtime attributes for irrigation history tracking
 - Refactored `IrrigationCircuit` to return detailed status after irrigation completion for better state management and irrigation history tracking.
+
 ### Changed
 
 ### Fixed
 - Auto pause fixed to work correctly.
+- `CircuitStateManager` now correctly handles empty data files, preventing potential crashes.
+- `CircuitStateManager` now correctly validates and handles corrupted data files, preventing potential crashes and data loss.
 
 ### Removed
 
@@ -44,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `config_global.json` does not contain a `api_enabled` flag, which is required for the `RecentWeatherFetcher` to function correctly. This will be added in the future release.
 - `max_flow_monitoring` feature does not work correctly at the moment. This will be addressed in a future release.
 - Auto pause does not work correctly.
+- No internet connectivity leads to unhandled exceptions in `RecentWeatherFetcher`.
+- The `CircuitStateManager` does not handle empty data files correctly, leading to potential crashes. 
 
 ---
 

@@ -1,6 +1,7 @@
 
 import time, threading, atexit
 from typing import Dict, Any
+from datetime import datetime
 
 from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.global_conditions import GlobalConditions
@@ -8,9 +9,10 @@ from smart_irrigation_system.weather_simulator import WeatherSimulator
 from smart_irrigation_system.recent_weather_fetcher import RecentWeatherFetcher
 from smart_irrigation_system.global_config import GlobalConfig
 from smart_irrigation_system.config_loader import load_global_config, load_zones_config
-from smart_irrigation_system.enums import IrrigationState, ControllerState
+from smart_irrigation_system.enums import IrrigationState, ControllerState, IrrigationOutcome
 from smart_irrigation_system.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.irrigation_result import IrrigationResult
 
 # Seed for the weather simulator to ensure reproducibility in tests
 WEATHER_SIMULATOR_SEED = 42
@@ -22,7 +24,7 @@ ZONE_STATE_PATH = "./data/zones_state.json"
 IRRIGATION_LOG_PATH = "./data/irrigation_log.json"
 
 # Constants for irrigation process
-MAX_WAIT_TIME = 60 * 30    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
+MAX_WAIT_TIME = 10    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
 WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
 
 # Constants for automatic irrigation main loop
@@ -229,7 +231,6 @@ class IrrigationController:
             self.logger.warning("Cannot start automatic irrigation while the controller is not in IDLE state.")
             return
 
-        self.logger.info("Starting automatic irrigation process...")
 
         # Update global conditions before starting irrigation
         self.global_conditions_provider.update_current_conditions()
@@ -240,10 +241,10 @@ class IrrigationController:
 
         try:
             if self.global_config.automation.sequential:
-                self.logger.info("Performing sequential irrigation...")
+                self.logger.info("Performing sequential automatic irrigation...")
                 self.perform_irrigation_sequential()
             else:
-                self.logger.info("Performing concurrent irrigation...")
+                self.logger.info("Performing concurrent automatic irrigation...")
                 self.perform_irrigation_concurrent()
         except Exception as e:
             self.logger.error(f"Error during automatic irrigation: {e}")
@@ -291,9 +292,11 @@ class IrrigationController:
                     # NOTE: This is a blocking call, it will wait until the flow capacity is available
                     while (self.global_config.automation.max_flow_monitoring
                             and self.get_current_consumption() + circuit.get_circuit_consumption()
-                            > self.global_config.irrigation_limits.main_valve_max_flow):
+                            > self.global_config.irrigation_limits.main_valve_max_flow) and \
+                            not self.stop_event.is_set():
                         if wait_time >= MAX_WAIT_TIME:
-                            self.state_manager.update_irrigation_result(circuit, "skipped", 0)
+                            result = circuit.flow_overload_timeout_trigerred(datetime.now())
+                            self.state_manager.irrigation_finished(circuit, result)
                             raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
                         
                         self.logger.debug(f"Waiting for flow capacity for circuit {circuit.id}...")
@@ -301,12 +304,11 @@ class IrrigationController:
                         time.sleep(WAIT_INTERVAL_SECONDS)  # Wait for 1 second before checking again
                         wait_time += WAIT_INTERVAL_SECONDS
 
-                    self.start_irrigation_circuit(circuit)
+                    if not self.stop_event.is_set():
+                        self.start_irrigation_circuit(circuit)
                 except TimeoutError as e:
                     self.logger.warning(str(e))
                     continue
-            else:
-                self.logger.info(f"Circuit {circuit.id} does not need irrigation at the moment.")
         
         # Wait for all threads to finish
         self.logger.debug("Waiting for all irrigation threads to finish...")
@@ -340,13 +342,15 @@ class IrrigationController:
                 if self.global_config.automation.max_flow_monitoring and \
                 circuit.get_circuit_consumption() > self.global_config.irrigation_limits.main_valve_max_flow:
                     self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.get_circuit_consumption()} L/h) to start irrigation, skipping it.")
-                    self.state_manager.update_irrigation_result(circuit, "skipped", 0)
+                    result = circuit.flow_overload_timeout_trigerred(datetime.now())
+                    self.state_manager.irrigation_finished(circuit, result)
                     continue
 
                 self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
                 self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
                 result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
-                self.state_manager.update_irrigation_result(circuit, result)
+                self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
+                self.state_manager.irrigation_finished(circuit, result)
 
         except Exception as e:
             self.logger.error(f"Error during sequential irrigation: {e}")

@@ -184,6 +184,23 @@ class IrrigationCircuit:
     # Irrigation methods
     # ============================================================================================================
 
+    def flow_overload_timeout_trigerred(self, datetime_of_event: datetime) -> IrrigationResult:
+        result = IrrigationResult(
+            circuit_id=self.id,
+            success=False,
+            outcome=IrrigationOutcome.FAILED,
+            start_time=datetime_of_event.replace(microsecond=0),
+            completed_duration=0,
+            target_duration=0,
+            actual_water_amount=0.0,
+            target_water_amount=0.0,
+            error="Timeout: Flow overload"
+        )
+        self.last_irrigation_time = datetime_of_event
+        self.last_irrigation_duration = 0
+        self._last_irrigation_result = "error"
+        return result
+
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> IrrigationResult:
         """Starts the automatic irrigation process depending on global conditions. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
         base_target_water_amount = self.base_target_water_amount
@@ -261,6 +278,7 @@ class IrrigationCircuit:
         return self._irrigate(target_duration, stop_event)
 
     def _irrigate(self, duration: int, stop_event) -> IrrigationResult:
+        # TODO: Update last irrigation result properly in all cases
         """Private method to handle the irrigation process. Starts the irrigation for a specified duration and updates the state accordingly."""
         def update_progress(elapsed):
             """Updates the real-time metrics during irrigation."""
@@ -413,13 +431,13 @@ class IrrigationCircuit:
     def is_irrigation_allowed(self, state_manager: CircuitStateManager) -> bool:
         """Checks if irrigation is needed based on global conditions and circuit settings."""
         if self.state != IrrigationState.IDLE:
-            self.logger.warning(f"Circuit is not in IDLE state. Current state: {self.state.name}. Cannot irrigate.")
+            self.logger.warning(f"Irrigation not allowed: Circuit is not in IDLE state. Current state: {self.state.name}.")
             return False
         if not self._interval_days_passed(state_manager.get_last_irrigation_time(self)):
-            self.logger.debug(f"Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self)}.")
+            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self)}.")
             return False
         if not self.enabled:
-            self.logger.warning(f"Circuit {self.id} is disabled. Cannot irrigate.")
+            self.logger.warning(f"Irrigation not allowed: Circuit {self.id} is disabled.")
             return False
         return True
     

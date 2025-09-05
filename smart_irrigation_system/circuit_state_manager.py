@@ -16,7 +16,8 @@ from smart_irrigation_system.enums import IrrigationOutcome
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
-    def __init__(self, state_file: str, irrigation_log_file: str):
+    # 2025-08-30 22:52:46,025 | smart_irrigation_system.main | ERROR | Failed to initialize IrrigationController: CircuitStateManager.__init__() missing 1 required positional argument: 'irrigation_log_file'
+    def __init__(self, state_file: str, irrigation_log_file: str) -> None:
         self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
@@ -76,9 +77,14 @@ class CircuitStateManager():
         except FileNotFoundError:
             self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
             return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
-        if not self._is_valid_state(state):
+        except json.JSONDecodeError:
+            self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
+            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
+        try:
+            self._valid_state(state)
+        except Exception as e:
             # single invalid circuit entry cause the whole state to be invalid, so we return a new empty state
-            self.logger.error(f"Invalid state structure in {self.state_file}. Returning new empty state.")
+            self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
             return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
         
         return state
@@ -92,43 +98,43 @@ class CircuitStateManager():
             self.logger.error(f"Failed to save state to {self.state_file}: {e}")
 
     
-    def _is_valid_state(self, state: dict) -> bool:
+    def _valid_state(self, state: dict) -> None:
         """Validates the state structure. See zones_state_explained.md for details."""
         if not isinstance(state, dict):
-            return False
+            raise ValueError("State must be a dictionary.")
 
         # Check last_updated
         if "last_updated" not in state:
-            return False
+            raise ValueError("State must contain 'last_updated' key.")
         # None is not allowed for last_updated for now, if needed, wrap the try-except in a condition
         try:
             datetime.fromisoformat(state["last_updated"])
         except Exception:
-            return False
+            raise ValueError("Invalid 'last_updated' timestamp format.")
 
         # Check circuits
         circuits = state.get("circuits")
         if not isinstance(circuits, list) or circuits is None:
-            return False
+            raise ValueError("'circuits' must be a list.")
 
         for circuit in circuits:
             if not isinstance(circuit, dict):
-                return False
+                raise ValueError("Each circuit must be a dictionary.")
             if "id" not in circuit:
-                return False
+                raise ValueError("Each circuit must contain 'id' key.")
             if "irrigation_state" not in circuit:
-                return False
+                raise ValueError("Each circuit must contain 'irrigation_state' key.")
             if "last_irrigation" in circuit and circuit["last_irrigation"] is not None:
                 try:
                     datetime.fromisoformat(circuit["last_irrigation"])
                 except Exception:
-                    return False
+                    raise ValueError("Invalid 'last_irrigation' timestamp format.")
             if "last_result" not in circuit:
-                return False
-            if circuit["last_result"] not in ["success", "failure", "skipped", "interrupted", "error", None]:
-                return False
+                raise ValueError("Each circuit must contain 'last_result' key.")
+            if circuit["last_result"] not in ["success", "failed", "skipped", "interrupted", "error", None]:
+                raise ValueError("Invalid 'last_result' value.")
             if "last_duration" not in circuit:
-                return False
+                raise ValueError("Each circuit must contain 'last_duration' key.")
 
         return True
     
@@ -184,7 +190,6 @@ class CircuitStateManager():
         self.update_irrigation_result(circuit, result.outcome.value, result.completed_duration)
         self.log_irrigation_result(result)
 
-
     def update_irrigation_result(self, circuit: "IrrigationCircuit", result: str, duration: int) -> None:
         """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""
@@ -209,7 +214,7 @@ class CircuitStateManager():
     
         # .get() would be safer here, but we assume the structure is valid since we validated it in load_state()
         self.state["circuits"][circuit_index]["last_result"] = result
-        self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failure" or "error", duration is 0
+        self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failed" or "error", duration is 0
         self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()

@@ -269,8 +269,10 @@ class IrrigationCLI:
             vol = self.controller.get_circuit(z['id']).last_irrigation_volume
             if vol is None:
                 v_str: Text = Text("N/A", style="dim")
+            elif vol == 0:
+                v_str: Text = Text(f"{vol:.2f} L", style="dim")
             elif vol > base_volume:
-                v_str: Text = Text(f"{vol:.2f} L", style="#eb8934")
+                v_str: Text = Text(f"{vol:.2f} L", style="orange3")
             else:
                 v_str: Text = Text(f"{vol:.2f} L", style="green")
             
@@ -285,6 +287,10 @@ class IrrigationCLI:
                 r_str = Text("Interrupted", style="yellow")
             elif result == "error":
                 r_str = Text("Error", style="red")
+            elif result == "failed":
+                r_str = Text("Failed", style="orange3")
+            else:
+                r_str = Text(result)
 
             zones_table.add_row(str(z['id']), z['name'], t_str, v_str, bv_str, r_str,
                                 f"{icon} {z['state']}", str(z['pin']))
@@ -342,7 +348,7 @@ class IrrigationCLI:
         logs_rich = []
         level_styles = {
             "INFO": "green",
-            "WARNING": "#eb8934",
+            "WARNING": "orange3",
             "ERROR": "red",
             "CRITICAL": "bold white on red",
             "DEBUG": "cyan",
@@ -412,7 +418,7 @@ class IrrigationCLI:
         elif percentage < 80:
             return "yellow"
         elif percentage < 100:
-            return "#eb8934"
+            return "orange3"
         else:
             return "red"
 
