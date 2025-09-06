@@ -109,13 +109,6 @@ class IrrigationCircuit:
         with self._irrigating_lock:
             self._state = new_state
             self.logger.debug(f"State changed to {self._state.name}.")
-        if new_state == IrrigationState.STOPPED:
-            self._last_irrigation_result = "interrupted"
-        elif new_state == IrrigationState.FINISHED:
-            self._last_irrigation_result = "success"
-        elif new_state == IrrigationState.ERROR:
-            self._last_irrigation_result = "error"
-        
     
     @last_irrigation_time.setter
     def last_irrigation_time(self, new_time: Optional[datetime]):
@@ -376,6 +369,7 @@ class IrrigationCircuit:
         
         finally:
             self.state = IrrigationState.IDLE
+            self._last_irrigation_result = result.outcome.value
             self._last_irrigation_duration = int(elapsed_time)  # Update the last irrigation duration
             self._current_duration = 0
             self._target_duration = None

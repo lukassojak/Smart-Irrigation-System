@@ -101,38 +101,38 @@ class CircuitStateManager():
     def _valid_state(self, state: dict) -> None:
         """Validates the state structure. See zones_state_explained.md for details."""
         if not isinstance(state, dict):
-            raise ValueError("State must be a dictionary.")
+            raise ValueError("State must be a dictionary")
 
         # Check last_updated
         if "last_updated" not in state:
-            raise ValueError("State must contain 'last_updated' key.")
+            raise ValueError("State must contain 'last_updated' key")
         # None is not allowed for last_updated for now, if needed, wrap the try-except in a condition
         try:
             datetime.fromisoformat(state["last_updated"])
         except Exception:
-            raise ValueError("Invalid 'last_updated' timestamp format.")
+            raise ValueError("Invalid 'last_updated' timestamp format")
 
         # Check circuits
         circuits = state.get("circuits")
         if not isinstance(circuits, list) or circuits is None:
-            raise ValueError("'circuits' must be a list.")
+            raise ValueError("'circuits' must be a list")
 
         for circuit in circuits:
             if not isinstance(circuit, dict):
-                raise ValueError("Each circuit must be a dictionary.")
+                raise ValueError("Each circuit must be a dictionary")
             if "id" not in circuit:
-                raise ValueError("Each circuit must contain 'id' key.")
+                raise ValueError("Each circuit must contain 'id' key")
             if "irrigation_state" not in circuit:
-                raise ValueError("Each circuit must contain 'irrigation_state' key.")
+                raise ValueError("Each circuit must contain 'irrigation_state' key")
             if "last_irrigation" in circuit and circuit["last_irrigation"] is not None:
                 try:
                     datetime.fromisoformat(circuit["last_irrigation"])
                 except Exception:
-                    raise ValueError("Invalid 'last_irrigation' timestamp format.")
+                    raise ValueError("Invalid 'last_irrigation' timestamp format")
             if "last_result" not in circuit:
-                raise ValueError("Each circuit must contain 'last_result' key.")
+                raise ValueError("Each circuit must contain 'last_result' key")
             if circuit["last_result"] not in ["success", "failed", "skipped", "interrupted", "error", None]:
-                raise ValueError("Invalid 'last_result' value.")
+                raise ValueError(f"Invalid 'last_result' value: {circuit['last_result']}")
             if "last_duration" not in circuit:
                 raise ValueError("Each circuit must contain 'last_duration' key.")
 
@@ -202,20 +202,14 @@ class CircuitStateManager():
             circuit_index = self.circuit_index.get(circuit.id)
         
         self.state["circuits"][circuit_index]["irrigation_state"] = "idle"  # Set irrigation state to idle after irrigation is done
-        if result == "skipped":
-            # If the result is "skipped", we do not update last_irrigation or last_duration
-            self.state["circuits"][circuit_index]["last_result"] = result
-            self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-            self.save_state()
-            return
         
-        # If the result is "interrupted" or "error", we update the last_irrigation time and last_duration (to None)
-        # This leads to loss of the last irrigation time and duration, which is acceptable in this case.
+
     
         # .get() would be safer here, but we assume the structure is valid since we validated it in load_state()
         self.state["circuits"][circuit_index]["last_result"] = result
         self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failed" or "error", duration is 0
-        self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        if result == IrrigationOutcome.SUCCESS.value:
+            self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.

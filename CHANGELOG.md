@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Refactored `IrrigationCircuit` to include runtime attributes for irrigation history tracking
+- Refactored `IrrigationCircuit` to include runtime attributes for irrigation history tracking.
 - Refactored `IrrigationCircuit` to return detailed status after irrigation completion for better state management and irrigation history tracking.
 
 ### Changed
@@ -17,8 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto pause fixed to work correctly.
 - `CircuitStateManager` now correctly handles empty data files, preventing potential crashes.
 - `CircuitStateManager` now correctly validates and handles corrupted data files, preventing potential crashes and data loss.
+- `RecentWeatherFetcher` now dynamically adjusts the date range for fetching weather data based on the circuits configuration, allowing for retrieval of weather data for the relevant period.
+- `RecentWeatherFetcher` now handles no internet connectivity gracefully, preventing unhandled exceptions.
 
 ### Removed
+- `ConsoleLogHandler` removed as it is no longer needed with the CLI.
 
 ### Known Issues
 - The `CircuitStateManager` does not handle race conditions when multiple threads access the state file simultaneously. This may lead to data corruption or loss of state information. A locking mechanism will be implemented in a future release to address this issue.

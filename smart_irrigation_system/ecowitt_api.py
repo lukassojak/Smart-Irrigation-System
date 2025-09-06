@@ -18,7 +18,14 @@ from smart_irrigation_system.weather_config import (
 
 def perform_api_call(url: str, params: dict) -> dict:
     """Performs an API call to fetch temperature data."""
-    response = requests.get(url, params=params)
+    try:
+        response = requests.get(url, params=params, timeout=10)
+    except requests.exceptions.ConnectionError as e:
+        raise Exception(f"Internet connection error: {e}")
+    except requests.exceptions.Timeout as e:
+        raise Exception(f"API request timed out: {e}")
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"API request error: {e}")
 
     # Check for status code -1 - indicates too frequent requests
 

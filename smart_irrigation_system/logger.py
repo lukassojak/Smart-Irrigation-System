@@ -49,7 +49,7 @@ def get_logger(name: str) -> logging.Logger:
     if not logger.handlers:  # Prevent duplicate handlers
         logger.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+        # logger.addHandler(console_handler)
         logger.addHandler(get_dashboard_log_handler())  # Attach shared DashboardLogHandler
         logger.propagate = False  # Prevent log duplication up the hierarchy
     return logger

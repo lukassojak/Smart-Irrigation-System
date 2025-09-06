@@ -146,40 +146,42 @@ class IrrigationCLI:
         """Handle user commands."""
         cmd = cmd.lower()
         if cmd == "irrigate":
+            self.add_log("'irrigate': Start automatic irrigation now.")
             self.controller.start_automatic_irrigation()
-            self.add_log("Start automatic irrigation.")
         elif cmd == "stop":
+            self.add_log("'Stop': Stop all irrigation.")
             self.controller.stop_irrigation()
-            self.add_log("Stop irrigation.")
         elif cmd == "auto on":
+            self.add_log("'auto on': Enable auto mode.")
             self.controller.start_main_loop()
-            self.add_log("Enable auto mode.")
         elif cmd == "auto off":
+            self.add_log("'auto off': Disable auto mode.")
             self.controller.stop_main_loop()
-            self.add_log("Disable auto mode.")
         elif cmd == "auto pause":
+            self.add_log("'auto pause': Pause auto mode. Next scheduled irrigation will be skipped.")
             self.controller.pause_main_loop()
-            self.add_log("Pause auto mode. Next scheduled irrigation will be skipped.")
         elif cmd == "auto resume":
+            self.add_log("'auto resume': Resume auto mode. Next scheduled irrigation will be executed.")
             self.controller.resume_main_loop()
-            self.add_log("Resume auto mode. Next scheduled irrigation will be executed.")
         elif cmd in ("quit", "shutdown", "exit"):
-            self.add_log("Shutdown system.")
+            self.add_log("Shutdown system now.")
             self.cleanup()
         elif cmd == "update weather":
-            self.add_log("Update cached weather conditions.")
-            self.controller.global_conditions_provider.update_current_conditions()
+            self.add_log("'update weather': Update cached weather conditions.")
+            self.controller.global_conditions_provider.get_current_conditions(force_update=True)
         elif cmd == "history":
+            self.add_log("'history': Show irrigation history.")
             self.showing_history = True
             history_panel = self.render_history()
             self.console.print(history_panel)
             self.console.input("Press 'Enter' to return to dashboard.")
             self.showing_history = False
         elif cmd == "help":
+            self.add_log("'help': Show help information.")
             self.showing_help = True
             self.render_help()
         else:
-            self.add_log(f"Unknown command: {cmd}")
+            self.add_log(f"{cmd}: Unknown command. Type 'help' for available commands.")
 
     # ===========================================================================================================
     # Rendering methods
@@ -219,13 +221,23 @@ class IrrigationCLI:
             "DISABLED": "🚫",
         }
 
+        weather_cache_state_icons = {
+            "connecting": "🔄",
+            "disconnected": "⚠️",
+            "fetched": "🟢",
+            "disabled": "🚫",
+            "invalid_secrets": "❌",
+            "error": "🔴",
+        }
+
         # 1) System status
         sys_table = Table.grid(expand=True)
         sys_table.add_column(justify="left")
         sys_table.add_column(justify="left")
+        sys_table.add_column(justify="left")
         sys_table.add_row("Mode", f"{'AUTO' if status['auto_enabled'] else 'MANUAL'} "
                                   f"{'(OFF)' if status['auto_stopped'] else '(ON)'}"
-                                  f"{' - paused' if status['auto_paused'] else ''}", f"version {version}")
+                                  f"{' - paused' if status['auto_paused'] else ''}", "", f"version {version}")
         sys_table.add_row("Irrigation mode", f"{'Sequential' if status['sequential'] else 'Concurrent'} ")
         
         # add current time
@@ -234,8 +246,31 @@ class IrrigationCLI:
         sys_table.add_row("Scheduled time", f"{status['scheduled_time']}" if status['auto_enabled'] else "N/A")
         # add empty row for spacing
         sys_table.add_row("", "")
-        sys_table.add_row("Cached weather", status['cached_global_conditions'], f"    (data from the last {self.controller.global_conditions_provider.max_interval_days} days)" if self.controller.global_conditions_provider.last_cache_update != datetime.datetime.min else "")
-        sys_table.add_row("Last weather cache update", str(status['cache_update'].strftime("%d.%m.%Y %H:%M:%S")) if status['cache_update'] else "N/A")
+        wd_s = Text("")
+        if self.controller.global_conditions_provider.connecting:
+            w_s = weather_cache_state_icons['connecting'] + " Connecting..."
+        elif not self.controller.global_config.weather_api.api_enabled:
+            w_s = weather_cache_state_icons['disabled'] + " Disabled (using standard conditions)"
+        elif self.controller.global_conditions_provider.last_cache_update == datetime.datetime.min:
+            w_s = weather_cache_state_icons['error'] + " No data"
+        elif self.controller.global_conditions_provider.try_reconnect:
+            w_s = weather_cache_state_icons['disconnected'] + " Disconnected"
+        elif self.controller.global_conditions_provider._use_standard_conditions:
+            w_s = weather_cache_state_icons['invalid_secrets'] + " Invalid API settings"
+        elif self.controller.global_conditions_provider.current_conditions is None:
+            w_s = weather_cache_state_icons['error'] + " No data"
+        elif self.controller.global_conditions_provider.current_conditions is not None:
+            api_url = self.controller.global_config.weather_api.realtime_url[:self.controller.global_config.weather_api.realtime_url.find(".net")+4] if self.controller.global_config.weather_api.realtime_url else "N/A"
+            w_s = weather_cache_state_icons['fetched'] + " Connected"
+            wd_s = Text(api_url, style="dim")
+        else:
+            w_s = weather_cache_state_icons['error'] + " Error"
+
+        sys_table.add_row("Weather status", w_s, wd_s)
+        cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim") if status['cached_global_conditions'] else Text("")
+        sys_table.add_row("Cached weather", f"{status['cached_global_conditions']}" if status['cached_global_conditions'] else "N/A", cache_interval_days)
+        sys_table.add_row("Weather cache update", str(status['cache_update'].strftime("%d.%m.%Y %H:%M:%S")) if status['cache_update'] else "N/A")
+
         # add empty row for spacing
         sys_table.add_row("", "")
         current_consumption = status['current_consumption']
@@ -286,7 +321,7 @@ class IrrigationCLI:
             elif result == "success":
                 r_str = Text("Success", style="green")
             elif result == "skipped":
-                r_str = Text("Skipped")
+                r_str = Text("Skipped", style="green")
             elif result == "interrupted":
                 r_str = Text("Interrupted", style="yellow")
             elif result == "error":
@@ -439,5 +474,5 @@ class IrrigationCLI:
         if self.live:
             self.live.stop()
         logging.getLogger().removeHandler(self.log_handler)
-        self.console.clear()
+        # self.console.clear()
     

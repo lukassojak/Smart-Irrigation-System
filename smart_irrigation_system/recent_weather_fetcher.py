@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import requests, json
+from typing import Optional
 
 from smart_irrigation_system.global_config import GlobalConfig
 from smart_irrigation_system.global_conditions import GlobalConditions
@@ -26,6 +27,7 @@ from smart_irrigation_system.weather_config import (
     CELSIUS
 )
 
+INTERVAL_DAYS_LIMIT = 7 # Maximum number of days for interval_days parameter (API limitation)
 
 # Constants for testing purposes
 TEMP_TEST_START_DATE = datetime(2025, 7, 30, 18, 0, 0)
@@ -35,9 +37,11 @@ class RecentWeatherFetcher:
     def __init__(self, global_config: GlobalConfig, max_interval_days: int):
         self.logger = get_logger("RecentWeatherFetcher")
         self.global_config: GlobalConfig = global_config
-        self.max_interval_days: int = max_interval_days     # Maximum interval in days between irrigation events in config
+        self.max_interval_days: int = max_interval_days if max_interval_days <= INTERVAL_DAYS_LIMIT else INTERVAL_DAYS_LIMIT
         self.current_conditions: GlobalConditions = None
         self._use_standard_conditions: bool = False
+        self.try_reconnect: bool = False
+        self.connecting: bool = False
 
         # Check if the API is enabled
         if not self.global_config.weather_api.api_enabled:
@@ -45,11 +49,22 @@ class RecentWeatherFetcher:
             self._use_standard_conditions = True
 
         # Validate API secrets
-        if not test_api_secrets_valid(self, global_config):
-            self.logger.error("Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
+        try:
+            self.connecting = True
+            if not test_api_secrets_valid(self, global_config):
+                self.logger.error("Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
+                self._use_standard_conditions = True
+            else:
+                self.logger.info("API secrets validated successfully.")
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(f"Connection error while validating API secrets: {e}.")
+            self.logger.warning("Internet connection issue. RecentWeatherFetcher will try to connect later.")
+            self.try_reconnect = True
+        except Exception as e:
+            self.logger.error(f"Error while validating API secrets: {e}. RecentWeatherFetcher will use standard conditions as fallback.")
             self._use_standard_conditions = True
-        else:
-            self.logger.info("API secrets validated successfully.")
+        finally:
+            self.connecting = False
 
         # Initialize current conditions with standard conditions for fallback
         self._standard_conditions = GlobalConditions(
@@ -66,6 +81,7 @@ class RecentWeatherFetcher:
         self._cached_solar: dict[datetime, float] = {}
         # Real-time rainfall data
         self._cached_real_time_rainfall: float | None = None
+        self.get_current_conditions(force_update=True)
 
         self.logger.info("RecentWeatherFetcher initialized.")
 
@@ -125,44 +141,46 @@ class RecentWeatherFetcher:
 
 
 
-
     def _data_expired(self) -> bool:
         """Checks if the cached data has expired based on the MAX_DATA_AGE."""
         if self.last_cache_update is None:
             return True
         return self.last_cache_update + timedelta(seconds=MAX_DATA_AGE) < datetime.now()
 
-    def get_current_conditions(self) -> GlobalConditions:
-        """Returns the current weather conditions, updating them if necessary."""
-        if self._use_standard_conditions:
-            self.logger.error("Cannot fetch current conditions. Using standard conditions as fallback.")
-            return self._standard_conditions
-    
-        current_conditions = self.current_conditions
-        if self.current_conditions is None or self._data_expired():
-            self.logger.debug("Current conditions are None or data expired, updating cached temperatures.")
-            current_conditions = self.update_current_conditions() # in case the api call fails, the standard conditions will be used - we dont want to update the self.current_conditions
-        else:
-            self.logger.debug("Using cached current conditions.")
-        return current_conditions
 
-    def update_current_conditions(self) -> GlobalConditions:
+    def get_current_conditions(self, interval_days: Optional[int] = None, force_update: bool = False) -> GlobalConditions:
         """Updates the current weather conditions by fetching data from the API."""
+        interval_days = interval_days if interval_days is not None else self.max_interval_days
+        if interval_days > INTERVAL_DAYS_LIMIT:
+            self.logger.warning(f"Interval days {interval_days} exceeds limit of {INTERVAL_DAYS_LIMIT}. Using limit value.")
+            interval_days = INTERVAL_DAYS_LIMIT
+
         if self._use_standard_conditions:
             self.logger.error("Cannot update current conditions. Using standard conditions as fallback.")
             return self._standard_conditions
 
+        if self.try_reconnect:
+            force_update = True
+            self.logger.info("Trying to reconnect to the API...")
         # For now, fetch temperatures and rainfall data only if the data is expired or not cached
-        if self._data_expired() or not self.cached_temperatures:
+        if self._data_expired() or not self.cached_temperatures or force_update:
             try:
+                self.connecting = True
                 self._update_cache()
+                self.try_reconnect = False
+                self.logger.info("Weather data cache updated successfully.")
             except Exception as e:
-                self.logger.warning("Using standard conditions as fallback.")
+                self.try_reconnect = True
+                self.logger.warning("Failed to update weather data cache, using standard conditions as fallback.")
                 return self._standard_conditions
-        
-        avg_temperature = self._get_avg_temperature(interval_days=1)
-        total_rainfall = self._get_total_rainfall(interval_days=1)
-        solar_total = self._get_total_solar(interval_days=1)
+            finally:
+                self.connecting = False
+        else:
+            self.logger.debug("Using cached current conditions.")
+
+        avg_temperature = self._get_avg_temperature(interval_days)
+        total_rainfall = self._get_total_rainfall(interval_days)
+        solar_total = self._get_total_solar(interval_days)
         timestamp_retrieved = self.last_cache_update
         self.current_conditions = GlobalConditions(
             temperature=avg_temperature,
@@ -255,7 +273,7 @@ class RecentWeatherFetcher:
             return self.global_config.standard_conditions.solar_total
         
         # Return the sum of solar radiation values and convert to kWh/m²
-        total_solar = sum(relevant_solar_data) / 1000  # Convert from Wh/m² to kWh/m²
+        total_solar = (sum(relevant_solar_data) / interval_days) / 1000  # Convert W/m² to kWh/m²
         return total_solar
 
 
@@ -264,18 +282,16 @@ class RecentWeatherFetcher:
 
     def _update_cache(self) -> None:
         """Updates the cache for temperatures and rainfall data."""
+        self.logger.debug("Updating cache for temperatures, rainfall, solar, and real-time weather data.")
         if self._use_standard_conditions:
             self.logger.error("Cannot update cache. Using standard conditions as fallback.")
             return
         
-        try:
-            self._cache_temperatures()
-            self._cache_rainfall()
-            self._cache_solar()
-            self._cache_real_time_weather()
-            self.logger.debug("Cache updated successfully.")
-        except Exception as e:
-            self.logger.error(f"Error updating cache: {e}")
+        self._cache_temperatures()
+        self._cache_rainfall()
+        self._cache_solar()
+        self._cache_real_time_weather()
+        self.logger.debug("Cache updated successfully.")
     
     def _cache_temperatures(self) -> None:
         """Fetches the temperatures for the last <max_interval_days> days and caches them as a dictionary."""

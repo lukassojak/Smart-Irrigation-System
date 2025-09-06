@@ -233,7 +233,7 @@ class IrrigationController:
 
 
         # Update global conditions before starting irrigation
-        self.global_conditions_provider.update_current_conditions()
+        self.global_conditions_provider.get_current_conditions()
         current_conditions_str = self.global_conditions_provider.get_conditions_str()
         self.logger.info(f"Global conditions updated: {current_conditions_str}")
 

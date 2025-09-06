@@ -1,5 +1,5 @@
 # tracemalloc - for debugging performance issues
-import tracemalloc
+import tracemalloc, time
 
 from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.irrigation_controller import IrrigationController
@@ -37,13 +37,21 @@ def main():
     tracemalloc.start()
     logger.info("Initializing Smart Irrigation System...")
     logger.info(f"Version: {version}")
+    print("Initializing ", end="", flush=True)
+    time.sleep(0.5)
+    print(".", end="", flush=True)
 
     try:
+        time.sleep(0.5)
+        print(".", end="", flush=True)
         controller = IrrigationController()
     except Exception as e:
         logger.error(f"Failed to initialize IrrigationController: {e}")
         return
 
+    time.sleep(0.5)
+    print(".", flush=True)
+    time.sleep(0.5)
     # display = DisplayController(controller)
     # pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
 
