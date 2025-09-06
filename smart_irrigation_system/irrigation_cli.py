@@ -166,6 +166,9 @@ class IrrigationCLI:
         elif cmd in ("quit", "shutdown", "exit"):
             self.add_log("Shutdown system.")
             self.cleanup()
+        elif cmd == "update weather":
+            self.add_log("Update cached weather conditions.")
+            self.controller.global_conditions_provider.update_current_conditions()
         elif cmd == "history":
             self.showing_history = True
             history_panel = self.render_history()
@@ -192,6 +195,7 @@ class IrrigationCLI:
                 "auto pause - Pause automatic mode (Next scheduled irrigation will be skipped)",
                 "auto resume - Resume automatic mode (Next scheduled irrigation will be executed)",
                 "quit/exit/shutdown - Exit the dashboard and shutdown system",
+                "update weather - Update cached weather conditions",
                 "help - Show help information",
             ]
         help_dashboard = Table.grid(expand=True)
@@ -230,8 +234,8 @@ class IrrigationCLI:
         sys_table.add_row("Scheduled time", f"{status['scheduled_time']}" if status['auto_enabled'] else "N/A")
         # add empty row for spacing
         sys_table.add_row("", "")
-        sys_table.add_row("Cached weather", status['cached_global_conditions'])
-        sys_table.add_row("Last weather cache update", str(status['cache_update']))
+        sys_table.add_row("Cached weather", status['cached_global_conditions'], f"    (data from the last {self.controller.global_conditions_provider.max_interval_days} days)" if self.controller.global_conditions_provider.last_cache_update != datetime.datetime.min else "")
+        sys_table.add_row("Last weather cache update", str(status['cache_update'].strftime("%d.%m.%Y %H:%M:%S")) if status['cache_update'] else "N/A")
         # add empty row for spacing
         sys_table.add_row("", "")
         current_consumption = status['current_consumption']

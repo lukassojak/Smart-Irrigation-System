@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto pause does not work correctly.
 - No internet connectivity leads to unhandled exceptions in `RecentWeatherFetcher`.
 - The `CircuitStateManager` does not handle empty data files correctly, leading to potential crashes. 
+- The `RecentWeatherFetcher` is hardcoded to fetch weather data for the last 1 day only.
 
 ---
 
