@@ -16,7 +16,7 @@
     },
     "automation": {
         "enabled": true,
-        "sequential": true,
+        "sequential": false,
         "scheduled_hour": 22,
         "scheduled_minute": 16,
         "max_flow_monitoring": true,

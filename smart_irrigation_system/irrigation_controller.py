@@ -1,5 +1,5 @@
 
-import time, threading, atexit
+import time, threading, atexit, sys, signal
 from typing import Dict, Any
 from datetime import datetime
 
@@ -68,11 +68,24 @@ class IrrigationController:
         # Consumption tracking
         self.current_consumption = 0.0  # Total consumption of all irrigating circuits in liters per hour
 
+        self._register_signal_handlers()
+
         # Set initial controller state
         self.controller_state = ControllerState.IDLE
         
         self.logger.info("Environment: %s", self.global_config.automation.environment)
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
+    
+    def _register_signal_handlers(self):
+        def shutdown_handler(signum, frame):
+            self.logger.info(f"Received signal {signum}, performing clean shutdown...")
+            self.cleanup()
+            self.state_manager.handle_clean_shutdown()
+            sys.exit(0)
+        
+        # Common termination signals
+        signal.signal(signal.SIGTERM, shutdown_handler)
+        signal.signal(signal.SIGINT, shutdown_handler)   # Ctrl+C
 
     def _load_global_config(self):
         """Loads the globalconfiguration."""
@@ -380,6 +393,39 @@ class IrrigationController:
 
         self.controller_state = ControllerState.IDLE
         self.logger.info("Stopping circuits done.")
+    
+    def manual_irrigation(self, circuit_number: int, liter_amount: float) -> IrrigationResult:
+        """Starts manual irrigation for a specified circuit and liter amount in a separate thread."""
+        if circuit_number not in self.circuits:
+            raise ValueError(f"Circuit number {circuit_number} does not exist.")
+        
+        circuit = self.circuits[circuit_number]
+
+        if self.controller_state != ControllerState.IDLE:
+            raise RuntimeError("Cannot start manual irrigation while the controller is not in IDLE state.")
+        
+        if circuit.state != IrrigationState.IDLE:
+            raise RuntimeError(f"Circuit {circuit.id} is not in IDLE state, current state: {circuit.state.name}.")
+
+        self.controller_state = ControllerState.IRRIGATING
+        self.stop_event.clear()
+
+        def manual_irrigation_thread_func():
+            try:
+                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
+                self.logger.info(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
+                result = circuit.irrigate_manual(liter_amount, self.stop_event)
+                self.logger.info(f"Manual irrigation for circuit {circuit.id} completed with result: {result}.")
+                self.state_manager.irrigation_finished(circuit, result)
+            except Exception as e:
+                self.logger.error(f"Error during manual irrigation for circuit {circuit.id}: {e}")
+            finally:
+                self.controller_state = ControllerState.IDLE
+
+        manual_thread = threading.Thread(target=manual_irrigation_thread_func, daemon=True)
+        manual_thread.start()
+        manual_thread.join()
+
 
 
     # ===========================================================================================================

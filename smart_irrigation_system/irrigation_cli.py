@@ -148,6 +148,24 @@ class IrrigationCLI:
         if cmd == "irrigate":
             self.add_log("'irrigate': Start automatic irrigation now.")
             self.controller.start_automatic_irrigation()
+        elif cmd.startswith("irrigate "):
+            parts = cmd.split()
+            if len(parts) == 3 and parts[1].isdigit():
+                zone_id = int(parts[1])
+                try:
+                    volume = float(parts[2])
+                    if volume <= 0:
+                        self.add_log(f"Volume must be positive. Given: {volume}")
+                        return
+                    if self.controller.get_circuit(zone_id) is None:
+                        self.add_log(f"Zone ID {zone_id} does not exist.")
+                        return
+                    self.add_log(f"'irrigate {zone_id} {volume}': Start irrigation of zone {zone_id} with {volume} liters.")
+                    self.controller.manual_irrigation(zone_id, volume)
+                except ValueError:
+                    self.add_log(f"Invalid volume: {parts[2]}. Must be a number.")
+            else:
+                self.add_log("Invalid command format. Use 'irrigate <zone_id> <volume_liters>'.")
         elif cmd == "stop":
             self.add_log("'Stop': Stop all irrigation.")
             self.controller.stop_irrigation()
@@ -191,6 +209,7 @@ class IrrigationCLI:
         """ Render help information for the CLI commands."""
         commands = [
                 "irrigate - Start automatic irrigation now",
+                "irrigate <zone_id> <volume_liters> - Irrigate specific zone with specified volume (e.g., 'irrigate 1 10')",
                 "stop - Stop all irrigation",
                 "auto on - Enable automatic mode",
                 "auto off - Disable automatic mode",
@@ -223,7 +242,7 @@ class IrrigationCLI:
 
         weather_cache_state_icons = {
             "connecting": "🔄",
-            "disconnected": "⚠️",
+            "disconnected": "🟡",
             "fetched": "🟢",
             "disabled": "🚫",
             "invalid_secrets": "❌",
@@ -247,14 +266,18 @@ class IrrigationCLI:
         # add empty row for spacing
         sys_table.add_row("", "")
         wd_s = Text("")
+        cache_interval_days = Text("")
         if self.controller.global_conditions_provider.connecting:
             w_s = weather_cache_state_icons['connecting'] + " Connecting..."
+            if self.controller.global_conditions_provider.last_cache_update != datetime.datetime.min:
+                cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim")
         elif not self.controller.global_config.weather_api.api_enabled:
             w_s = weather_cache_state_icons['disabled'] + " Disabled (using standard conditions)"
         elif self.controller.global_conditions_provider.last_cache_update == datetime.datetime.min:
             w_s = weather_cache_state_icons['error'] + " No data"
         elif self.controller.global_conditions_provider.try_reconnect:
             w_s = weather_cache_state_icons['disconnected'] + " Disconnected"
+            cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim")
         elif self.controller.global_conditions_provider._use_standard_conditions:
             w_s = weather_cache_state_icons['invalid_secrets'] + " Invalid API settings"
         elif self.controller.global_conditions_provider.current_conditions is None:
@@ -263,11 +286,11 @@ class IrrigationCLI:
             api_url = self.controller.global_config.weather_api.realtime_url[:self.controller.global_config.weather_api.realtime_url.find(".net")+4] if self.controller.global_config.weather_api.realtime_url else "N/A"
             w_s = weather_cache_state_icons['fetched'] + " Connected"
             wd_s = Text(api_url, style="dim")
+            cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim")
         else:
             w_s = weather_cache_state_icons['error'] + " Error"
 
         sys_table.add_row("Weather status", w_s, wd_s)
-        cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim") if status['cached_global_conditions'] else Text("")
         sys_table.add_row("Cached weather", f"{status['cached_global_conditions']}" if status['cached_global_conditions'] else "N/A", cache_interval_days)
         sys_table.add_row("Weather cache update", str(status['cache_update'].strftime("%d.%m.%Y %H:%M:%S")) if status['cache_update'] else "N/A")
 
@@ -328,6 +351,8 @@ class IrrigationCLI:
                 r_str = Text("Error", style="red")
             elif result == "failed":
                 r_str = Text("Failed", style="orange3")
+            elif result == "stopped":
+                r_str = Text("Stopped", style="yellow")
             else:
                 r_str = Text(result)
 
@@ -474,5 +499,5 @@ class IrrigationCLI:
         if self.live:
             self.live.stop()
         logging.getLogger().removeHandler(self.log_handler)
-        # self.console.clear()
+        self.console.clear()
     

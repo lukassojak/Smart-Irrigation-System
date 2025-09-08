@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CircuitStateManager` now correctly validates and handles corrupted data files, preventing potential crashes and data loss.
 - `RecentWeatherFetcher` now dynamically adjusts the date range for fetching weather data based on the circuits configuration, allowing for retrieval of weather data for the relevant period.
 - `RecentWeatherFetcher` now handles no internet connectivity gracefully, preventing unhandled exceptions.
+- `IrrigationCircuit` correctly updates its runtime state attribute after skipping irrigation due to weather conditions.
 
 ### Removed
 - `ConsoleLogHandler` removed as it is no longer needed with the CLI.

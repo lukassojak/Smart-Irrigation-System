@@ -1,33 +1,33 @@
 {
-    "last_updated": "2025-09-06T15:42:41",
+    "last_updated": "2025-09-08T09:43:12",
     "circuits": [
         {
             "id": "1",
-            "irrigation_state": "shutdown",
-            "last_irrigation": "2025-09-05T15:25:24",
+            "irrigation_state": "idle",
+            "last_irrigation": null,
             "last_result": "failed",
             "last_duration": 0
         },
         {
             "id": "2",
-            "irrigation_state": "shutdown",
-            "last_irrigation": "2025-09-06T15:42:41",
-            "last_result": "success",
-            "last_duration": 26
+            "irrigation_state": "idle",
+            "last_irrigation": "2025-09-07T13:02:50",
+            "last_result": "stopped",
+            "last_duration": 3
         },
         {
             "id": "4",
-            "irrigation_state": "shutdown",
-            "last_irrigation": "2025-09-05T23:11:42",
-            "last_result": "skipped",
-            "last_duration": 0
+            "irrigation_state": "idle",
+            "last_irrigation": "2025-09-07T13:02:59",
+            "last_result": "stopped",
+            "last_duration": 3
         },
         {
             "id": "5",
-            "irrigation_state": "shutdown",
-            "last_irrigation": "2025-09-05T23:11:47",
-            "last_result": "skipped",
-            "last_duration": 0
+            "irrigation_state": "irrigating",
+            "last_irrigation": "2025-09-07T13:02:27",
+            "last_result": "stopped",
+            "last_duration": 3
         }
     ]
 }

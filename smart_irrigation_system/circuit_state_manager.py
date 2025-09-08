@@ -131,7 +131,7 @@ class CircuitStateManager():
                     raise ValueError("Invalid 'last_irrigation' timestamp format")
             if "last_result" not in circuit:
                 raise ValueError("Each circuit must contain 'last_result' key")
-            if circuit["last_result"] not in ["success", "failed", "skipped", "interrupted", "error", None]:
+            if circuit["last_result"] not in ["success", "failed", "skipped", "stopped", "interrupted", "error", None]:
                 raise ValueError(f"Invalid 'last_result' value: {circuit['last_result']}")
             if "last_duration" not in circuit:
                 raise ValueError("Each circuit must contain 'last_duration' key.")
