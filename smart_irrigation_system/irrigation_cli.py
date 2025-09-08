@@ -157,13 +157,17 @@ class IrrigationCLI:
                     if volume <= 0:
                         self.add_log(f"Volume must be positive. Given: {volume}")
                         return
-                    if self.controller.get_circuit(zone_id) is None:
+                    try:
+                        self.controller.get_circuit(zone_id)
+                    except ValueError:
                         self.add_log(f"Zone ID {zone_id} does not exist.")
                         return
                     self.add_log(f"'irrigate {zone_id} {volume}': Start irrigation of zone {zone_id} with {volume} liters.")
                     self.controller.manual_irrigation(zone_id, volume)
                 except ValueError:
                     self.add_log(f"Invalid volume: {parts[2]}. Must be a number.")
+                except RuntimeError as e:
+                    self.add_log(f"Cannot start irrigation: {e}")
             else:
                 self.add_log("Invalid command format. Use 'irrigate <zone_id> <volume_liters>'.")
         elif cmd == "stop":
@@ -181,7 +185,7 @@ class IrrigationCLI:
         elif cmd == "auto resume":
             self.add_log("'auto resume': Resume auto mode. Next scheduled irrigation will be executed.")
             self.controller.resume_main_loop()
-        elif cmd in ("quit", "shutdown", "exit"):
+        elif cmd == "shutdown":
             self.add_log("Shutdown system now.")
             self.cleanup()
         elif cmd == "update weather":
@@ -220,11 +224,46 @@ class IrrigationCLI:
                 "help - Show help information",
             ]
         help_dashboard = Table.grid(expand=True)
-        commands_text = Text("\n".join(commands), style="green")
-        commands_panel = Panel(commands_text, title="Available Commands", expand=True)
+        help_dashboard.add_column(justify="left")
+        help_dashboard.add_column(justify="left")
+        irrigate = Text("irrigate", style="bold green")
+        irrigate_doc = Text("Start automatic irrigation now", style="dim")
+        irrigate_manual = Text("irrigate <zone_id> <volume_liters>", style="bold green")
+        irrigate_manual_doc = Text("Irrigate specific zone with specified volume in liters (e.g., 'irrigate 1 10')", style="dim")
+        stop = Text("stop", style="bold green")
+        stop_doc = Text("Stop all irrigation", style="dim")
+        auto_on = Text("auto on", style="bold green")
+        auto_on_doc = Text("Enable automatic mode", style="dim")
+        auto_off = Text("auto off", style="bold green")
+        auto_off_doc = Text("Disable automatic mode", style="dim")
+        auto_pause = Text("auto pause", style="bold green")
+        auto_pause_doc = Text("Pause automatic mode (Next scheduled irrigation will be skipped)", style="dim")
+        auto_resume = Text("auto resume", style="bold green")
+        auto_resume_doc = Text("Resume automatic mode (Next scheduled irrigation will be executed)", style="dim")
+        shutdown = Text("shutdown", style="bold green")
+        shutdown_doc = Text("Exit the dashboard and shutdown system", style="dim")
+        update_weather = Text("update weather", style="bold green")
+        update_weather_doc = Text("Update cached weather conditions", style="dim")
+        help = Text("help", style="bold green")
+        help_doc = Text("Show help information", style="dim")
+
+        # assemble the commands in a panel
+        help_dashboard.add_row(irrigate, irrigate_doc)
+        help_dashboard.add_row(irrigate_manual, irrigate_manual_doc)
+        help_dashboard.add_row(stop, stop_doc)
+        help_dashboard.add_row(auto_on, auto_on_doc)
+        help_dashboard.add_row(auto_off, auto_off_doc)
+        help_dashboard.add_row(auto_pause, auto_pause_doc)
+        help_dashboard.add_row(auto_resume, auto_resume_doc)
+        help_dashboard.add_row(shutdown, shutdown_doc)
+        help_dashboard.add_row(update_weather, update_weather_doc)
+        help_dashboard.add_row(help, help_doc)
+
+        # Add return information
         return_text = Text("Press 'Enter' to return to dashboard.", style="yellow")
-        help_dashboard.add_row(commands_panel)
-        help_dashboard.add_row(Align.center(return_text, vertical="middle"))
+        help_dashboard.add_row("", return_text)
+
+        help_dashboard = Panel(help_dashboard, title="Help - Available Commands", expand=True, border_style="white")
 
         return help_dashboard
 

@@ -401,12 +401,13 @@ class IrrigationController:
         
         circuit = self.circuits[circuit_number]
 
-        if self.controller_state != ControllerState.IDLE:
+        if self.controller_state != ControllerState.IDLE and self.controller_state != ControllerState.IRRIGATING:
             raise RuntimeError("Cannot start manual irrigation while the controller is not in IDLE state.")
         
         if circuit.state != IrrigationState.IDLE:
             raise RuntimeError(f"Circuit {circuit.id} is not in IDLE state, current state: {circuit.state.name}.")
 
+        self.logger.info(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
         self.controller_state = ControllerState.IRRIGATING
         self.stop_event.clear()
 
@@ -420,11 +421,19 @@ class IrrigationController:
             except Exception as e:
                 self.logger.error(f"Error during manual irrigation for circuit {circuit.id}: {e}")
             finally:
+                with self.threads_lock:
+                    current = threading.current_thread()
+                    try:
+                        self.threads.remove(current)
+                    except ValueError:
+                        self.logger.warning(f"Thread {current.name} not found in the threads list. It might have already been removed.")
                 self.controller_state = ControllerState.IDLE
+                self.logger.info(f"Manual irrigation thread for circuit {circuit.id} has finished.")
 
         manual_thread = threading.Thread(target=manual_irrigation_thread_func, daemon=True)
+        with self.threads_lock:
+            self.threads.append(manual_thread)
         manual_thread.start()
-        manual_thread.join()
 
 
 

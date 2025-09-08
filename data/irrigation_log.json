@@ -526,6 +526,160 @@
             "actual_water_amount": 0.072,
             "target_water_amount": 0.6,
             "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-08T10:43:58",
+            "completed_duration": 20,
+            "target_duration": 21,
+            "actual_water_amount": 4.9,
+            "target_water_amount": 4.9,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:50:29",
+            "completed_duration": 3,
+            "target_duration": 4,
+            "actual_water_amount": 0.224,
+            "target_water_amount": 0.244,
+            "error": null
+        },
+        {
+            "circuit_id": 2,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:50:29",
+            "completed_duration": 3,
+            "target_duration": 27,
+            "actual_water_amount": 0.082,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 2,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:50:54",
+            "completed_duration": 3,
+            "target_duration": 27,
+            "actual_water_amount": 0.082,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:50:54",
+            "completed_duration": 3,
+            "target_duration": 36,
+            "actual_water_amount": 0.058,
+            "target_water_amount": 0.56,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:50:54",
+            "completed_duration": 3,
+            "target_duration": 4,
+            "actual_water_amount": 0.229,
+            "target_water_amount": 0.244,
+            "error": null
+        },
+        {
+            "circuit_id": 2,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T10:56:33",
+            "completed_duration": 3,
+            "target_duration": 45,
+            "actual_water_amount": 0.072,
+            "target_water_amount": 1.0,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T11:05:24",
+            "completed_duration": 8,
+            "target_duration": 17,
+            "actual_water_amount": 2.072,
+            "target_water_amount": 3.967,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-08T11:05:49",
+            "completed_duration": 16,
+            "target_duration": 17,
+            "actual_water_amount": 3.956,
+            "target_water_amount": 3.967,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T11:35:42",
+            "completed_duration": 25,
+            "target_duration": 43,
+            "actual_water_amount": 6.013,
+            "target_water_amount": 10.033,
+            "error": null
+        },
+        {
+            "circuit_id": 1,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-08T11:37:32",
+            "completed_duration": 76,
+            "target_duration": 77,
+            "actual_water_amount": 17.949,
+            "target_water_amount": 17.967,
+            "error": null
+        },
+        {
+            "circuit_id": 5,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-08T11:39:38",
+            "completed_duration": 3,
+            "target_duration": 4,
+            "actual_water_amount": 0.239,
+            "target_water_amount": 0.244,
+            "error": null
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-08T11:39:38",
+            "completed_duration": 26,
+            "target_duration": 27,
+            "actual_water_amount": 0.599,
+            "target_water_amount": 0.6,
+            "error": null
+        },
+        {
+            "circuit_id": 4,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-09-08T11:37:46",
+            "completed_duration": 175,
+            "target_duration": 450,
+            "actual_water_amount": 2.723,
+            "target_water_amount": 7.0,
+            "error": null
         }
     ]
 }

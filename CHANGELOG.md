@@ -8,8 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+- `IrrigationController` now handles keyboard interrupts (CTRL+C) gracefully, ensuring ongoing irrigation processes are stopped before exiting.
+- Manual irrigation is now non-blocking, allowing the CLI to remain responsive during irrigation.
+
+### Removed
+
+### Known Issues
+
+---
+
+## [0.4.1] - 2025-09-08
+
+### Added
+
+### Changed
+- Help information in CLI updated and redesigned.
+
+### Fixed
+- `IrrigationController` now handles keyboard interrupts (CTRL+C) gracefully, ensuring ongoing irrigation processes are stopped before exiting.
+- Manual irrigation is now non-blocking, allowing the CLI to remain responsive during irrigation.
+
+### Removed
+
+### Known Issues
+
+---
+
+## [0.4.0] - 2025-09-08
+
+### Added
 - Refactored `IrrigationCircuit` to include runtime attributes for irrigation history tracking.
 - Refactored `IrrigationCircuit` to return detailed status after irrigation completion for better state management and irrigation history tracking.
+- CLI and `IrrigationController` now support manual irrigation of individual circuits with specified water amount.
 
 ### Changed
 
@@ -26,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Issues
 - The `CircuitStateManager` does not handle race conditions when multiple threads access the state file simultaneously. This may lead to data corruption or loss of state information. A locking mechanism will be implemented in a future release to address this issue.
-- No internet connectivity leads to unhandled exceptions in `RecentWeatherFetcher`.
+- Manual irrigation from the CLI does not support stopping an ongoing irrigation process. This will be added in a future release.
 
 ---
 
