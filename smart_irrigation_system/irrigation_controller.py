@@ -505,28 +505,26 @@ class IrrigationController:
             # Check the irrigation window
             if (self.get_state() == ControllerState.IDLE and abs(time_diff) <= TOLERANCE):
                 # If main loop is paused, skip current irrigation and resume
-                if self._timer_pause_event.is_set():
-                    if not skipped_cycle:
-                        skipped_cycle = True
-                        self.logger.info("Main loop is paused, skipping current irrigation check.")
+                if self._timer_pause_event.is_set() and not skipped_cycle:
+                    skipped_cycle = True
+                    self.logger.info("Main loop is paused, skipping current irrigation check.")
                 
                 elif not already_checked:
                     self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
                     self.start_automatic_irrigation()   # non-blocking call to start irrigation
                     already_checked = True
 
-            # The flag was_in_window indicates that: 1. the current time is outside the irrigation window, 2. the irrigation window just passed
-            was_in_window = abs(time_diff) > TOLERANCE and (skipped_cycle or already_checked)
+            # The variable window_passed is used to reset the skipped_cycle and already_checked flags after the irrigation window has passed
+            window_passed = abs(time_diff) > TOLERANCE and (skipped_cycle or already_checked)
 
             # Reset flags after the irrigation window has passed
-            if was_in_window:
-                skipped_cycle = False
-                already_checked = False
+            if window_passed:
+                skipped_cycle, already_checked = False, False
             
             # Refresh weather cache periodically
             if (self.global_conditions_provider.last_cache_update is None or
                 (time.time() - self.global_conditions_provider.last_cache_update.timestamp()) >= WEATHER_CACHE_REFRESH_INTERVAL):
-                self.global_conditions_provider.get_current_conditions(force_update=True)
+                self.global_conditions_provider.get_current_conditions(force_update=True) # blocking call to refresh the cache - should be fast enough
 
             time.sleep(CHECK_INTERVAL)  # Wait for the next check
         
