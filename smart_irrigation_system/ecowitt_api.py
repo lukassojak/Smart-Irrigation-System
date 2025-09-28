@@ -66,7 +66,6 @@ def temperature_api_call(fetcher, start_date: datetime, end_date: datetime) -> d
             fetcher.logger.error(f"Unexpected data structure for temperature list: {temperature_list}")
     except Exception as e:
         fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
-    save_json(data=data_to_save, filename_prefix="recent_temperature_data")
 
     try:
         return data.get("data").get("outdoor").get("temperature").get("list", [])
@@ -105,7 +104,6 @@ def rainfall_api_call_history(fetcher, start_date: datetime, end_date: datetime)
             fetcher.logger.error(f"Unexpected data structure for rainfall list: {rainfall_list}")
     except Exception as e:
         fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
-    save_json(data=data_to_save, filename_prefix="recent_rainfall_data")
 
     try:
         return data.get("data").get("rainfall").get("yearly", {}).get("list", {})
@@ -144,7 +142,6 @@ def solar_api_call_history(fetcher, start_date: datetime, end_date: datetime) ->
             fetcher.logger.error(f"Unexpected data structure for solar list: {solar_list}")
     except Exception as e:
         fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
-    save_json(data=data_to_save, filename_prefix="recent_solar_data")
 
     try:
         return data.get("data").get("solar_and_uvi").get("solar", {}).get("list", {})
@@ -184,7 +181,6 @@ def all_api_call_real_time(fetcher) -> dict[str, list]:
         fetcher.logger.error(f"Invalid timestamp value: {e}")
     except Exception as e:
         fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
-    save_json(data=data_to_save, filename_prefix="real_time_weather_data")
 
 
     try:

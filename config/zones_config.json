@@ -69,15 +69,15 @@
             "target_mm": null,
             "zone_area_m2": null,
             "liters_per_minimum_dripper": 0.2,
-            "interval_days": 1,
+            "interval_days": 2,
             "drippers_summary": {
                 "12": 3,
                 "8": 1,
                 "2": 6
             },
             "local_correction_factors": {
-                "solar": 0.05,
-                "rain": 0.0,
+                "solar": 0.03,
+                "rain": -0.3,
                 "temperature": 0.02
             }
         },

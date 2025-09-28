@@ -12,6 +12,7 @@ from smart_irrigation_system.irrigation_controller import IrrigationController
 from smart_irrigation_system.logger import get_dashboard_log_handler
 from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.enums import ControllerState
+from smart_irrigation_system.logger import get_logger
 
 class IrrigationCLI:
     def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,
@@ -25,6 +26,7 @@ class IrrigationCLI:
         self.max_logs = max_logs
         self.input_cmd = ""  # stores the current input command
         self.live = None
+        self.logger = get_logger("IrrigationCLI")
 
         # Sleep mode
         self.last_activity = time.time()
@@ -49,8 +51,6 @@ class IrrigationCLI:
         if len(self.logs) > self.max_logs:
             self.logs.pop(0)
 
-
-
     def run(self):
         # Start the input thread
         self.input_thread.start()
@@ -64,10 +64,20 @@ class IrrigationCLI:
             while self.running:
                 if self.showing_help:
                     # If help is being shown, render the help dashboard
-                    dashboard = self.render_help()
+                    try:
+                        dashboard = self.render_help()
+                    except Exception as e:
+                        self.logger.error(f"Error rendering help: {e}")
+                        dashboard = Panel(Text("Error rendering help.", style="red"), title="Help - Error", expand=True)
+                        time.sleep(10) # wait before retrying
                 else:
                     # Render the main dashboard
-                    dashboard = self.render_dashboard()
+                    try:
+                        dashboard = self.render_dashboard()
+                    except Exception as e:
+                        self.logger.error(f"Error rendering dashboard: {e}")
+                        dashboard = Panel(Text("Error rendering dashboard.", style="red"), title="Dashboard - Error", expand=True)
+                        time.sleep(10)
 
                 # Adaptive refresh interval based on controller state
                 if self.controller.get_state() == ControllerState.IRRIGATING:
@@ -428,6 +438,11 @@ class IrrigationCLI:
 
             # Add a separator line for minimal spacing
             tasks_panel_content.append(" " * 3)  # Add 3 spaces for padding
+
+            # Simulate CLI crash during irrigation for testing purposes
+            if current_water_amount > target_water_amount / 4:
+                self.add_log("Simulated crash for testing purposes.")
+                raise Exception("Simulated crash for testing purposes.")
 
         # Combine all rows into a single string
         tasks_panel_text = "\n".join(tasks_panel_content) or "No tasks currently running."

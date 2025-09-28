@@ -60,16 +60,29 @@ def main():
 
     # Start CLI in the main thread
     # command_loop(controller, stop_event)
-    cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
-                        refresh_interval_active=REFRESH_INTERVAL_ACTIVE)
-    cli.run()
+    try:
+        cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
+                            refresh_interval_active=REFRESH_INTERVAL_ACTIVE)
+    except Exception as e:
+        logger.error(f"Failed to initialize IrrigationCLI: {e}")
+        controller.stop_main_loop()
+        del controller
+        return
+    try:
+        cli.run()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Exiting Smart Irrigation System...")
+    except Exception as e:
+        logger.error(f"Error in CLI: {e}")
 
     controller.stop_main_loop()
 
     # Cleanup resources
-    controller.cleanup()
     # display.cleanup()
     # pause_button.cleanup()
+
+    # Finalize controller
+    del controller
     logger.info("Smart Irrigation System stopped.")
 
     current, peak = tracemalloc.get_traced_memory()

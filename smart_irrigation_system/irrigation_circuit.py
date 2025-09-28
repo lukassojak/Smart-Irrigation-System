@@ -442,11 +442,11 @@ class IrrigationCircuit:
 
     def open_valve(self):
         """Opens the valve for debugging purposes."""
-        self.valve.control(RelayValveState.OPEN)
+        self.valve.state = RelayValveState.OPEN
         self.logger.info(f"Valve opened for circuit {self.id}.")
 
     def close_valve(self):
         """Closes the valve for debugging purposes."""
-        self.valve.control(RelayValveState.CLOSED)
+        self.valve.state = RelayValveState.CLOSED
         self.logger.info(f"Valve closed for circuit {self.id}.")
         

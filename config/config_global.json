@@ -5,20 +5,20 @@
         "temperature_celsius": 18.5
     },
     "correction_factors": {
-        "solar": 0.15,
-        "rain": -0.05,
+        "solar": 0.05,
+        "rain": -0.15,
         "temperature": 0.07
     },
     "irrigation_limits": {
         "min_percent": 0,
-        "max_percent": 10,
-        "main_valve_max_flow": 800
+        "max_percent": 150,
+        "main_valve_max_flow": 1200
     },
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 22,
-        "scheduled_minute": 16,
+        "scheduled_hour": 18,
+        "scheduled_minute": 1,
         "max_flow_monitoring": true,
         "environment": "development"
     },

@@ -30,7 +30,7 @@ WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when 
 # Constants for automatic irrigation main loop
 CHECK_INTERVAL = 5  # seconds, how often to check the time for irrigation
 TOLERANCE = 1  # minutes, tolerance for irrigation time, if the current time is within this tolerance of the scheduled time, irrigation will be started
-
+WEATHER_CACHE_REFRESH_INTERVAL = 1 * 60  # seconds, how often to refresh the weather cache in RecentWeatherFetcher
 
 class IrrigationController:
     """The main irrigation controller that manages all the irrigation circuits. Pattern: Singleton"""
@@ -52,6 +52,7 @@ class IrrigationController:
         self.global_conditions_provider = self._initialize_global_conditions_provider()
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH, IRRIGATION_LOG_PATH)
         atexit.register(self.state_manager.handle_clean_shutdown)
+        atexit.register(self.cleanup)  # Ensure cleanup is called on exit
         for circuit in self.circuits_list:
             circuit.init_last_irrigation_data(self.state_manager)  # Initialize last irrigation data for each circuit
 
@@ -441,10 +442,20 @@ class IrrigationController:
     # Cleanup and shutdown
     # ===========================================================================================================
 
+    def __del__(self):
+        self.cleanup()
+
     def cleanup(self):
         """Cleans up the resources used by the irrigation controller"""
         self.logger.info("Cleaning up resources...")
-        self.stop_irrigation()
+        if self.controller_state != ControllerState.IDLE:
+            self.stop_irrigation()
+        # Check if all valves are closed
+        for circuit in self.circuits.values():
+            if circuit.state == IrrigationState.IRRIGATING:
+                self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to close valve.")
+                circuit.close_valve()
+        self.state_manager.handle_clean_shutdown()
 
     
     # ===========================================================================================================
@@ -484,26 +495,38 @@ class IrrigationController:
     def _main_loop_func(self):
         irrigation_hour = self.global_config.automation.scheduled_hour
         irrigation_minute = self.global_config.automation.scheduled_minute
-        skipped_cycle = False
+        skipped_cycle = False   # flag to indicate if the current irrigation cycle was skipped due to pause
+        already_checked = False # flag to indicate if the irrigation time has already been checked in the current irrigation window
 
         while not self._timer_stop_event.is_set():
             current_time = time.localtime()
             time_diff = (current_time.tm_hour - irrigation_hour) * 60 + (current_time.tm_min - irrigation_minute) # in minutes
+
+            # Check the irrigation window
             if (self.get_state() == ControllerState.IDLE and abs(time_diff) <= TOLERANCE):
                 # If main loop is paused, skip current irrigation and resume
                 if self._timer_pause_event.is_set():
                     if not skipped_cycle:
                         skipped_cycle = True
                         self.logger.info("Main loop is paused, skipping current irrigation check.")
-                    time.sleep(CHECK_INTERVAL)
-                    continue  # Skip the current iteration
+                
+                elif not already_checked:
+                    self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
+                    self.start_automatic_irrigation()   # non-blocking call to start irrigation
+                    already_checked = True
 
-                self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
-                self.start_automatic_irrigation()   # non-blocking call to start irrigation
-            elif (self.get_state() == ControllerState.IDLE and skipped_cycle):
+            # The flag was_in_window indicates that: 1. the current time is outside the irrigation window, 2. the irrigation window just passed
+            was_in_window = abs(time_diff) > TOLERANCE and (skipped_cycle or already_checked)
+
+            # Reset flags after the irrigation window has passed
+            if was_in_window:
                 skipped_cycle = False
-                self._timer_pause_event.clear()
-                self.logger.info("Main loop resumed from pause, next irrigation will be at the scheduled time.")
+                already_checked = False
+            
+            # Refresh weather cache periodically
+            if (self.global_conditions_provider.last_cache_update is None or
+                (time.time() - self.global_conditions_provider.last_cache_update.timestamp()) >= WEATHER_CACHE_REFRESH_INTERVAL):
+                self.global_conditions_provider.get_current_conditions(force_update=True)
 
             time.sleep(CHECK_INTERVAL)  # Wait for the next check
         

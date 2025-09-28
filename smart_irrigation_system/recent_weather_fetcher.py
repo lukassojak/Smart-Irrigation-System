@@ -168,7 +168,7 @@ class RecentWeatherFetcher:
                 self.connecting = True
                 self._update_cache()
                 self.try_reconnect = False
-                self.logger.info("Weather data cache updated successfully.")
+                self.logger.debug("Weather data cache updated successfully.")
             except Exception as e:
                 self.try_reconnect = True
                 self.logger.warning("Failed to update weather data cache, using standard conditions as fallback.")
