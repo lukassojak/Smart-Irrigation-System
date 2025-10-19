@@ -177,9 +177,13 @@ cython_debug/
 
 
 # Temporarly ignore config files and state files
-config_global.json
-zones_config.json
-zones_state.json
+config/config_global.json
+config/zones_config.json
+data/zones_state.json
+
+# Ignore log files
+logs/*.log
+data/irrigation_log.json
 
 
 # Weather API output (test files)
