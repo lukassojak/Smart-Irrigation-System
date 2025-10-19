@@ -97,7 +97,7 @@ class IrrigationController:
             raise Exception("Global configuration file not found.") from e
         except ValueError as e:
             self.logger.error(f"Error loading global configuration: {e}. Exiting initialization.")
-            raise Exception("Error loading global configuration. Check the configuration file format.") from es
+            raise Exception("Error loading global configuration. Check the configuration file format.") from e
         
     def _load_zones_config(self):
         """Loads the zones configuration and initializes circuits."""

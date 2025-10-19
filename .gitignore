@@ -176,9 +176,7 @@ cython_debug/
 
 
 
-# Temporarly ignore config files and state files
-config/config_global.json
-config/zones_config.json
+# Ignore data files
 data/zones_state.json
 
 # Ignore log files

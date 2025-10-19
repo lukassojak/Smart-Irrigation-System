@@ -1,0 +1,52 @@
+{
+    "2025-09-23": [
+        {
+            "circuit_id": 4,
+            "success": true,
+            "outcome": "skipped",
+            "start_time": "2025-09-23T20:00:00",
+            "completed_duration": 0,
+            "target_duration": 0,
+            "actual_water_amount": 0.0,
+            "target_water_amount": 0.0,
+            "error": "No irrigation needed due to conditions"
+        }
+    ],
+    "2025-09-30": [
+        {
+            "circuit_id": 1,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-30T20:01:24",
+            "completed_duration": 84,
+            "target_duration": 84,
+            "actual_water_amount": 1.917,
+            "target_water_amount": 1.917,
+            "error": null
+        },
+        {
+            "circuit_id": 2,
+            "success": true,
+            "outcome": "success",
+            "start_time": "2025-09-30T20:05:20",
+            "completed_duration": 320,
+            "target_duration": 320,
+            "actual_water_amount": 7.296,
+            "target_water_amount": 7.296,
+            "error": null
+        }
+    ],
+    "2025-10-19": [
+        {
+            "circuit_id": 5,
+            "success": false,
+            "outcome": "stopped",
+            "start_time": "2025-10-19T19:36:41",
+            "completed_duration": 24,
+            "target_duration": 300,
+            "actual_water_amount": 0.576,
+            "target_water_amount": 7.2,
+            "error": "Irrigation manually stopped by user"
+        }
+    ]
+}
