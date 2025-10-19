@@ -59,7 +59,6 @@ def main():
     controller.start_main_loop()
 
     # Start CLI in the main thread
-    # command_loop(controller, stop_event)
     try:
         cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
                             refresh_interval_active=REFRESH_INTERVAL_ACTIVE)

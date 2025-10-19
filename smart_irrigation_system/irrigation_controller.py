@@ -51,8 +51,6 @@ class IrrigationController:
         # Initialize components
         self.global_conditions_provider = self._initialize_global_conditions_provider()
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH, IRRIGATION_LOG_PATH)
-        atexit.register(self.state_manager.handle_clean_shutdown)
-        atexit.register(self.cleanup)  # Ensure cleanup is called on exit
         for circuit in self.circuits_list:
             circuit.init_last_irrigation_data(self.state_manager)  # Initialize last irrigation data for each circuit
 
@@ -69,7 +67,9 @@ class IrrigationController:
         # Consumption tracking
         self.current_consumption = 0.0  # Total consumption of all irrigating circuits in liters per hour
 
+        # Register signal handlers for clean shutdown
         self._register_signal_handlers()
+        atexit.register(self.cleanup)  # Ensure cleanup is called on exit
 
         # Set initial controller state
         self.controller_state = ControllerState.IDLE
@@ -80,13 +80,12 @@ class IrrigationController:
     def _register_signal_handlers(self):
         def shutdown_handler(signum, frame):
             self.logger.info(f"Received signal {signum}, performing clean shutdown...")
-            self.cleanup()
-            self.state_manager.handle_clean_shutdown()
             sys.exit(0)
         
         # Common termination signals
-        signal.signal(signal.SIGTERM, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)  # Termination signal
         signal.signal(signal.SIGINT, shutdown_handler)   # Ctrl+C
+        # SIGKILL cannot be caught - when received and the irrigation is running, the valves may remain open until the next startup
 
     def _load_global_config(self):
         """Loads the globalconfiguration."""
@@ -442,8 +441,6 @@ class IrrigationController:
     # Cleanup and shutdown
     # ===========================================================================================================
 
-    def __del__(self):
-        self.cleanup()
 
     def cleanup(self):
         """Cleans up the resources used by the irrigation controller"""
@@ -455,7 +452,7 @@ class IrrigationController:
             if circuit.state == IrrigationState.IRRIGATING:
                 self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to close valve.")
                 circuit.close_valve()
-        self.state_manager.handle_clean_shutdown()
+        self.state_manager._handle_clean_shutdown()
 
     
     # ===========================================================================================================

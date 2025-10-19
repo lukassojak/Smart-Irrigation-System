@@ -439,10 +439,7 @@ class IrrigationCLI:
             # Add a separator line for minimal spacing
             tasks_panel_content.append(" " * 3)  # Add 3 spaces for padding
 
-            # Simulate CLI crash during irrigation for testing purposes
-            if current_water_amount > target_water_amount / 4:
-                self.add_log("Simulated crash for testing purposes.")
-                raise Exception("Simulated crash for testing purposes.")
+            # Simulated crash - removed
 
         # Combine all rows into a single string
         tasks_panel_text = "\n".join(tasks_panel_content) or "No tasks currently running."

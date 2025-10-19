@@ -241,7 +241,7 @@ class CircuitStateManager():
         self.save_state()
 
     
-    def handle_clean_shutdown(self) -> None:
+    def _handle_clean_shutdown(self) -> None:
         """Sets all circuits to 'shutdown' state during a clean exit."""
         for circuit in self.state.get("circuits", []):
             circuit["irrigation_state"] = "shutdown"
