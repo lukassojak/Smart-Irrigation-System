@@ -245,5 +245,6 @@ class CircuitStateManager():
         """Sets all circuits to 'shutdown' state during a clean exit."""
         for circuit in self.state.get("circuits", []):
             circuit["irrigation_state"] = "shutdown"
+        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         self.logger.debug("All circuits set to 'shutdown' state during clean exit.")

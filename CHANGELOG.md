@@ -8,19 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Weather data cache is now refreshed periodically in main loop based on a interval defined in `IrrigationController`.
 
 ### Changed
-- `RecentWeatherFetcher` now does not save all fetched data to a file (was implemented for debugging purposes only).
 
 ### Fixed
-- `IrrigationCLI` now handles errors gracefully and continues running instead of crashing on exceptions.
+- `CircuitStateManager` now updates `last_update` timestamp when state is changed to `shutdown`.
 
 ### Removed
 
 ### Known Issues
 - If `global_conditions_provider` in `IrrigationController` is set to `WeatherSimulator`, some methods are not available in the simulator, leading to potential crashes.
-- `CircuitStateManager` does not update `last_update` timestamp when state is changed to `shutdown`.
 - Main loop allows multiple irrigation attempts in irrigation time window if the previous attempt was skipped due to weather conditions. 
 - `irrigation_log.json` is not updated correctly.
 - `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
@@ -32,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Weather data cache is now refreshed periodically in main loop based on a interval defined in `IrrigationController`.
 - Log rotation added for `system_log.log` to prevent excessive file size growth. Default settings: daily rotation, keep 30 backup files. The logs are located in the `/logs/` directory
+- Example data files: `data/zones_state.example.json` and `data/irrigation_log.example.json` added
 
 ### Changed
 - `RecentWeatherFetcher` now does not save all fetched data to a file (was implemented for debugging purposes only).
