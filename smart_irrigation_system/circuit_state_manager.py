@@ -16,7 +16,6 @@ from smart_irrigation_system.enums import IrrigationOutcome
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
-    # 2025-08-30 22:52:46,025 | smart_irrigation_system.main | ERROR | Failed to initialize IrrigationController: CircuitStateManager.__init__() missing 1 required positional argument: 'irrigation_log_file'
     def __init__(self, state_file: str, irrigation_log_file: str) -> None:
         self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
