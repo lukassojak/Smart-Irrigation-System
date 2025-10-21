@@ -1,6 +1,7 @@
 import json
 from typing import Optional, Any, Dict
 from datetime import datetime
+import threading
 
 from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.irrigation_result import IrrigationResult
@@ -20,8 +21,11 @@ class CircuitStateManager():
         self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
         self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
-
         self.irrigation_log_file = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
+
+        # File locks
+        self.state_file_lock = threading.Lock()
+        self.irrigation_log_file_lock = threading.Lock()
 
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
@@ -33,32 +37,28 @@ class CircuitStateManager():
 
     def log_irrigation_result(self, result: IrrigationResult) -> None:
         """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
-        try:
-            # Load the existing log file or initialize an empty dictionary
+        with self.irrigation_log_file_lock:
             try:
-                with open(self.irrigation_log_file, "r") as f:
-                    try:
-                        log_data = json.load(f)
-                    except json.JSONDecodeError:
-                        log_data = {}
-            except FileNotFoundError:
-                log_data = {}
-    
-            # Extract the date from the result's start_time
-            irrigation_date = datetime.fromisoformat(result.to_dict()["start_time"]).date().isoformat()
-    
-            # Ensure the date key exists in the log
-            if irrigation_date not in log_data:
-                log_data[irrigation_date] = []
-    
-            # Append the new result to the list for the date
-            log_data[irrigation_date].append(result.to_dict())
-    
-            # Save the updated log back to the file
-            with open(self.irrigation_log_file, "w") as f:
-                json.dump(log_data, f, indent=4)
-        except Exception as e:
-            self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
+                # Load the existing log file or initialize an empty dictionary
+                try:
+                    with open(self.irrigation_log_file, "r") as f:
+                        try:
+                            log_data = json.load(f)
+                        except json.JSONDecodeError:
+                            log_data = {}
+                except FileNotFoundError:
+                    log_data = {}
+        
+                irrigation_date = datetime.fromisoformat(result.to_dict()["start_time"]).date().isoformat()
+                if irrigation_date not in log_data:
+                    log_data[irrigation_date] = []
+                log_data[irrigation_date].append(result.to_dict())
+        
+                # Save the updated log back to the file
+                with open(self.irrigation_log_file, "w") as f:
+                    json.dump(log_data, f, indent=4)
+            except Exception as e:
+                self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
 
     
     def _rebuild_circuit_index(self):
@@ -90,11 +90,12 @@ class CircuitStateManager():
     
     def save_state(self) -> None:
         """Saves the current state to the state file and updates the last_updated timestamp."""
-        try:
-            with open(self.state_file, "w") as f:
-                json.dump(self.state, f, indent=4)
-        except Exception as e:
-            self.logger.error(f"Failed to save state to {self.state_file}: {e}")
+        with self.state_file_lock:
+            try:
+                with open(self.state_file, "w") as f:
+                    json.dump(self.state, f, indent=4)
+            except Exception as e:
+                self.logger.error(f"Failed to save state to {self.state_file}: {e}")
 
     
     def _valid_state(self, state: dict) -> None:

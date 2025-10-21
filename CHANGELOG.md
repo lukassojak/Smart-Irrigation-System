@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Improved `CircuitStateManager` to handle concurrent access to state files using file locking mechanism, preventing data corruption.
 
 ### Fixed
 - Fixed minor bugs in `CircuitStateManager`.
