@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 from datetime import datetime
 
 from smart_irrigation_system.logger import get_logger
@@ -230,17 +230,49 @@ class CircuitStateManager():
             "last_result": None,
             "last_duration": 0
         }
-        self.state["circuits"].append(new_entry)
+        self.state["circuits"].append(self, new_entry)
         self._rebuild_circuit_index()
 
     
+    def log_missing_interrupted_result(self, circuit: Dict[str, Any]) -> None:
+        """Logs an interrupted irrigation result for a circuit that was irrigating during an unclean shutdown."""
+        try:
+            interrupted_result = IrrigationResult(
+                circuit_id=circuit["id"],
+                success=False,
+                outcome=IrrigationOutcome.INTERUPTED,
+                start_time=datetime.now().replace(microsecond=0),
+                completed_duration=0,
+                target_duration=0,
+                actual_water_amount=0.0,
+                target_water_amount=0.0,
+                error="Irrigation was interrupted due to unclean shutdown. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
+            )
+            self.log_irrigation_result(interrupted_result)
+        except Exception as e:
+            self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit.id}: {e}")
+
     def init_circuit_states(self) -> None:
         """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
+        unclean_shutdown_detected = False
+        recovered_circuits = []             # List of circuit IDs that were irrigating during unclean shutdown
         for circuit in self.state.get("circuits", []):
             if circuit.get("irrigation_state") != "shutdown":
-                self.logger.warning(f"Unclean shutdown detected on circuit {circuit.get('id')}.")
+                self.logger.debug(f"Unclean shutdown detected on circuit {circuit.get('id')}.")
+                unclean_shutdown_detected = True
+                if circuit.get("irrigation_state") == "irrigating":
+                    circuit["last_result"] = "interrupted"
+                    circuit["last_duration"] = 0                                                # Duration is unknown
+                    circuit["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")   # Update last irrigation time to now
+                    recovered_circuits.append(circuit.get("id"))
+                    # Log the interrupted irrigation result
+                    self.log_missing_interrupted_result(circuit)
             circuit["irrigation_state"] = "idle"
         self.save_state()
+        if unclean_shutdown_detected:
+            self.logger.warning("Unclean shutdown detected.")
+            if recovered_circuits:
+                self.logger.warning(f"Circuits: [{', '.join(map(str, recovered_circuits))}] were irrigating during shutdown and have been marked as 'interrupted'.")
 
     
     def _handle_clean_shutdown(self) -> None:

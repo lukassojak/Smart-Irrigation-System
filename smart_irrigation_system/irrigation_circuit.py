@@ -77,6 +77,7 @@ class IrrigationCircuit:
                  zone_area_m2: float, liters_per_minimum_dripper: float,
                  interval_days: int, drippers: Drippers,
                  correction_factors: CorrectionFactors, sensor_pins=None):
+        # self.on_state_update = on_state_update  # callback -> calls controller/state manager; possible future enhancement
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
         self.id = circuit_id
         self.name = name

@@ -8,24 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `use_weathersimulator` attribute in `config_global.json` to allow switching between `RecentWeatherFetcher` and `WeatherSimulator` for global conditions. If `environment` is set to `production`, this setting is ignored and `RecentWeatherFetcher` is always used.
 
 ### Changed
-- Automatic irrigation now does not require `ControllerState` to be `IDLE`. This allows automatic irrigation to run even if manual irrigation is in progress.
 
 ### Fixed
-- `CircuitStateManager` now updates `last_update` timestamp when state is changed to `shutdown`.
-- `WeatherSimulator` now provides same interface as `RecentWeatherFetcher` for better compatibility.
-- Fixed `IrrigationController` state management when both automatic and manual irrigation run concurrently.
-- `CircuitStateManager` now correctly updates `last_update` timestamp when irrigation is stopped.
-- `IrrigationController` now correctly handles attempts to manually irrigate a zone which is already irrigating.
 
 ### Removed
 
 ### Known Issues
-- `ControllerState` does not correctly represent the actual irrigation activity when both automatic and manual irrigation run concurrently. If a manual irrigation finishes while an automatic irrigation is still in progress, the controller state is set to `IDLE`, causing the system to incorrectly report that no irrigation is active and preventing `stop_irrigation()` from stopping the remaining automatic processes.
+- `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
+
+---
+
+## [0.5.0] - 2025-10-21
+
+### Added
+- `use_weathersimulator` attribute in `config_global.json` to allow switching between `RecentWeatherFetcher` and `WeatherSimulator` for global conditions. If `environment` is set to `production`, this setting is ignored and `RecentWeatherFetcher` is always used.
+- Automatic logging of interrupted irrigation results during system startup after unclean shutdowns.
+  - If a circuit was irrigating during an unexpected shutdown, it is now automatically marked as `interrupted` in `zones_state.json`.
+  - An `IrrigationResult` entry is now appended to `irrigation_log.json` for full historical consistency.
+
+### Changed
+- Automatic irrigation now does not require `ControllerState` to be `IDLE`. This allows automatic irrigation to run even if manual irrigation is in progress.
+- Improved unclean shutdown detection in `CircuitStateManager.init_circuit_states()` to recover interrupted irrigation sessions and maintain data consistency between state and log files.
+
+### Fixed
+- `CircuitStateManager` now updates `last_update` timestamp when state is changed to `shutdown`.
+- Fixed inconsistency in `zones_state.json` and `irrigation_log.json` when system was terminated unexpectedly during irrigation.
+- `WeatherSimulator` now provides same interface as `RecentWeatherFetcher` for better compatibility.
+- Fixed `IrrigationController` state management when both automatic and manual irrigation run concurrently.
+- `CircuitStateManager` now correctly updates `last_update` timestamp when irrigation is stopped.
+- `IrrigationController` now correctly handles attempts to manually irrigate a zone which is already irrigating.
+- `ControllerState` management significantly improved to accurately reflect ongoing irrigation activities, even when both automatic and manual irrigation processes are running concurrently. The controller state now correctly indicates active irrigation, preventing premature transitions to `IDLE` and ensuring that `stop_irrigation()` functions as intended for all ongoing processes.
+
+### Removed
+
+### Known Issues
 - Main loop allows multiple irrigation attempts in irrigation time window if the previous attempt was skipped due to weather conditions. 
-- `irrigation_log.json` is not updated correctly.
 - `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
 
 ---
