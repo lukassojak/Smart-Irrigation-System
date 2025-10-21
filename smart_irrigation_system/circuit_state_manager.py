@@ -229,7 +229,7 @@ class CircuitStateManager():
             "last_result": None,
             "last_duration": 0
         }
-        self.state["circuits"].append(self, new_entry)
+        self.state["circuits"].append(new_entry)
         self._rebuild_circuit_index()
 
     
@@ -239,7 +239,7 @@ class CircuitStateManager():
             interrupted_result = IrrigationResult(
                 circuit_id=circuit["id"],
                 success=False,
-                outcome=IrrigationOutcome.INTERUPTED,
+                outcome=IrrigationOutcome.INTERRUPTED,
                 start_time=datetime.now().replace(microsecond=0),
                 completed_duration=0,
                 target_duration=0,

@@ -370,13 +370,13 @@ class IrrigationCircuit:
             )
         
         except KeyboardInterrupt:
-            self.state = IrrigationState.INTERUPTED
+            self.state = IrrigationState.INTERRUPTED
             self.valve.state = RelayValveState.CLOSED
             self.logger.info(f"Irrigation interrupted after {int(elapsed_time)} seconds.")
             result = IrrigationResult(
                 circuit_id=self.id,
                 success=False,
-                outcome=IrrigationOutcome.INTERUPTED,
+                outcome=IrrigationOutcome.INTERRUPTED,
                 start_time=datetime.fromtimestamp(self._start_time).replace(microsecond=0),
                 completed_duration=int(elapsed_time),
                 target_duration=int(self._target_duration) if self._target_duration else 0,
@@ -386,13 +386,13 @@ class IrrigationCircuit:
             )
         
         except SystemExit:
-            self.state = IrrigationState.INTERUPTED
+            self.state = IrrigationState.INTERRUPTED
             self.valve.state = RelayValveState.CLOSED
             self.logger.info(f"Irrigation interrupted after {int(elapsed_time)} seconds due to system exit.")
             result = IrrigationResult(
                 circuit_id=self.id,
                 success=False,
-                outcome=IrrigationOutcome.INTERUPTED,
+                outcome=IrrigationOutcome.INTERRUPTED,
                 start_time=datetime.fromtimestamp(self._start_time).replace(microsecond=0),
                 completed_duration=int(elapsed_time),
                 target_duration=int(self._target_duration) if self._target_duration else 0,

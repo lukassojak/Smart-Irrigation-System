@@ -14,7 +14,7 @@ class IrrigationState(Enum):
     FINISHED = "finished"                   # Irrigation has finished
     ERROR = "error"                         # An error occurred
     STOPPED = "stopped"                     # Irrigation has been stopped by the user
-    INTERUPTED = "interrupted"              # Irrigation was interrupted (e.g., power loss)
+    INTERRUPTED = "interrupted"              # Irrigation was interrupted (e.g., power loss)
     DISABLED = "disabled"                   # Irrigation circuit is disabled
 
 
@@ -23,7 +23,7 @@ class IrrigationOutcome(Enum):
     SUCCESS = "success"          # Irrigation completed successfully
     FAILED = "failed"            # Irrigation failed due to an error
     STOPPED = "stopped"          # Irrigation was manually stopped by the user
-    INTERUPTED = "interrupted"   # Irrigation was interrupted (e.g., power loss)
+    INTERRUPTED = "interrupted"   # Irrigation was interrupted (e.g., power loss)
     SKIPPED = "skipped"          # Irrigation was skipped (e.g., due to conditions)
 
 
