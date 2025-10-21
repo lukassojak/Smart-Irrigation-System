@@ -8,16 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `use_weathersimulator` attribute in `config_global.json` to allow switching between `RecentWeatherFetcher` and `WeatherSimulator` for global conditions. If `environment` is set to `production`, this setting is ignored and `RecentWeatherFetcher` is always used.
 
 ### Changed
+- Automatic irrigation now does not require `ControllerState` to be `IDLE`. This allows automatic irrigation to run even if manual irrigation is in progress.
 
 ### Fixed
 - `CircuitStateManager` now updates `last_update` timestamp when state is changed to `shutdown`.
+- `WeatherSimulator` now provides same interface as `RecentWeatherFetcher` for better compatibility.
+- Fixed `IrrigationController` state management when both automatic and manual irrigation run concurrently.
+- `CircuitStateManager` now correctly updates `last_update` timestamp when irrigation is stopped.
+- `IrrigationController` now correctly handles attempts to manually irrigate a zone which is already irrigating.
 
 ### Removed
 
 ### Known Issues
-- If `global_conditions_provider` in `IrrigationController` is set to `WeatherSimulator`, some methods are not available in the simulator, leading to potential crashes.
+- `ControllerState` does not correctly represent the actual irrigation activity when both automatic and manual irrigation run concurrently. If a manual irrigation finishes while an automatic irrigation is still in progress, the controller state is set to `IDLE`, causing the system to incorrectly report that no irrigation is active and preventing `stop_irrigation()` from stopping the remaining automatic processes.
 - Main loop allows multiple irrigation attempts in irrigation time window if the previous attempt was skipped due to weather conditions. 
 - `irrigation_log.json` is not updated correctly.
 - `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
@@ -41,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- Type error is occurring when trying to manually irrigate a zone which is already irrigating.
+- When irrigation is stopped, `CircuitStateManager` does not update the `last_update` timestamp, leading to inaccurate state tracking.
 - If `global_conditions_provider` in `IrrigationController` is set to `WeatherSimulator`, some methods are not available in the simulator, leading to potential crashes.
 - `CircuitStateManager` does not update `last_update` timestamp when state is changed to `shutdown`.
 - Main loop allows multiple irrigation attempts in irrigation time window if the previous attempt was skipped due to weather conditions. 

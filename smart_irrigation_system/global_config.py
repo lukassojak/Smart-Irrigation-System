@@ -35,6 +35,7 @@ class AutomationSettings:
     scheduled_minute: int
     max_flow_monitoring: bool
     environment: str
+    use_weathersimulator: bool
 
 @dataclass
 class LoggingSettings:
@@ -93,7 +94,8 @@ class GlobalConfig:
                 scheduled_hour=data["automation"]["scheduled_hour"],
                 scheduled_minute=data["automation"]["scheduled_minute"],
                 max_flow_monitoring=data["automation"]["max_flow_monitoring"],
-                environment=data["automation"]["environment"]
+                environment=data["automation"]["environment"],
+                use_weathersimulator=data["automation"]["use_weathersimulator"]
             ),
             logging=LoggingSettings(
                 enabled=data["logging"]["enabled"],

@@ -209,7 +209,9 @@ class CircuitStateManager():
         self.state["circuits"][circuit_index]["last_result"] = result
         self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failed" or "error", duration is 0
         if result == IrrigationOutcome.SUCCESS.value:
-            self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            # In future, update last irrigation time only on successful irrigation ("last_irrigation_start_time")
+            pass
+        self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S") # In future, replace it by "last_decision_time"
         self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         self.save_state()
         # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.

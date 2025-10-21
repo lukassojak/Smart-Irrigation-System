@@ -67,12 +67,12 @@ class IrrigationController:
         # Consumption tracking
         self.current_consumption = 0.0  # Total consumption of all irrigating circuits in liters per hour
 
+        # Set initial controller state
+        self.controller_state = ControllerState.IDLE
+
         # Register signal handlers for clean shutdown
         self._register_signal_handlers()
         atexit.register(self.cleanup)  # Ensure cleanup is called on exit
-
-        # Set initial controller state
-        self.controller_state = ControllerState.IDLE
         
         self.logger.info("Environment: %s", self.global_config.automation.environment)
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
@@ -116,7 +116,7 @@ class IrrigationController:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
         self.logger.debug("Initializing global conditions provider...")
         max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
-        use_recent_weather_fetcher = self.global_config.automation.environment == "production" or self.global_config.weather_api.api_enabled
+        use_recent_weather_fetcher = self.global_config.automation.environment == "production" or not self.global_config.automation.use_weathersimulator
         if use_recent_weather_fetcher:
             fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
             self.logger.info("Global conditions provider initialized as RecentWeatherFetcher.")
@@ -133,6 +133,43 @@ class IrrigationController:
     def reload_config(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
         """ Reloads the global configuration and zones configuration in runtime. If any error occurs, it will raise an exception and the controller will not be updated. """
         pass
+
+    # ===========================================================================================================
+    # Controller state management
+    # ===========================================================================================================
+
+    def _update_controller_state(self, delay: float = 0.0):
+        """Updates the controller state based on the current threads and stop event."""
+        if delay > 0:
+            time.sleep(delay)
+
+        if self.controller_state == ControllerState.ERROR:
+            return # Do not change state if in ERROR
+
+        stopping = self.stop_event.is_set()
+        with self.threads_lock:
+            previous_state = self.controller_state
+            any_alive = any(t.is_alive() for t in self.threads)
+            if stopping:
+                self.controller_state = ControllerState.STOPPING
+            elif any_alive:
+                self.controller_state = ControllerState.IRRIGATING
+            else:
+                self.controller_state = ControllerState.IDLE
+        
+        if previous_state != self.controller_state:
+            self.logger.info(f"Controller state changed from {previous_state.name} to {self.controller_state.name}.")
+            # Future MQTT publish or other notifications can be added here
+    
+    def _set_error_state(self):
+        """Sets the controller state to ERROR."""
+        # if irrigation is running, stop it
+        if self.controller_state == ControllerState.IRRIGATING:
+            self.stop_irrigation()
+        
+        self.controller_state = ControllerState.ERROR
+        self.logger.error("Controller state set to ERROR.")
+
 
     # ===========================================================================================================
     # Status and information retrieval
@@ -240,17 +277,14 @@ class IrrigationController:
             self.logger.warning("Automatic irrigation is not enabled in the global configuration.")
             return
         
-        if self.controller_state != ControllerState.IDLE:
-            self.logger.warning("Cannot start automatic irrigation while the controller is not in IDLE state.")
+        if self.controller_state not in [ControllerState.IDLE, ControllerState.IRRIGATING]:
+            self.logger.warning(f"Cannot start automatic irrigation while the controller is in {self.controller_state.name} state.")
             return
-
 
         # Update global conditions before starting irrigation
         self.global_conditions_provider.get_current_conditions()
         current_conditions_str = self.global_conditions_provider.get_conditions_str()
         self.logger.info(f"Global conditions updated: {current_conditions_str}")
-
-        self.controller_state = ControllerState.IRRIGATING
 
         try:
             if self.global_config.automation.sequential:
@@ -261,13 +295,13 @@ class IrrigationController:
                 self.perform_irrigation_concurrent()
         except Exception as e:
             self.logger.error(f"Error during automatic irrigation: {e}")
-            self.controller_state = ControllerState.ERROR
+            self._set_error_state()
         else:
             self.logger.info("Automatic irrigation process completed.")
-            self.controller_state = ControllerState.IDLE
+            self._update_controller_state()
 
-    def start_irrigation_circuit(self, circuit: IrrigationCircuit):
-        """Starts the irrigation process for a specified circuit in a new thread"""
+    def start_irrigation_circuit(self, circuit: IrrigationCircuit) -> threading.Thread:
+        """Starts the irrigation process for a specified circuit in a new thread. Returns the thread object."""
         def thread_target():
             self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
             self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
@@ -287,6 +321,7 @@ class IrrigationController:
             self.threads.append(t)
 
         t.start()
+        return t
     
     def perform_irrigation_concurrent(self):
         """Performs automatic irrigation for all circuits at once"""
@@ -319,6 +354,7 @@ class IrrigationController:
 
                     if not self.stop_event.is_set():
                         self.start_irrigation_circuit(circuit)
+                        self._update_controller_state()
                 except TimeoutError as e:
                     self.logger.warning(str(e))
                     continue
@@ -333,12 +369,12 @@ class IrrigationController:
             for t in threads_copy:
                 t.join(timeout=1)  # prevent indefinite blocking
             time.sleep(0.1)
+        self._update_controller_state()
         self.logger.debug("All irrigation threads have completed.")
 
     def perform_irrigation_sequential(self):
         """Performs automatic irrigation for all circuits one by one by their IDs"""
         self.stop_event.clear()
-        self.controller_state = ControllerState.IRRIGATING
 
         try:
             for circuit in self.circuits.values():
@@ -359,18 +395,18 @@ class IrrigationController:
                     self.state_manager.irrigation_finished(circuit, result)
                     continue
 
-                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
-                self.logger.info(f"Starting irrigation for circuit {circuit.id}...")
-                result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
-                self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
-                self.state_manager.irrigation_finished(circuit, result)
+                t = self.start_irrigation_circuit(circuit) # start irrigation in a new thread
+                self._update_controller_state()
+
+                # Wait for the thread to finish before starting the next one
+                t.join()
+                self._update_controller_state()
 
         except Exception as e:
             self.logger.error(f"Error during sequential irrigation: {e}")
-            self.controller_state = ControllerState.ERROR
         else:
+            self._update_controller_state()
             self.logger.info("Sequential irrigation process completed.")
-            self.controller_state = ControllerState.IDLE
 
     def stop_irrigation(self):
         """Stops all irrigation processes"""
@@ -378,10 +414,9 @@ class IrrigationController:
             self.logger.info("No irrigation processes are running. Nothing to stop.")
             return
 
-        self.controller_state = ControllerState.STOPPING
-        self.logger.info("Stopping all irrigation processes...")
-
         self.stop_event.set()
+        self._update_controller_state(delay=0.1)  # Small delay to allow threads to recognize the stop event
+        self.logger.info("Stopping all irrigation processes...")
 
         with self.threads_lock:
             threads_copy = self.threads.copy()
@@ -390,31 +425,32 @@ class IrrigationController:
             thread.join()  # Wait for all threads to finish
         
         self.threads.clear()  # Clear the thread list after stopping all threads
-
-        self.controller_state = ControllerState.IDLE
+        self.stop_event.clear()  # Reset the stop event for future irrigation
+        self._update_controller_state()
         self.logger.info("Stopping circuits done.")
-    
+
     def manual_irrigation(self, circuit_number: int, liter_amount: float) -> IrrigationResult:
         """Starts manual irrigation for a specified circuit and liter amount in a separate thread."""
         if circuit_number not in self.circuits:
+            self.logger.warning(f"Circuit number {circuit_number} does not exist.")
             raise ValueError(f"Circuit number {circuit_number} does not exist.")
         
         circuit = self.circuits[circuit_number]
 
         if self.controller_state != ControllerState.IDLE and self.controller_state != ControllerState.IRRIGATING:
+            self.logger.warning(f"Cannot start manual irrigation while the controller is not in IDLE state, current state: {self.controller_state.name}.")
             raise RuntimeError("Cannot start manual irrigation while the controller is not in IDLE state.")
-        
+    
         if circuit.state != IrrigationState.IDLE:
-            raise RuntimeError(f"Circuit {circuit.id} is not in IDLE state, current state: {circuit.state.name}.")
+            self.logger.warning(f"Circuit {circuit.id} is not in IDLE state, current state: {circuit.state.name}. Cannot start manual irrigation.")
+            raise RuntimeError(f"Circuit {circuit.id} is not in IDLE state, cannot start manual irrigation.")
 
-        self.logger.info(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
-        self.controller_state = ControllerState.IRRIGATING
-        self.stop_event.clear()
+        self.logger.debug(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
 
         def manual_irrigation_thread_func():
             try:
                 self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
-                self.logger.info(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
+                self.logger.info(f"Manual irrigation for circuit {circuit.id} started with target {liter_amount} liters...")
                 result = circuit.irrigate_manual(liter_amount, self.stop_event)
                 self.logger.info(f"Manual irrigation for circuit {circuit.id} completed with result: {result}.")
                 self.state_manager.irrigation_finished(circuit, result)
@@ -427,13 +463,14 @@ class IrrigationController:
                         self.threads.remove(current)
                     except ValueError:
                         self.logger.warning(f"Thread {current.name} not found in the threads list. It might have already been removed.")
-                self.controller_state = ControllerState.IDLE
+                self._update_controller_state()
                 self.logger.info(f"Manual irrigation thread for circuit {circuit.id} has finished.")
 
         manual_thread = threading.Thread(target=manual_irrigation_thread_func, daemon=True)
         with self.threads_lock:
             self.threads.append(manual_thread)
         manual_thread.start()
+        self._update_controller_state()
 
 
 
@@ -495,37 +532,44 @@ class IrrigationController:
         skipped_cycle = False   # flag to indicate if the current irrigation cycle was skipped due to pause
         already_checked = False # flag to indicate if the irrigation time has already been checked in the current irrigation window
 
-        while not self._timer_stop_event.is_set():
-            current_time = time.localtime()
-            time_diff = (current_time.tm_hour - irrigation_hour) * 60 + (current_time.tm_min - irrigation_minute) # in minutes
+        try:
+            while not self._timer_stop_event.is_set():
+                current_time = time.localtime()
+                time_diff = (current_time.tm_hour - irrigation_hour) * 60 + (current_time.tm_min - irrigation_minute) # in minutes
 
-            # Check the irrigation window
-            if (self.get_state() == ControllerState.IDLE and abs(time_diff) <= TOLERANCE):
-                # If main loop is paused, skip current irrigation and resume
-                if self._timer_pause_event.is_set() and not skipped_cycle:
-                    skipped_cycle = True
-                    self.logger.info("Main loop is paused, skipping current irrigation check.")
-                
-                elif not already_checked:
-                    self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
-                    self.start_automatic_irrigation()   # non-blocking call to start irrigation
-                    already_checked = True
+                # Check the irrigation window
+                if (getattr(self, "_auto_irrigation_thread", None) is None or not self._auto_irrigation_thread.is_alive()) and \
+                abs(time_diff) <= TOLERANCE:
 
-            # The variable window_passed is used to reset the skipped_cycle and already_checked flags after the irrigation window has passed
-            window_passed = abs(time_diff) > TOLERANCE and (skipped_cycle or already_checked)
+                    # If main loop is paused, skip current irrigation and resume
+                    if self._timer_pause_event.is_set() and not skipped_cycle:
+                        skipped_cycle = True
+                        self.logger.info("Main loop is paused, skipping current irrigation check.")
+                    
+                    elif not already_checked:
+                        self.logger.debug(f"Current time {current_time.tm_hour:02}:{current_time.tm_min:02} matches irrigation time {irrigation_hour:02}:{irrigation_minute:02} within tolerance of {TOLERANCE} minutes.")
+                        self.start_automatic_irrigation()   # non-blocking call to start irrigation
+                        already_checked = True
 
-            # Reset flags after the irrigation window has passed
-            if window_passed:
-                skipped_cycle, already_checked = False, False
-            
-            # Refresh weather cache periodically
-            if (self.global_conditions_provider.last_cache_update is None or
-                (time.time() - self.global_conditions_provider.last_cache_update.timestamp()) >= WEATHER_CACHE_REFRESH_INTERVAL):
-                self.global_conditions_provider.get_current_conditions(force_update=True) # blocking call to refresh the cache - should be fast enough
+                # The variable window_passed is used to reset the skipped_cycle and already_checked flags after the irrigation window has passed
+                window_passed = abs(time_diff) > TOLERANCE and (skipped_cycle or already_checked)
 
-            time.sleep(CHECK_INTERVAL)  # Wait for the next check
+                # Reset flags after the irrigation window has passed
+                if window_passed:
+                    skipped_cycle, already_checked = False, False
+
+                # Refresh weather cache periodically
+                if (self.global_conditions_provider.last_cache_update is None or self.global_conditions_provider.last_cache_update == datetime.min or
+                    (time.time() - self.global_conditions_provider.last_cache_update.timestamp()) >= WEATHER_CACHE_REFRESH_INTERVAL):
+                    self.global_conditions_provider.get_current_conditions(force_update=True) # blocking call to refresh the cache - should be fast enough
+
+                time.sleep(CHECK_INTERVAL)  # Wait for the next check
         
-        self.logger.info("Main loop stopped.")
+        except Exception as e:
+            self.logger.error(f"Oh no! Main loop encountered an error: {e}")
+        
+        finally:
+            self.logger.info("Main loop stopped.")
 
 
     # ===========================================================================================================

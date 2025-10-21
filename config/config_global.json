@@ -11,16 +11,17 @@
     },
     "irrigation_limits": {
         "min_percent": 0,
-        "max_percent": 150,
+        "max_percent": 40,
         "main_valve_max_flow": 1200
     },
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 18,
-        "scheduled_minute": 1,
+        "scheduled_hour": 20,
+        "scheduled_minute": 26,
         "max_flow_monitoring": true,
-        "environment": "development"
+        "environment": "development",
+        "use_weathersimulator": true
     },
     "logging": {
         "enabled": true,

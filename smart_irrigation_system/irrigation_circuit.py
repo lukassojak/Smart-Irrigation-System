@@ -14,6 +14,62 @@ from smart_irrigation_system.logger import get_logger
 from smart_irrigation_system.irrigation_result import IrrigationResult
 
 
+# ===============================================================================================================
+# Predefined IrrigationResult instances for common scenarios
+# ===============================================================================================================
+
+IRRIGATION_RESULT_FLOW_OVERLOAD = IrrigationResult(
+    circuit_id=-1,
+    success=False,
+    outcome=IrrigationOutcome.FAILED,
+    start_time=datetime.now().replace(microsecond=0),
+    completed_duration=0,
+    target_duration=0,
+    actual_water_amount=0.0,
+    target_water_amount=0.0,
+    error="Timeout: Flow overload"
+)
+
+IRRIGATION_RESULT_NO_IRRIGATION_NEEDED = IrrigationResult(
+    circuit_id=-1,
+    success=True,
+    outcome=IrrigationOutcome.SKIPPED,
+    start_time=datetime.now().replace(microsecond=0),
+    completed_duration=0,
+    target_duration=0,
+    actual_water_amount=0.0,
+    target_water_amount=0.0,
+    error="No irrigation needed due to conditions (negative adjustment)"
+)
+
+IRRIGATION_RESULT_NON_POSITIVE_WATER_AMOUNT = IrrigationResult(
+    circuit_id=-1,
+    success=False,
+    outcome=IrrigationOutcome.FAILED,
+    start_time=datetime.now().replace(microsecond=0),
+    completed_duration=0,
+    target_duration=0,
+    actual_water_amount=0.0,
+    target_water_amount=0.0,
+    error="Target water amount must be greater than 0"
+)
+
+IRRIGATION_RESULT_NOT_IDLE_STATE = IrrigationResult(
+    circuit_id=-1,
+    success=False,
+    outcome=IrrigationOutcome.FAILED,
+    start_time=datetime.now().replace(microsecond=0),
+    completed_duration=0,
+    target_duration=0,
+    actual_water_amount=0.0,
+    target_water_amount=0.0,
+    error="Irrigation circuit is not in IDLE state"
+)
+
+
+
+
+
 
 class IrrigationCircuit:
     def __init__(self, name: str, circuit_id: int, relay_pin: int,
@@ -48,7 +104,7 @@ class IrrigationCircuit:
         self._current_duration: Optional[int] = 0    # Current duration of irrigation in seconds
 
         # Temporary attributes for historical data
-        self._last_irrigation_time: Optional[datetime] = None
+        self._last_irrigation_time: Optional[datetime] = None   # new: even if skipped or error
         self._last_irrigation_duration: Optional[int] = None  # seconds
         self._last_irrigation_result: Optional[str] = None  # "success", "skipped", "interrupted", "error", None
 
@@ -122,11 +178,11 @@ class IrrigationCircuit:
         self._last_irrigation_duration = new_duration
         self.logger.debug(f"Last irrigation duration set to {self._last_irrigation_duration} seconds.")
     
-    def init_last_irrigation_data(self, circuit_state_manager: CircuitStateManager):
+    def init_last_irrigation_data(self, state_manager: CircuitStateManager):
         """Initializes the last irrigation time from the circuit state manager."""
-        self._last_irrigation_time = circuit_state_manager.get_last_irrigation_time(self)
-        self._last_irrigation_duration = circuit_state_manager.get_last_irrigation_duration(self)
-        self._last_irrigation_result = circuit_state_manager.get_last_irrigation_result(self)
+        self._last_irrigation_time = state_manager.get_last_irrigation_time(self)
+        self._last_irrigation_duration = state_manager.get_last_irrigation_duration(self)
+        self._last_irrigation_result = state_manager.get_last_irrigation_result(self)
 
     def get_status_summary(self) -> Dict[str, str]:
         """Returns a summary of the irrigation circuit status."""
@@ -178,17 +234,9 @@ class IrrigationCircuit:
     # ============================================================================================================
 
     def flow_overload_timeout_trigerred(self, datetime_of_event: datetime) -> IrrigationResult:
-        result = IrrigationResult(
-            circuit_id=self.id,
-            success=False,
-            outcome=IrrigationOutcome.FAILED,
-            start_time=datetime_of_event.replace(microsecond=0),
-            completed_duration=0,
-            target_duration=0,
-            actual_water_amount=0.0,
-            target_water_amount=0.0,
-            error="Timeout: Flow overload"
-        )
+        result = IRRIGATION_RESULT_FLOW_OVERLOAD
+        result.circuit_id = self.id
+        result.start_time = datetime_of_event.replace(microsecond=0)
         self.last_irrigation_time = datetime_of_event
         self.last_irrigation_duration = 0
         self._last_irrigation_result = "error"
@@ -227,17 +275,13 @@ class IrrigationCircuit:
         # If total adjustment is -1 or less, no irrigation is needed
         if total_adjustment <= -1:
             self.logger.info(f"No irrigation needed. Total adjustment is {total_adjustment}.")
-            return IrrigationResult(
-                circuit_id=self.id,
-                success=True,
-                outcome=IrrigationOutcome.SKIPPED,
-                start_time=datetime.now().replace(microsecond=0),
-                completed_duration=0,
-                target_duration=0,
-                actual_water_amount=0.0,
-                target_water_amount=0.0,
-                error="No irrigation needed due to conditions"
-            )
+            result = IRRIGATION_RESULT_NO_IRRIGATION_NEEDED
+            result.circuit_id = self.id
+            result.start_time = datetime.now().replace(microsecond=0)
+            self.last_irrigation_time = result.start_time
+            self.last_irrigation_duration = 0
+            self._last_irrigation_result = "skipped"
+            return result
 
         # Check bounds for the total adjusted water amount
         min_water_amount = global_config.irrigation_limits.min_percent / 100.0 * base_target_water_amount
@@ -251,28 +295,25 @@ class IrrigationCircuit:
         
     def irrigate_manual(self, target_water_amount, stop_event) -> IrrigationResult:
         """Starts the manual irrigation process for a specified water amount. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
+        target_duration = self._get_target_duration_seconds(target_water_amount)
+        
         if target_water_amount <= 0:
             self.logger.warning(f"Target water amount must be greater than 0. Received: {target_water_amount} liters. No irrigation will be performed.")
-            return IrrigationResult(
-                circuit_id=self.id,
-                success=False,
-                outcome=IrrigationOutcome.FAILED,
-                start_time=datetime.now().replace(microsecond=0),
-                completed_duration=0,
-                target_duration=0,
-                actual_water_amount=0.0,
-                target_water_amount=0.0,
-                error="Target water amount must be greater than 0"
-            )
+            result = IRRIGATION_RESULT_NON_POSITIVE_WATER_AMOUNT
+            result.circuit_id = self.id
+            result.start_time = datetime.now().replace(microsecond=0)
+            result.target_water_amount = target_water_amount
+            result.target_duration = target_duration
+            self.last_irrigation_time = result.start_time
+            self.last_irrigation_duration = 0
+            self._last_irrigation_result = "error"
+            return result
         
-        # Calculate the target duration of irrigation based on the target water amount and global conditions
-        target_duration = self._get_target_duration_seconds(target_water_amount)
-
         return self._irrigate(target_duration, stop_event)
 
     def _irrigate(self, duration: int, stop_event) -> IrrigationResult:
-        # TODO: Update last irrigation result properly in all cases
         """Private method to handle the irrigation process. Starts the irrigation for a specified duration and updates the state accordingly."""
+        # TODO: Update last irrigation result properly in all cases
         def update_progress(elapsed):
             """Updates the real-time metrics during irrigation."""
             self._current_duration = elapsed
@@ -295,8 +336,16 @@ class IrrigationCircuit:
 
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Circuit {self.id} is not in IDLE state. Current state: {self.state.name}. Cannot start irrigation.")
-            return None
-        
+            result = IRRIGATION_RESULT_NOT_IDLE_STATE
+            result.circuit_id = self.id
+            result.start_time = datetime.now().replace(microsecond=0)
+            result.target_duration = duration
+            result.target_water_amount = round((self.get_circuit_consumption() * (duration / 3600)), 3)
+            self.last_irrigation_time = result.start_time
+            self.last_irrigation_duration = 0
+            self._last_irrigation_result = "error"
+            return result
+
         self.logger.debug(f"Starting irrigation for {duration} seconds.")
         self.state = IrrigationState.IRRIGATING
         self.last_irrigation_time = datetime.now()

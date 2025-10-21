@@ -13,6 +13,7 @@ from smart_irrigation_system.logger import get_dashboard_log_handler
 from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.enums import ControllerState
 from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.weather_simulator import WeatherSimulator
 
 class IrrigationCLI:
     def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,
@@ -296,6 +297,14 @@ class IrrigationCLI:
             "disabled": "🚫",
             "invalid_secrets": "❌",
             "error": "🔴",
+            "simulated": "🔀",
+        }
+
+        main_loop_state_icons = {
+            "RUNNING": "▶️",
+            "STOPPED": "⏹️",
+            "PAUSED": "⏸️",
+            "UNDEFINED": "❓",
         }
 
         # 1) System status
@@ -316,7 +325,10 @@ class IrrigationCLI:
         sys_table.add_row("", "")
         wd_s = Text("")
         cache_interval_days = Text("")
-        if self.controller.global_conditions_provider.connecting:
+        # Check if the WeatherSimulator is being used
+        if isinstance(self.controller.global_conditions_provider, WeatherSimulator):
+            w_s = weather_cache_state_icons['simulated'] + " Using simulated weather data"
+        elif self.controller.global_conditions_provider.connecting:
             w_s = weather_cache_state_icons['connecting'] + " Connecting..."
             if self.controller.global_conditions_provider.last_cache_update != datetime.datetime.min:
                 cache_interval_days = Text(f"(from the last {self.controller.global_conditions_provider.max_interval_days} days)", style="dim")
@@ -350,6 +362,7 @@ class IrrigationCLI:
         cc_str = Text(f"{current_consumption:.2f} L/h", style=current_consumption_color)
         sys_table.add_row("Current consumption", cc_str)
         sys_table.add_row("Controller state", f"{state_icons.get(status['controller_state'], '?')} {status['controller_state']}")
+        sys_table.add_row("Main loop state", f"{main_loop_state_icons.get('UNDEFINED')}")
 
         # 2) Zones
         zones_table = Table(title="Zones", expand=True)

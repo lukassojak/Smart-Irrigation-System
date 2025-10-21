@@ -57,6 +57,7 @@ Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% b�
     - `half_base_volume`: Zavlažování pokračuje v nastavený čas podle konfigurace. Zavlaží se vždy 50% bazálního množství.
 - `environment`: Tato položka určuje **běhové prostředí systému**. Na základě hodnoty mohou různé části aplikace měnit své chování – např. používat simulovaná data, odlišné API adresy, deaktivovat reálné GPIO výstupy apod.
     - `development`: Vývojové prostředí. Povolen je simulovaný režim, rozšířené logování, debug výstupy.
+- `use_weathersimulator`: Pokud je `true`, systém používá pro výpočty počasí náhodně generovaná data místo reálných dat z meteostanice. Užitečné pro testování a vývoj bez nutnosti přístupu k reálným datům.
 
 ### logging:
 Ovládá chování výstupu logování na klientském zařízení.

@@ -16,9 +16,9 @@ def load_global_config(filepath: str) -> GlobalConfig:
         data = json.load(f)
 
     _is_valid_global_config(data)       # if invalid, raises ValueError
+    api_enabled = True
     try:
         api_key, application_key, device_mac = get_secret("api_key"), get_secret("application_key"), get_secret("device_mac")
-        api_enabled = True
     except Exception as e:
         if data.get("automation").get("environment") == "production":
             logger.error("Weather API keys are required in production environment.")
@@ -28,7 +28,6 @@ def load_global_config(filepath: str) -> GlobalConfig:
             # In non-production environments, we can use dummy values
             logger.warning("Using dummy weather API keys in non-production environment.")
             api_key, application_key, device_mac = "dummy_api_key", "dummy_application_key", "00:00:00:00:00:00"
-            api_enabled = False
     
     data["weather_api"] = {
         "api_enabled": api_enabled,
@@ -228,6 +227,8 @@ def _is_valid_global_config(data: dict):
         raise ValueError("automation.environment must be a string")
     if not isinstance(auto.get("environment"), str):
         raise ValueError("automation.environment must be a string")
+    if not isinstance(auto.get("use_weathersimulator"), bool):
+        raise ValueError("automation.use_weathersimulator must be a boolean")
 
     # Validate logging
     log = data["logging"]
