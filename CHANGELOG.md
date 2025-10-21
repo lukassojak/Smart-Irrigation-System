@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Documentation for `IrrigationController` state machine in `docs/CONTROLLER_STATE_MACHINE.md`.
 
 ### Changed
 - Improved `CircuitStateManager` to handle concurrent access to state files using file locking mechanism, preventing data corruption.
