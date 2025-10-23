@@ -180,7 +180,7 @@ cython_debug/
 data/zones_state.json
 
 # Ignore log files
-logs/*.log
+logs/*.log*
 data/irrigation_log.json
 
 
@@ -193,3 +193,4 @@ debug_data/
 # other
 notes.txt
 config_secrets.json
+system_log.log.bak
