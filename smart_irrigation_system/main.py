@@ -9,6 +9,8 @@ from smart_irrigation_system.button import Button
 from smart_irrigation_system.display_controller import DisplayController
 from smart_irrigation_system.enums import ControllerState
 from smart_irrigation_system.irrigation_cli import IrrigationCLI
+from smart_irrigation_system.network.mqtt_client import MQTTClient
+from smart_irrigation_system.network.server_command_handler import ServerCommandHandler
 
 
 # === Configuration ===
@@ -33,32 +35,40 @@ def toggle_pause(state):
 
 
 def main():
-    """Main function to start the Smart Irrigation System."""
+    """Main function to start the Smart Irrigation Node."""
     tracemalloc.start()
-    logger.info("Initializing Smart Irrigation System...")
+    logger.info("Initializing Smart Irrigation Node...")
     logger.info(f"Version: {version}")
     print("Initializing ", end="", flush=True)
     time.sleep(0.5)
     print(".", end="", flush=True)
 
+    # Initialize the Irrigation Controller
     try:
+        controller = IrrigationController()
         time.sleep(0.5)
         print(".", end="", flush=True)
-        controller = IrrigationController()
     except Exception as e:
         logger.error(f"Failed to initialize IrrigationController: {e}")
         return
 
-    time.sleep(0.5)
-    print(".", flush=True)
-    time.sleep(0.5)
-    # display = DisplayController(controller)
-    # pause_button = Button(gpio_pin=17, led_pin=27, user_callback=toggle_pause)
+    # Initialize network components
+    try:
+        server_command_handler = ServerCommandHandler(controller, None) # MQTTClient will be set after its creation
+        mqtt_client = MQTTClient(server_command_handler, node_id="node1", broker_host="localhost", broker_port=1883)
+        server_command_handler.mqtt_client = mqtt_client  # Set the mqtt_client in the handler
+        mqtt_client.start()
+        time.sleep(0.5)
+        print(".", end="", flush=True)
+    except Exception as e:
+        logger.error(f"Failed to initialize network components: {e}")
+        del controller
+        return
 
     # Start the controller main loop
     controller.start_main_loop()
 
-    # Start CLI in the main thread
+    # Initialize CLI
     try:
         cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
                             refresh_interval_active=REFRESH_INTERVAL_ACTIVE)
@@ -67,6 +77,8 @@ def main():
         controller.stop_main_loop()
         del controller
         return
+    
+    # Run the CLI
     try:
         cli.run()
     except (KeyboardInterrupt, SystemExit):
@@ -76,14 +88,11 @@ def main():
 
     controller.stop_main_loop()
 
-    # Cleanup resources
-    # display.cleanup()
-    # pause_button.cleanup()
-
     # Finalize controller
     del controller
     logger.info("Smart Irrigation System stopped.")
 
+    # Debug memory usage
     current, peak = tracemalloc.get_traced_memory()
     current_kb = current / 1024
     peak_kb = peak / 1024

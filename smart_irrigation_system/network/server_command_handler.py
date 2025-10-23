@@ -13,6 +13,7 @@ class ServerCommandHandler:
 
     def handle(self, message: str):
         """Process incoming mqtt message (JSON)."""
+        # Future improvements: registry pattern for commands (map action to method)
         try:
             cmd = json.loads(message)
             action = cmd.get("action")
@@ -35,7 +36,7 @@ class ServerCommandHandler:
     
     def _publish_status(self):
         """Publish current irrigation system status to server."""
-        status = self.irrigation_controller.get_status()
+        status = self.irrigation_controller.get_status_message()
         self.mqtt_client.publish_status(status)
         self.logger.debug("Published current status to server.")
     

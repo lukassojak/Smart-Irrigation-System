@@ -11,7 +11,7 @@ This file describes the internal state machine of the [`IrrigationController`](.
 The states are defined in the [`ControllerState`](../smart_irrigation_system/enums.py) enum.
 
 The `IrrigationController` can be in one of the following states:
-- `idle`: The controller is not currently irrigating any zones and is waiting for the next scheduled irrigation.
+- `idle`: The controller is not currently irrigating any zones and is waiting for the next scheduled irrigation or a manual task.
 - `irrigating`: The controller is actively irrigating one or more zones (could be either automatic or manual irrigation or a combination).
 - `stopping`: The controller is in the process of stopping irrigation due to a manual stop command or an error condition. The `stop_event` is set, but all zones have not yet been fully stopped.
 - `error`: The controller has encountered an error that prevents it from continuing normal operation. This could be due to hardware failures, communication issues, or other critical problems.

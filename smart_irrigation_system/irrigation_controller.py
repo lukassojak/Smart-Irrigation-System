@@ -175,6 +175,20 @@ class IrrigationController:
     # Status and information retrieval
     # ===========================================================================================================
 
+    def get_status_message(self) -> str:
+        """Returns a brief status message of the irrigation controller for mqtt publishing."""
+        status = self.get_status()
+        status_msg = f"Controller State: {status['controller_state']}, Auto Enabled: {status['auto_enabled']}, Auto Paused: {status['auto_paused']}, Currently Irrigating Zones: {self.get_currently_irrigating_zones()}"
+        return status_msg
+    
+    def get_currently_irrigating_zones(self) -> list[int]:
+        """Returns a list of IDs of currently irrigating zones."""
+        irrigating_zones = []
+        for circuit in self.circuits.values():
+            if circuit.is_currently_irrigating:
+                irrigating_zones.append(circuit.id)
+        return irrigating_zones
+
     def get_status(self) -> dict:
         """
         Returns comprehensive snapshot of the irrigation controller's status.:

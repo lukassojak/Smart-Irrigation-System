@@ -8,17 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Documentation for `IrrigationController` state machine in `docs/CONTROLLER_STATE_MACHINE.md`.
 
 ### Changed
-- Improved `CircuitStateManager` to handle concurrent access to state files using file locking mechanism, preventing data corruption.
 
 ### Fixed
-- Fixed minor bugs in `CircuitStateManager`.
 
 ### Removed
 
 ### Known Issues
+
+---
+
+## [0.6.0] - 2025-10-23
+
+### Added
+- Implemented `MQTTClient` module for bidirectional communication between irrigation node and central server via MQTT.
+- Added `ServerCommandHandler` class to interpret incoming MQTT messages and translate them into controller actions.
+- Added new `get_status_message()` method in `IrrigationController` for simplified status publishing via MQTT.
+- Added MQTT initialization and startup integration in `main.py` to launch the MQTT client alongside the irrigation controller.
+- Added `network/` directory containing communication modules for MQTT and server commands.
+
+### Changed
+- `IrrigationController` can now operate as an MQTT-enabled node, publishing live status updates and responding to remote commands.
+- Internal project structure updated to separate core logic (`irrigation_controller`) from communication layer (`network`).
+- Simplified message format for node status reporting to support future unification of MQTT and CLI status outputs.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+- Node currently publishes status in a simplified format; CLI and MQTT use different formatting — unification planned in future.
+- No authentication or TLS implemented yet for MQTT communication (planned for future stable version).
 - `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
 
 ---
@@ -34,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Automatic irrigation now does not require `ControllerState` to be `IDLE`. This allows automatic irrigation to run even if manual irrigation is in progress.
 - Improved unclean shutdown detection in `CircuitStateManager.init_circuit_states()` to recover interrupted irrigation sessions and maintain data consistency between state and log files.
+- Main loop in `IrrigationController` enhanced and made more robust.
 
 ### Fixed
 - `CircuitStateManager` now updates `last_update` timestamp when state is changed to `shutdown`.
@@ -47,7 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
-- Main loop allows multiple irrigation attempts in irrigation time window if the previous attempt was skipped due to weather conditions. 
 - `IrrigationCLI` throws an exception during irrigation (no more details known yet) - investigation ongoing. Exception in the CLI does not affect the main irrigation process.
 
 ---
