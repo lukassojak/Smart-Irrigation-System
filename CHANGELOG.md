@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+
+### Fixed
+
+### Removed
+
+### Known Issues
+
+---
+
+## [0.7.0] - 2025-10-24
+
+### Added
+- **Server MVP**: Initial implementation of the central server architecture.
+  - `IrrigationServer` orchestrator introduced for managing server lifecycle.
+  - `MQTTManager` added for MQTT-based communication with irrigation nodes.
+  - `NodeRegistry` introduced for storing runtime states of all nodes in `runtime/server/data/nodes_state.json`.
+  - Logging integrated for all server components.
+- Added standalone entry point for the server (`server/main.py`).
+- Verified successful MQTT communication between Server and Node (v0.6.0).
+
+### Changed
 - Major project refactor: introduced new modular architecture separating `node/` and `server/` components under `smart_irrigation_system/`.
 - Updated internal imports and folder structure for better scalability.
 - Added dedicated directories for `core`, `interface`, `network`, `weather`, `utils`, `config`  modules in the Node implementation.
@@ -21,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- `NodeRegistry` currently stores placeholder timestamp (`"now"`) for `last_update`. Real-time timestamps to be implemented.¨
+- Documentation for server setup, usage and architecture is pending.
 
 ---
 

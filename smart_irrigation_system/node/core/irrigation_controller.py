@@ -23,10 +23,11 @@ BASE_DIR = os.path.abspath(
 )
 
 # Paths to configuration and data files
-CONFIG_GLOBAL_PATH = os.path.join(BASE_DIR, "config/config_global.json")
-CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "config/zones_config.json")
-ZONE_STATE_PATH = os.path.join(BASE_DIR, "data/zones_state.json")
-IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "data/irrigation_log.json")
+CONFIG_SECRETS_PATH = os.path.join(BASE_DIR, "runtime/node/config/config_secrets.json")
+CONFIG_GLOBAL_PATH = os.path.join(BASE_DIR, "runtime/node/config/config_global.json")
+CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "runtime/node/config/zones_config.json")
+ZONE_STATE_PATH = os.path.join(BASE_DIR, "runtime/node/data/zones_state.json")
+IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "runtime/node/data/irrigation_log.json")
 
 # Constants for irrigation process
 MAX_WAIT_TIME = 10    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
@@ -95,7 +96,7 @@ class IrrigationController:
     def _load_global_config(self):
         """Loads the globalconfiguration."""
         try:
-            self.global_config: GlobalConfig = load_global_config(self.global_config_path)
+            self.global_config: GlobalConfig = load_global_config(self.global_config_path, CONFIG_SECRETS_PATH)
             self.logger.debug("Global configuration loaded successfully.")
         except FileNotFoundError as e:
             self.logger.error(f"Global configuration file not found: {e}. Exiting initialization.")

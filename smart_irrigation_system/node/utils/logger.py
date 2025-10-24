@@ -8,7 +8,10 @@ from logging.handlers import TimedRotatingFileHandler
 # Logger Configuration
 # ===========================================================================================================
 
-LOG_DIR = "logs"
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../..")
+)
+LOG_DIR  = os.path.join(BASE_DIR, "runtime", "node", "logs")
 LOG_FILE = os.path.join(LOG_DIR, "system_log.log")
 
 ROTATION_WHEN = 'midnight'  # Rotate logs at midnight

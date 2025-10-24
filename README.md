@@ -162,7 +162,7 @@ Před spuštěním je nutné mít dostupné všechny závislosti. Chystá se aut
 Spuštění systému je možné tímto příkazem v kořenovém adresáři projektu:
 
 ```bash
-python3 -m smart_irrigation_system.main
+python3 -m smart_irrigation_system.node.main
 ```
 
 ---

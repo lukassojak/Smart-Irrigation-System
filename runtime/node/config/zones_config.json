@@ -62,7 +62,7 @@
         },
         {
             "id": 4,
-            "name": "Jižní květináče",
+            "name": "Truhlíky jih",
             "relay_pin": 4,
             "enabled": true,
             "even_area_mode": false,
@@ -83,7 +83,7 @@
         },
         {
             "id": 5,
-            "name": "Muškáty na oknech",
+            "name": "Zeleninový záhon",
             "relay_pin": 5,
             "enabled": true,
             "even_area_mode": false,

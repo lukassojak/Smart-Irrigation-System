@@ -11,14 +11,15 @@ from typing import Tuple, List
 logger = get_logger("config_loader")
 
 
-def load_global_config(filepath: str) -> GlobalConfig:
+def load_global_config(filepath: str, secrets_path: str) -> GlobalConfig:
+    """Loads global configuration from JSON file and secrets from environment variables or secrets file."""
     with open(filepath, "r") as f:
         data = json.load(f)
 
     _is_valid_global_config(data)       # if invalid, raises ValueError
     api_enabled = True
     try:
-        api_key, application_key, device_mac = get_secret("api_key"), get_secret("application_key"), get_secret("device_mac")
+        api_key, application_key, device_mac = get_secret("api_key", secrets_path), get_secret("application_key", secrets_path), get_secret("device_mac", secrets_path)
     except Exception as e:
         if data.get("automation").get("environment") == "production":
             logger.error("Weather API keys are required in production environment.")

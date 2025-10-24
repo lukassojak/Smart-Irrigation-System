@@ -1,15 +1,14 @@
 import os
 import json
 
-def get_secret(key: str) -> str:
+def get_secret(key: str, path: str) -> str:
     # First try to get the secret from environment variables
     if key in os.environ:
         return os.environ[key]
     
-
     # Fallback to config_secrets.json, used for development and testing
     try:
-        with open("config/config_secrets.json", "r") as f:
+        with open(path, "r") as f:
             secrets = json.load(f)
             return secrets.get(key)
     except FileNotFoundError:
