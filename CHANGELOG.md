@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Major project refactor: introduced new modular architecture separating `node/` and `server/` components under `smart_irrigation_system/`.
+- Updated internal imports and folder structure for better scalability.
+- Added dedicated directories for `core`, `interface`, `network`, `weather`, `utils`, `config`  modules in the Node implementation.
+- Added placeholder structure for the upcoming Server MVP (`server/` folder, `config`, `data`, `api` placeholders, requirements file).
+- Adjusted file path handling in `irrigation_controller.py` to dynamically resolve project root.
 
 ### Fixed
 

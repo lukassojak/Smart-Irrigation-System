@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from smart_irrigation_system.drippers import Drippers
+from smart_irrigation_system.node.core.drippers import Drippers
 
 
 def test_add_dripper_increases_total_consumption():

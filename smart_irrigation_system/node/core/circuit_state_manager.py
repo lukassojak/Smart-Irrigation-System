@@ -3,10 +3,9 @@ from typing import Optional, Any, Dict
 from datetime import datetime
 import threading
 
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.irrigation_result import IrrigationResult
-from smart_irrigation_system.enums import IrrigationOutcome
-
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
+from smart_irrigation_system.node.core.enums import IrrigationOutcome
 
 
 # 1. Possible problem with key being a string

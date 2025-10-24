@@ -6,7 +6,8 @@ from luma.oled.device import ssd1306
 from luma.core.render import canvas
 from PIL import ImageFont
 from datetime import datetime
-from smart_irrigation_system.irrigation_controller import IrrigationController
+
+from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
 
 
 ADDRESS = 0x3C  # I2C address for the OLED display, most of ssd1306 displays use this address

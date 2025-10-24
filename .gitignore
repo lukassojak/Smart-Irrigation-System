@@ -191,6 +191,6 @@ recent_weather_data_*.json
 debug_data/
 
 # other
-notes.txt
+docs/DEV_NOTES.md
 config_secrets.json
 system_log.log.bak

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from smart_irrigation_system.relay_valve import RelayValve
+from smart_irrigation_system.node.core.relay_valve import RelayValve
 
 
 def test_control_open_prints_open_message():

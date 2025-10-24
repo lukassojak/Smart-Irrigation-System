@@ -2,7 +2,8 @@ import json
 import threading
 import time
 import paho.mqtt.client as mqtt
-from smart_irrigation_system.logger import get_logger
+
+from smart_irrigation_system.node.utils.logger import get_logger
 
 
 class MQTTClient(threading.Thread):

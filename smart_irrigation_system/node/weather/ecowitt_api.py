@@ -4,7 +4,7 @@ import json
 import os
 import copy
 
-from smart_irrigation_system.weather_config import (
+from smart_irrigation_system.node.weather.weather_config import (
     TEMPERATURE_TIME_RESOLUTION,
     RAINFALL_TIME_RESOLUTION,
     SOLAR_TIME_RESOLUTION,

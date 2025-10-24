@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from smart_irrigation_system.irrigation_controller import IrrigationController
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.enums import IrrigationState
+from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
+from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.node.core.enums import IrrigationState
 
 
 @pytest.fixture

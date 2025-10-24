@@ -2,24 +2,24 @@ from datetime import datetime, timedelta
 import requests, json
 from typing import Optional
 
-from smart_irrigation_system.global_config import GlobalConfig
-from smart_irrigation_system.global_conditions import GlobalConditions
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.secrets import get_secret
-from smart_irrigation_system.ecowitt_api import (
+from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.config.secrets import get_secret
+from smart_irrigation_system.node.weather.ecowitt_api import (
     temperature_api_call,
     rainfall_api_call_history,
     solar_api_call_history,
     all_api_call_real_time,
     test_api_secrets_valid
 )
-from smart_irrigation_system.weather_data_processor import (
+from smart_irrigation_system.node.weather.weather_data_processor import (
     calculate_avg_temperature,
     calculate_total_rainfall,
     calculate_total_solar
 )
 
-from smart_irrigation_system.weather_config import (
+from smart_irrigation_system.node.weather.weather_config import (
     TEMPERATURE_TIME_RESOLUTION,
     RAINFALL_TIME_RESOLUTION,
     MIN_TEMPERATURE_COUNT,
@@ -29,9 +29,6 @@ from smart_irrigation_system.weather_config import (
 
 INTERVAL_DAYS_LIMIT = 7 # Maximum number of days for interval_days parameter (API limitation)
 
-# Constants for testing purposes
-TEMP_TEST_START_DATE = datetime(2025, 7, 30, 18, 0, 0)
-TEMP_TEST_END_DATE = datetime(2025, 8, 2, 20, 10, 0)
 
 class RecentWeatherFetcher:
     def __init__(self, global_config: GlobalConfig, max_interval_days: int):

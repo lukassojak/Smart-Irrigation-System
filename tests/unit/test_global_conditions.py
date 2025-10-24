@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from smart_irrigation_system.global_conditions import GlobalConditions
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 
 
 def test_global_conditions_initialization():

@@ -2,15 +2,15 @@
 import tracemalloc, time
 
 from smart_irrigation_system.__version__ import __version__ as version
-from smart_irrigation_system.irrigation_controller import IrrigationController
-from smart_irrigation_system.enums import Environment
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.button import Button
-from smart_irrigation_system.display_controller import DisplayController
-from smart_irrigation_system.enums import ControllerState
-from smart_irrigation_system.irrigation_cli import IrrigationCLI
-from smart_irrigation_system.network.mqtt_client import MQTTClient
-from smart_irrigation_system.network.server_command_handler import ServerCommandHandler
+from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
+from smart_irrigation_system.node.core.enums import Environment
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.interface.button import Button
+from smart_irrigation_system.node.interface.display_controller import DisplayController
+from smart_irrigation_system.node.core.enums import ControllerState
+from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
+from smart_irrigation_system.node.network.mqtt_client import MQTTClient
+from smart_irrigation_system.node.network.server_command_handler import ServerCommandHandler
 
 
 # === Configuration ===

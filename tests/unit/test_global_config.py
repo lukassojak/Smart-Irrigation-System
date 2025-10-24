@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from smart_irrigation_system.global_config import (
+from smart_irrigation_system.node.config.global_config import (
     GlobalConfig,
     StandardConditions,
     CorrectionFactors,

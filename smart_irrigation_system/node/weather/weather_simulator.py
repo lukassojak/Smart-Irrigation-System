@@ -1,12 +1,11 @@
 import random
 from datetime import datetime, timedelta
-from smart_irrigation_system.global_conditions import GlobalConditions
-from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
+from smart_irrigation_system.node.utils.logger import get_logger
 
 
 INTERVAL_HOURS = 24  # Interval in hours for the collection of global conditions
 INTERVAL_DAYS_LIMIT = 7  # Maximum number of days for interval_days parameter
-
 
 
 class WeatherSimulator:

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from smart_irrigation_system.enums import IrrigationOutcome
+from smart_irrigation_system.node.core.enums import IrrigationOutcome
 
 
 @dataclass

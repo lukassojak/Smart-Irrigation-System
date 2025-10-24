@@ -30,7 +30,7 @@ except (ImportError, RuntimeError):
     GPIO = GPIO  # Use the dummy GPIO class for testing
 
 import time
-from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.node.utils.logger import get_logger
 
 class Button:
     def __init__(self, gpio_pin, led_pin=None, user_callback=None):

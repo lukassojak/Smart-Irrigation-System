@@ -2,16 +2,15 @@ from datetime import datetime, timedelta
 import time, threading
 from typing import Optional, Dict
 
-from smart_irrigation_system.relay_valve import RelayValve
-from deprecated.soil_moisture_sensor import SoilMoistureSensorPair
-from smart_irrigation_system.enums import IrrigationState, RelayValveState, IrrigationOutcome
-from smart_irrigation_system.drippers import Drippers
-from smart_irrigation_system.correction_factors import CorrectionFactors
-from smart_irrigation_system.global_config import GlobalConfig
-from smart_irrigation_system.global_conditions import GlobalConditions
-from smart_irrigation_system.circuit_state_manager import CircuitStateManager
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.irrigation_result import IrrigationResult
+from smart_irrigation_system.node.core.relay_valve import RelayValve
+from smart_irrigation_system.node.core.enums import IrrigationState, RelayValveState, IrrigationOutcome
+from smart_irrigation_system.node.core.drippers import Drippers
+from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
+from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 
 
 # ===============================================================================================================
@@ -90,9 +89,8 @@ class IrrigationCircuit:
         # Ask Drippers for the dripper with the minimum flow rate in liters per hour in configuration
 
         self.interval_days = interval_days
-        self.sensors = [SoilMoistureSensorPair(pin1, pin2) for pin1, pin2 in sensor_pins] if sensor_pins else []
 
-        self.drippers = drippers                                        # Instance of Drippers to manage dripper flow rates
+        self.drippers = drippers                                              # Instance of Drippers to manage dripper flow rates
         self.local_correction_factors = correction_factors                    # Instance of CorrectionFactors for local adjustments
 
 

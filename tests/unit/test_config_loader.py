@@ -1,15 +1,15 @@
 import pytest
 import json
-from smart_irrigation_system.config_loader import (
+from smart_irrigation_system.node.config.config_loader import (
     load_global_config,
     load_zones_config,
     _is_valid_zone,
     circuit_from_config
 )
-from smart_irrigation_system.global_config import GlobalConfig
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.drippers import Drippers
-from smart_irrigation_system.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.node.core.drippers import Drippers
+from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
 
 
 @pytest.fixture

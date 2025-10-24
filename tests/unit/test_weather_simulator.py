@@ -1,12 +1,12 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from smart_irrigation_system.weather_simulator import WeatherSimulator
-from smart_irrigation_system.global_conditions import GlobalConditions
+from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 from datetime import datetime
 
 
 def test_weather_simulator_ranges():
-    from smart_irrigation_system.weather_simulator import WeatherSimulator
+    from node.weather.weather_simulator import WeatherSimulator
     sim = WeatherSimulator()
     for _ in range(100):
         conditions = sim.get_current_conditions()

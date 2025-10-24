@@ -1,8 +1,8 @@
 import json
 
-from smart_irrigation_system.irrigation_controller import IrrigationController
-from smart_irrigation_system.network.mqtt_client import MQTTClient
-from smart_irrigation_system.logger import get_logger
+from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
+from smart_irrigation_system.node.network.mqtt_client import MQTTClient
+from smart_irrigation_system.node.utils.logger import get_logger
 
 
 class ServerCommandHandler:

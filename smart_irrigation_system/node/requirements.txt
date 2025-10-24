@@ -1,3 +1,4 @@
+# Base (Node)
 cbor2==5.6.5
 certifi==2025.8.3
 charset-normalizer==3.4.2

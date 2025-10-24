@@ -1,27 +1,32 @@
 
-import time, threading, atexit, sys, signal
+import time, threading, atexit, sys, signal, os
 from typing import Dict, Any
 from datetime import datetime
 
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.global_conditions import GlobalConditions
-from smart_irrigation_system.weather_simulator import WeatherSimulator
-from smart_irrigation_system.recent_weather_fetcher import RecentWeatherFetcher
-from smart_irrigation_system.global_config import GlobalConfig
-from smart_irrigation_system.config_loader import load_global_config, load_zones_config
-from smart_irrigation_system.enums import IrrigationState, ControllerState, IrrigationOutcome
-from smart_irrigation_system.circuit_state_manager import CircuitStateManager
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.irrigation_result import IrrigationResult
+from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
+from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
+from smart_irrigation_system.node.weather.recent_weather_fetcher import RecentWeatherFetcher
+from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.config.config_loader import load_global_config, load_zones_config
+from smart_irrigation_system.node.core.enums import IrrigationState, ControllerState, IrrigationOutcome
+from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 
 # Seed for the weather simulator to ensure reproducibility in tests
 WEATHER_SIMULATOR_SEED = 42
 
+# Determine the base directory of the project
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../../..")
+)
+
 # Paths to configuration and data files
-CONFIG_GLOBAL_PATH = "./config/config_global.json"
-CONFIG_ZONES_PATH =  "./config/zones_config.json"
-ZONE_STATE_PATH = "./data/zones_state.json"
-IRRIGATION_LOG_PATH = "./data/irrigation_log.json"
+CONFIG_GLOBAL_PATH = os.path.join(BASE_DIR, "config/config_global.json")
+CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "config/zones_config.json")
+ZONE_STATE_PATH = os.path.join(BASE_DIR, "data/zones_state.json")
+IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "data/irrigation_log.json")
 
 # Constants for irrigation process
 MAX_WAIT_TIME = 10    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time

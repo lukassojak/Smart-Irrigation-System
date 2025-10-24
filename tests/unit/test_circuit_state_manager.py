@@ -1,8 +1,8 @@
 import pytest
 import json
 from datetime import datetime
-from smart_irrigation_system.circuit_state_manager import CircuitStateManager
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 from types import SimpleNamespace
 
 

@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock
 import json
 
-from smart_irrigation_system.enums import IrrigationState
-from smart_irrigation_system.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.node.core.enums import IrrigationState
+from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
+from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 
 @pytest.fixture
 def mock_drippers():

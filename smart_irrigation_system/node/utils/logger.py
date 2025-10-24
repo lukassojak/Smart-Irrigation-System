@@ -1,8 +1,6 @@
 import logging
 import os
 from collections import deque
-
-# new 
 from logging.handlers import TimedRotatingFileHandler
 
 

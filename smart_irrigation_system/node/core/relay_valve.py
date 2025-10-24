@@ -32,8 +32,8 @@ except (ImportError, RuntimeError):
 
 
 import time
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.enums import RelayValveState
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.core.enums import RelayValveState
 from typing import Optional, Callable
 
 

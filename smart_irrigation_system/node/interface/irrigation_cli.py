@@ -8,12 +8,12 @@ import threading
 import time, logging, datetime
 from typing import Optional
 
-from smart_irrigation_system.irrigation_controller import IrrigationController
-from smart_irrigation_system.logger import get_dashboard_log_handler
+from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
+from smart_irrigation_system.node.utils.logger import get_dashboard_log_handler
 from smart_irrigation_system.__version__ import __version__ as version
-from smart_irrigation_system.enums import ControllerState
-from smart_irrigation_system.logger import get_logger
-from smart_irrigation_system.weather_simulator import WeatherSimulator
+from smart_irrigation_system.node.core.enums import ControllerState
+from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
 
 class IrrigationCLI:
     def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from smart_irrigation_system.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
 
 
 def test_default_factors_are_zero():

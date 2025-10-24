@@ -4,7 +4,7 @@ from enum import Enum
 
 
 # The time resolution for api data fetching in minutes.
-# Supported values: 5, 30, 240, 1440 
+# Supported values: 5, 30, 240, 1440 (ecowitt api limitations)
 TEMPERATURE_TIME_RESOLUTION = 30
 RAINFALL_TIME_RESOLUTION = 240
 SOLAR_TIME_RESOLUTION = 30
