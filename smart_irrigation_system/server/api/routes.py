@@ -31,13 +31,13 @@ def get_nodes():
     except Exception as e:
         raise RuntimeError(f"Failed to retrieve nodes: {str(e)}")
 
-@router.post("/get_status")
-def get_status(req: NodeRequest):
-    """Endpoint to get status summary of a specific irrigation node (sends MQTT command)."""
+@router.post("/update_status")
+def update_status():
+    """Endpoint to update status summary of all nodes (sends MQTT commands)."""
     try:
         command = {"action": "get_status"}
-        server.mqtt_manager.publish_command(req.node_id, command)
-        return {"message": f"Status request sent to node {req.node_id}."}
+        server.update_all_node_statuses()
+        return {"message": f"Status update requests sent to all nodes."}
     except Exception as e:
         raise RuntimeError(f"Failed to send status request: {str(e)}")
 
@@ -50,18 +50,19 @@ def start_irrigation(req: StartIrrigationRequest):
             "zone_id": req.zone_id,
             "liter_amount": req.liter_amount
         }
-        server.mqtt_manager.publish_command("node1", command)   # TODO: Make node ID dynamic - use node registry to find appropriate node / NodeManager
+        node_id = server.zone_node_mapper.get_node_for_zone(req.zone_id)
+        server.mqtt_manager.publish_command(node_id, command)
         return {"message": f"Irrigation command sent for zone {req.zone_id}."}
     except Exception as e:
         raise RuntimeError(f"Failed to send irrigation command: {str(e)}")
 
 @router.post("/stop_irrigation")
-def stop_irrigation(req: NodeRequest):
-    """Endpoint to stop irrigation on a specific node (sends MQTT command)."""
+def stop_irrigation():
+    """Endpoint to stop irrigation on all nodes (sends MQTT command)."""
     try:
         command = {"action": "stop_irrigation"}
-        server.mqtt_manager.publish_command(req.node_id, command)
-        return {"message": f"Stop irrigation command sent to node {req.node_id}."}
+        server.stop_all_irrigation()
+        return {"message": f"Stop irrigation command sent to all nodes."}
     except Exception as e:
         raise RuntimeError(f"Failed to send stop irrigation command: {str(e)}")
     

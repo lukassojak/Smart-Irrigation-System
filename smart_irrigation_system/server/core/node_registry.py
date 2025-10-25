@@ -25,7 +25,7 @@ class NodeRegistry:
         with self.lock:
             self.nodes[node_id] = {
                 "last_status": status_message,
-                "last_update": datetime.now().replace(microsecond=0)
+                "last_update": datetime.now().strftime("%Y-%m-%dT%H:%M:%S") # in future, use UTC time format
             }
             with open(self.file_path, "w") as f:
                 json.dump(self.nodes, f, indent=2)

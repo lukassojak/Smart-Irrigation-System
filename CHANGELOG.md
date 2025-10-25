@@ -20,19 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [0.8.0] - 2025-10-25
-*First FastAPI REST API implementation for the central server component*
+*First MVP of the central server component – ready for Web UI integration.*
 
 ### Added
 - **FastAPI REST API** for the central server component:
   - Implemented base endpoints for node monitoring and irrigation control.
     - `GET /nodes` - returns current state of all registered nodes.
-    - `POST /get_status` - requests node status update via MQTT.
+    - `POST /update_status` - requests status update of all nodes via MQTT.
     - `POST /start_irrigation` - sends command to start manual irrigation for a specified zone and amount.
-    - `POST /stop_irrigation` - sends command to stop irrigation on a specified zone.
+    - `POST /stop_irrigation` - sends command to stop irrigation of all irrigation (all zones, all nodes).
     - `GET /ping` - simple health check endpoint.
   - All endpoints are fully integrated with the `MQTTManager` for backend communication with nodes.
 - FastAPI server lifecycle now manages `IrrigationServer` startup and shutdown.
 - Added initial API documentation via auto-generated Swagger UI at `/docs` endpoint.
+- `ZoneNodeMapper` module introduced for dynamic mapping of zones to irrigation nodes.
+  - Current MVP implementation returns `"node1"` (single-node setup).
+  - Future versions will load mappings from configuration or database.
 
 ### Changed
 - Refactored server entry point (`server/main.py`) for clean FastAPI integration.
@@ -45,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"` (MVP limitation).
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
 - Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
 - Server documentation and REST API usage examples are not yet included in the main documentation.
 
