@@ -1,5 +1,6 @@
 import json
 import threading
+from datetime import datetime
 from smart_irrigation_system.server.utils.logger import get_logger
 
 class NodeRegistry:
@@ -24,7 +25,7 @@ class NodeRegistry:
         with self.lock:
             self.nodes[node_id] = {
                 "last_status": status_message,
-                "last_update": "now"  # placeholder - use datetime
+                "last_update": datetime.now().replace(microsecond=0)
             }
             with open(self.file_path, "w") as f:
                 json.dump(self.nodes, f, indent=2)

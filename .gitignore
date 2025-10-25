@@ -178,6 +178,8 @@ cython_debug/
 
 # Ignore data files
 data/zones_state.json
+config_global.json
+zones_config.json
 
 runtime/node/data/irrigation_log.json
 runtime/node/data/zones_state.json

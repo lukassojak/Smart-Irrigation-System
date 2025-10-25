@@ -19,7 +19,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2025-10-25
+*First FastAPI REST API implementation for the central server component*
+
+### Added
+- **FastAPI REST API** for the central server component:
+  - Implemented base endpoints for node monitoring and irrigation control.
+    - `GET /nodes` - returns current state of all registered nodes.
+    - `POST /get_status` - requests node status update via MQTT.
+    - `POST /start_irrigation` - sends command to start manual irrigation for a specified zone and amount.
+    - `POST /stop_irrigation` - sends command to stop irrigation on a specified zone.
+    - `GET /ping` - simple health check endpoint.
+  - All endpoints are fully integrated with the `MQTTManager` for backend communication with nodes.
+- FastAPI server lifecycle now manages `IrrigationServer` startup and shutdown.
+- Added initial API documentation via auto-generated Swagger UI at `/docs` endpoint.
+
+### Changed
+- Refactored server entry point (`server/main.py`) for clean FastAPI integration.
+- Server logger (`server/utils/logger.py`) now configured for simplified console output during API operation.
+- Verified functional communication chain: REST API -> MQTTManager -> Irrigation Node -> NodeRegistry update.
+
+### Fixed
+- `NodeRegistry` now correctly updates the `last_update` timestamp with real-time values upon receiving status updates from nodes.
+
+### Removed
+
+### Known Issues
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+- Server documentation and REST API usage examples are not yet included in the main documentation.
+
+---
+
 ## [0.7.0] - 2025-10-24
+*First functional version of the central server component*
 
 ### Added
 - **Server MVP**: Initial implementation of the central server architecture.
@@ -48,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [0.6.0] - 2025-10-23
+*Completed the MVP of the edge node component*
 
 ### Added
 - Implemented `MQTTClient` module for bidirectional communication between irrigation node and central server via MQTT.

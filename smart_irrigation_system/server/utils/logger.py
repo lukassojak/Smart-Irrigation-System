@@ -34,7 +34,7 @@ def setup_server_logger():
     # --- Console handler (for real-time view) ---
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", "%H:%M:%S")
+    console_formatter = logging.Formatter("[%(levelname)s] %(name)s: %(message)s")
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
