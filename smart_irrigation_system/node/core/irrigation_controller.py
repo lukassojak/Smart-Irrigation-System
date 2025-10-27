@@ -184,7 +184,7 @@ class IrrigationController:
     def get_status_message(self) -> str:
         """Returns a brief status message of the irrigation controller for mqtt publishing."""
         status = self.get_status()
-        status_msg = f"Controller State: {status['controller_state']}, Auto Enabled: {status['auto_enabled']}, Auto Paused: {status['auto_paused']}, Currently Irrigating Zones: {self.get_currently_irrigating_zones()}"
+        status_msg = f"Controller State: {status['controller_state']}, Auto Enabled: {not status['auto_stopped']}, Auto Paused: {status['auto_paused']}, Currently Irrigating Zones: {self.get_currently_irrigating_zones()}"
         return status_msg
     
     def get_currently_irrigating_zones(self) -> list[int]:

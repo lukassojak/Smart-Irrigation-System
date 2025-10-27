@@ -19,8 +19,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] - 2025-10-27
+*First functional prototype of the Web UI layer (React + Vite) integrated with FastAPI backend.*
+
+### Added
+- Introduced new `web_ui/` module containing the first functional React + Vite dashboard.
+- Added API communication layer `src/lib/api.js` using Axios with support for:
+  - `GET /api/nodes`
+  - `POST /api/update_status`
+  - `POST /api/start_irrigation`
+  - `POST /api/stop_irrigation`
+  - `GET /api/ping`
+- Implemented `NodeList.jsx` component:
+  - Fetches and visualizes node statuses from the backend.
+  - Displays each node as a modern card layout with:
+    - Controller state, Auto mode (enabled/paused), currently irrigating zones.
+    - Last update timestamp (formatted as `HH:MM:SS DD.MM.YYYY`).
+    - Online/offline indicator with icon.
+  - Supports manual refresh via `/update_status` endpoint.
+- Integrated Tailwind CSS and Lucide icons for clean and responsive UI styling.
+- Added development proxy configuration in `vite.config.js` for seamless connection with FastAPI.
+- Added base documentation file `docs/SETUP_SERVER_AND_WEB_UI.md` for server and frontend deployment.
+- Prepared build integration with FastAPI for future production serving (`app.mount("/", StaticFiles(...))`).
+
+### Changed
+- Refactored FastAPI endpoints to be prefixed with `/api` for better separation of API and static content.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
+- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
+- Web UI currently includes only monitoring (`NodeList`) — no irrigation control or real-time updates.
+- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+- Server documentation and REST API usage examples are not yet included in the main documentation.
+
+---
+
 ## [0.8.0] - 2025-10-25
-*First MVP of the central server component – ready for Web UI integration.*
+*Initial prototype of the central server component – ready for Web UI integration.*
 
 ### Added
 - **FastAPI REST API** for the central server component:
@@ -34,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FastAPI server lifecycle now manages `IrrigationServer` startup and shutdown.
 - Added initial API documentation via auto-generated Swagger UI at `/docs` endpoint.
 - `ZoneNodeMapper` module introduced for dynamic mapping of zones to irrigation nodes.
-  - Current MVP implementation returns `"node1"` (single-node setup).
+  - Current implementation returns `"node1"` (single-node setup).
   - Future versions will load mappings from configuration or database.
 
 ### Changed
@@ -48,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
-- `ZoneNodeMapper` currently uses a static mapping returning `"node1"` (MVP limitation).
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
 - Configuration management not yet implemented.
 - Authentication and access control for REST API endpoints are not yet included.
 - Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
@@ -60,7 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 *First functional version of the central server component*
 
 ### Added
-- **Server MVP**: Initial implementation of the central server architecture.
+- **Server prototype**: Initial implementation of the central server architecture.
   - `IrrigationServer` orchestrator introduced for managing server lifecycle.
   - `MQTTManager` added for MQTT-based communication with irrigation nodes.
   - `NodeRegistry` introduced for storing runtime states of all nodes in `runtime/server/data/nodes_state.json`.
@@ -72,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Major project refactor: introduced new modular architecture separating `node/` and `server/` components under `smart_irrigation_system/`.
 - Updated internal imports and folder structure for better scalability.
 - Added dedicated directories for `core`, `interface`, `network`, `weather`, `utils`, `config`  modules in the Node implementation.
-- Added placeholder structure for the upcoming Server MVP (`server/` folder, `config`, `data`, `api` placeholders, requirements file).
+- Added placeholder structure for the upcoming Server prototype (`server/` folder, `config`, `data`, `api` placeholders, requirements file).
 - Adjusted file path handling in `irrigation_controller.py` to dynamically resolve project root.
 
 ### Fixed

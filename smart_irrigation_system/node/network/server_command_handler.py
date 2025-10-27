@@ -38,7 +38,6 @@ class ServerCommandHandler:
         """Publish current irrigation system status to server."""
         status = self.irrigation_controller.get_status_message()
         self.mqtt_client.publish_status(status)
-        self.logger.debug("Published current status to server.")
     
     def _start_irrigation(self, cmd):
         """Start manual irrigation for a specific zone and amount."""

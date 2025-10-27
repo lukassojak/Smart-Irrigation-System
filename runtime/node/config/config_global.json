@@ -21,7 +21,7 @@
         "scheduled_minute": 0,
         "max_flow_monitoring": true,
         "environment": "development",
-        "use_weathersimulator": true
+        "use_weathersimulator": false
     },
     "logging": {
         "enabled": true,

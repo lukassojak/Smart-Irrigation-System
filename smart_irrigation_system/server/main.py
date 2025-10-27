@@ -21,7 +21,7 @@ app = FastAPI(title="Smart Irrigation Server API",
                     "Provides endpoints to monitor and control irrigation nodes."
                 )
             )
-app.include_router(api_router)
+app.include_router(api_router, prefix="/api") # Prefix all routes with /api
 
 
 # ------------------- Server Orchestrator ------------------- #
