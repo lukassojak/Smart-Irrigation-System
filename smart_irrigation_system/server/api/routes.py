@@ -2,6 +2,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from smart_irrigation_system.server.core.server_core import IrrigationServer
+from smart_irrigation_system.server.core.node_registry import parse_node_status
+
 
 router = APIRouter()
 server = IrrigationServer() # Singleton instance
@@ -24,10 +26,19 @@ def root():
 
 @router.get("/nodes")
 def get_nodes():
-    """Endpoint to get the list of registered irrigation nodes."""
+    """Endpoint to get the list of registered irrigation nodes with parsed status."""
     try:
         nodes = server.get_node_summary()
-        return {"nodes": nodes}
+        parsed_nodes = {}
+
+        for node_id, data in nodes.items():
+            raw_status = data.get("last_status")
+            parsed_nodes[node_id] = {
+                **data,
+                "status": parse_node_status(raw_status)
+            }
+
+        return {"nodes": parsed_nodes}
     except Exception as e:
         raise RuntimeError(f"Failed to retrieve nodes: {str(e)}")
 

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- New structured status parsing for node states:
+  - Introduced function `parse_node_status(raw_status)` in `NodeRegistry` to convert
+    raw MQTT status strings into structured JSON objects.
+  - Handles invalid or missing data gracefully (returns `None` if parsing fails).
+- Extended `/nodes` endpoint:
+  - Now returns an additional field `"status"` for each node, containing the parsed structure.
+  - Original `"last_status"` string is preserved for backward compatibility with older frontends.
 
 ### Changed
 
@@ -16,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
+- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
+- Web UI currently includes only monitoring (`NodeList`) — no irrigation control or real-time updates.
+- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+- Server documentation and REST API usage examples are not yet included in the main documentation.
 
 ---
 
@@ -50,15 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
-- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
-- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
-- Web UI currently includes only monitoring (`NodeList`) — no irrigation control or real-time updates.
-- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
-- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
-- Configuration management not yet implemented.
-- Authentication and access control for REST API endpoints are not yet included.
-- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
-- Server documentation and REST API usage examples are not yet included in the main documentation.
 
 ---
 
