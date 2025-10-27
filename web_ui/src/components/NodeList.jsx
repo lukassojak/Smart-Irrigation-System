@@ -11,6 +11,7 @@ export default function NodeList() {
 
     useEffect(() => {
         fetchNodes()
+        handleRefresh()
     }, [])
 
     async function fetchNodes() {
@@ -71,15 +72,16 @@ export default function NodeList() {
     }
 
     function renderNodeCard(nodeId, info) {
-        const status = parseStatus(info.last_status)
+        // Prefer structured status from backend (v0.9.1+), fallback to parser
+        const status = info.status || parseStatus(info.last_status)
         const lastUpdate = info.last_update ? new Date(info.last_update) : null
         const now = new Date()
-        const isOnline = lastUpdate && now - lastUpdate < 1000 * 60 * 1 // 1 min
+        const isOnline = lastUpdate && now - lastUpdate < 1000 * 10 // 10 seconds
 
         return (
             <div
                 key={nodeId}
-                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow text-left "
+                className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow text-left w-full"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3 w-full">
@@ -91,25 +93,25 @@ export default function NodeList() {
                         <h3 className="text-lg font-semibold text-slate-800">{nodeId}</h3>
                     </div>
                     <span
-                        className={`text-sm font-medium px-2 py-0.5 rounded-full ${status.controllerState === "IRRIGATING"
+                        className={`text-sm font-medium px-2 py-0.5 rounded-full ${status.controller_state === "IRRIGATING"
                             ? "bg-green-100 text-green-700"
                             : "bg-slate-100 text-slate-600"
                             }`}
                     >
-                        {status.controllerState}
+                        {status.controller_state}
                     </span>
                 </div>
 
                 {/* Details */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-700 text-left">
+                <div className="grid w-full grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-700 text-left">
                     <div className="text-slate-500">Auto Mode:</div>
                     <div>
-                        {status.autoEnabled ? (
+                        {status.auto_enabled ? (
                             <span className="text-green-600 font-medium">Enabled</span>
                         ) : (
                             <span className="text-slate-500">Disabled</span>
                         )}
-                        {status.autoPaused && (
+                        {status.auto_paused && (
                             <span className="ml-2 text-amber-600">(Paused)</span>
                         )}
                     </div>
@@ -168,8 +170,8 @@ export default function NodeList() {
             </div>
 
             {/* Fixed-height container to avoid layout shift */}
-            <div className="min-h-[200px]">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="min-h-[200px]" w-full>
+                <div className="grid w-full gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 justify-items-stretch">
                     {loading ? (
                         <p className="col-span-full text-slate-500 italic text-center">
                             Refreshing nodes...
