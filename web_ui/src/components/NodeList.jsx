@@ -12,10 +12,15 @@ export default function NodeList() {
     useEffect(() => {
         fetchNodes()
         handleRefresh()
+        // fetch nodes periodically without loading indicator
+        const interval = setInterval(() => {
+            fetchNodes(false)
+        }, 3000) // every 3 seconds
+        return () => clearInterval(interval)
     }, [])
 
-    async function fetchNodes() {
-        setLoading(true)
+    async function fetchNodes(allowLoading = true) {
+        setLoading(allowLoading)
         setError(null)
         const res = await getNodes()
         if (res.error) {
