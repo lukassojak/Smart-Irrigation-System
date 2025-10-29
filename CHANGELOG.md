@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Removed
+- (Node side) Removed periodic weather cache updates in the main loop; weather data is now fetched only on demand.
 
 ### Known Issues
 - Parser currently supports only the default Node MQTT format; additional metrics will require format extension.

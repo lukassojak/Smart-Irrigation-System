@@ -39,6 +39,7 @@ The easiest way to install and run the full demo is using the prepared shell scr
 ### 1️⃣ Install all dependencies
 ```bash
 cd demo
+chmod +x install_demo.sh run_demo.sh    # Make scripts executable
 ./install_demo.sh
 ```
 

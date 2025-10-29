@@ -578,11 +578,6 @@ class IrrigationController:
                 if window_passed:
                     skipped_cycle, already_checked = False, False
 
-                # Refresh weather cache periodically
-                if (self.global_conditions_provider.last_cache_update is None or self.global_conditions_provider.last_cache_update == datetime.min or
-                    (time.time() - self.global_conditions_provider.last_cache_update.timestamp()) >= WEATHER_CACHE_REFRESH_INTERVAL):
-                    self.global_conditions_provider.get_current_conditions(force_update=True) # blocking call to refresh the cache - should be fast enough
-
                 time.sleep(CHECK_INTERVAL)  # Wait for the next check
         
         except Exception as e:
