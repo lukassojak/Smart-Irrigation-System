@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended `/nodes` endpoint:
   - Now returns an additional field `"status"` for each node, containing the parsed structure.
   - Original `"last_status"` string is preserved for backward compatibility with older frontends.
+- Added frontend node state refresh on first load.
+- Added frontend periodic polling every 5 seconds.
 
 ### Changed
 

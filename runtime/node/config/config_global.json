@@ -1,8 +1,8 @@
 {
     "standard_conditions": {
-        "solar_total": 6.5,
+        "solar_total": 2.5,
         "rain_mm": 0.0,
-        "temperature_celsius": 18.5
+        "temperature_celsius": 10.5
     },
     "correction_factors": {
         "solar": 0.05,
@@ -17,8 +17,8 @@
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 20,
-        "scheduled_minute": 0,
+        "scheduled_hour": 14,
+        "scheduled_minute": 14,
         "max_flow_monitoring": true,
         "environment": "development",
         "use_weathersimulator": false

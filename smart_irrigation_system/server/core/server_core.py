@@ -13,6 +13,8 @@ NODES_STATE_FILE = os.path.join(NODES_STATE_DIR, "nodes_state.json")
 
 CONFIG_DIR = os.path.join(BASE_DIR, "runtime", "server", "config")
 
+PERIODIC_STATUS_UPDATE_INTERVAL = 10  # seconds
+
 class IrrigationServer:
     """Central orchestrator for the Smart Irrigation Server."""
     _instance = None
@@ -36,10 +38,19 @@ class IrrigationServer:
         self.zone_node_mapper = ZoneNodeMapper()
         self._running = False
 
+    def get_node_summary(self):
+        return self.node_registry.nodes
+    
+    def update_all_node_statuses(self):
+        for node_id in self.zone_node_mapper.get_all_node_ids():
+            command = {"action": "get_status"}
+            self.mqtt_manager.publish_command(node_id, command)
+
     def start(self):
         self.logger.info("Starting Irrigation Server...")
         self.mqtt_manager.start()
         self._running = True
+        self.periodic_status_update(PERIODIC_STATUS_UPDATE_INTERVAL)
         self.logger.info("Server started successfully.")
 
     def stop(self):
@@ -51,15 +62,16 @@ class IrrigationServer:
         self._running = False
         self.logger.info("Server stopped.")
 
-    def get_node_summary(self):
-        return self.node_registry.nodes
-    
-    def update_all_node_statuses(self):
-        for node_id in self.zone_node_mapper.get_all_node_ids():
-            command = {"action": "get_status"}
-            self.mqtt_manager.publish_command(node_id, command)
-
     def stop_all_irrigation(self):
         for node_id in self.zone_node_mapper.get_all_node_ids():
             command = {"action": "stop_irrigation"}
             self.mqtt_manager.publish_command(node_id, command)
+    
+    def periodic_status_update(self, interval_seconds=10):
+        """Periodically request status updates from all nodes."""
+        def _update_loop():
+            while self._running:
+                self.update_all_node_statuses()
+                threading.Event().wait(interval_seconds)
+        
+        threading.Thread(target=_update_loop, daemon=True).start()
