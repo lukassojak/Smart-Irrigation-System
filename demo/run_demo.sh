@@ -61,26 +61,21 @@ else
 fi
 
 # --- Start Node ---
-if $HAS_GNOME_TERMINAL; then
-  echo "Launching Node in new terminal..."
-  gnome-terminal -- bash -c "cd '$REPO_ROOT' && source '$VENV_DIR/bin/activate' && python -m smart_irrigation_system.node.main; exec bash"
-  echo "All components started!"
-else
-  echo
-  echo "Starting Node in foreground (interactive mode). It can be stopped with Ctrl+C or by typing 'shutdown'."
-  echo "+-------------------------------------------+"
-  echo "| Server API:    http://127.0.0.1:8000/docs |"
-  echo "| Web Dashboard: http://localhost:5173      |"
-  echo "+-------------------------------------------+"
-  echo
-  for i in {15..1}; do
-    echo -ne "Starting Node in $i seconds...\r"
-    sleep 1
-  done
-  cd "$REPO_ROOT"
-  echo
-  python3 -m smart_irrigation_system.node.main
-fi
+echo
+echo "Starting Node in foreground (interactive mode). It can be stopped with Ctrl+C or by typing 'shutdown'."
+echo "+-------------------------------------------+"
+echo "| Server API:    http://127.0.0.1:8000/docs |"
+echo "| Web Dashboard: http://localhost:5173      |"
+echo "+-------------------------------------------+"
+echo
+for i in {15..1}; do
+  echo -ne "Starting Node in $i seconds..\r"
+  sleep 1
+done
+cd "$REPO_ROOT"
+echo
+python3 -m smart_irrigation_system.node.main
+clear
 
 echo
   echo "+-------------------------------------------+"
@@ -88,9 +83,8 @@ echo
   echo "| Web Dashboard: http://localhost:5173      |"
   echo "+-------------------------------------------+"
 echo
-if $HAS_GNOME_TERMINAL; then
-  echo "Each component is running in its own terminal window."
-else
+# if does not have gnome-terminal, show log file locations
+if ! $HAS_GNOME_TERMINAL; then
   echo "Logs are written to: $BASE_DIR/server.log, $BASE_DIR/node.log, $BASE_DIR/web.log"
 fi
 echo
