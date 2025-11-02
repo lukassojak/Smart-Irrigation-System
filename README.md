@@ -1,7 +1,12 @@
 # Smart Irrigation System
 
-**A distributed IoT platform for automated garden irrigation**, designed for Raspberry Pi–based edge nodes coordinated by a central server and web dashboard.  
+**A distributed IoT platform for automated irrigation**, designed for Raspberry Pi–based edge nodes coordinated by a central server and web dashboard.  
 The project demonstrates a fully functional **prototype** of a irrigation network with weather-based logic, MQTT communication, and modular architecture.
+
+<figure style="text-align: center;">
+  <img src="./other/dashboard_v0.9.0_screenshot.png" alt="Web Dashboard Prototype" style="max-width: 100%; height: auto;">
+  <figcaption>Web Dashboard Prototype (v0.9)</figcaption>
+</figure>
 
 > Project is currently in *Phase 3 (v0.9)* - fundamental node and server functionality is complete, basic web UI prototype is implemented. Demo is available for local testing.
 
@@ -17,7 +22,16 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
 The Smart Irrigation System uses **edge computing** to manage watering zones autonomously. In case of network failure, each node continues to operate based on local data, schedules, weather conditions and configuration. 
 Each **node** controls multiple irrigation circuits, while a **central server** coordinates and monitors the network through MQTT and a REST API.
 
-![Architecture Diagram](./other/architecture.png)
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px">
+  <div>
+    <img src="./other/architecture_0.9.0.svg" alt="0.9 version architecture" title="v0.9 architecture" style="height: 300px";/>
+    <p>Fig. 1: Current v0.9 architecture</p>
+  </div>
+  <div>
+    <img src="./other/architecture_target.svg" alt="target architecture" title="target architecture" style="height: 300px";/>
+    <p>Fig. 2: Target architecture (v1.0+)</p>
+  </div>
+</div>
 
 ---
 

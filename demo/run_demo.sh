@@ -83,7 +83,6 @@ echo
   echo "| Web Dashboard: http://localhost:5173      |"
   echo "+-------------------------------------------+"
 echo
-# if does not have gnome-terminal, show log file locations
 if ! $HAS_GNOME_TERMINAL; then
   echo "Logs are written to: $BASE_DIR/server.log, $BASE_DIR/node.log, $BASE_DIR/web.log"
 fi

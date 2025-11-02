@@ -69,7 +69,10 @@ http://localhost:5173
 **You should see the Smart Irrigation System dashboard displaying simulated data.**
 *If the UI does not load, check the terminal window to see logs with the actual URL provided by Vite.*
 
-![Web UI Screenshot](../../other/dashboard_v0.9.0_screenshot.png)
+<figure style="text-align: center;">
+  <img src="../../other/dashboard_v0.9.0_screenshot.png" alt="Web Dashboard Prototype" style="max-width: 100%; height: auto;">
+  <figcaption>Web Dashboard Prototype (v0.9)</figcaption>
+</figure>
 
 ---
 

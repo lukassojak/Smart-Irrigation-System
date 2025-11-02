@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated `README.md` with simplified and concise structure.
 - Updated `/docs/` structure for better separation between *user guides* and *developer references*.
+- Updated architecture diagram in `README.md` to reflect local demo setup and planned final architecture.
 
 ### Fixed
 - Links to developer reference in `README.md` fixed.

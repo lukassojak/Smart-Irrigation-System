@@ -24,38 +24,16 @@ The system consists of three main layers:
 
 ## High-Level Architecture Diagram
 
-```text
-                    ┌────────────────────────────────────────┐
-                    │            User Layer                  │
-                    │ ────────────────────────────────────── │
-                    │  • Web Dashboard (React + REST)        │
-                    │  • Home Assistant Integration (planned)│
-                    │  • CLI Interface                       │
-                    └────────────────────────────────────────┘
-                                   │       ▲
-                                   │REST   │JSON
-                                   ▼       │
-                    ┌────────────────────────────────────────┐
-                    │         Central Server Layer           │
-                    │ ────────────────────────────────────── │
-                    │  • MQTT Manager (Server ↔ Nodes)       │
-                    │  • Node Registry (state tracking)      │
-                    │  • Zone–Node Mapper                    │
-                    │  • REST API                            │
-                    └────────────────────────────────────────┘
-                                   │       ▲
-                            MQTT   │       │  MQTT
-                                   ▼       │
-                    ┌────────────────────────────────────────┐
-                    │           Edge Node Layer              │
-                    │ ────────────────────────────────────── │
-                    │  • IrrigationController                │
-                    │  • IrrigationCircuits (per-zone)       │
-                    │  • WeatherFetcher / WeatherSimulator   │
-                    │  • CircuitStateManager (JSON state)    │
-                    │  • MQTT Client (status + commands)     │
-                    └────────────────────────────────────────┘
-```
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px">
+  <div>
+    <img src="../../other/architecture_0.9.0.svg" alt="0.9 version architecture" title="v0.9 architecture" style="height: 300px";/>
+    <p>Fig. 1: Current v0.9 architecture</p>
+  </div>
+  <div>
+    <img src="../../other/architecture_target.svg" alt="target architecture" title="target architecture" style="height: 300px";/>
+    <p>Fig. 2: Target architecture (v1.0+)</p>
+  </div>
+</div>
 
 ## Component Responsibilities
 
