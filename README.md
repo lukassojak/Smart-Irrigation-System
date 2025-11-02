@@ -63,7 +63,7 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 
 You can test the full **Node ↔ Server ↔ Web UI** chain on a single computer using a local Mosquitto MQTT broker.
 
-Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/SETUP_AND_RUN_DEMO.md) file.
+Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/user_guide/SETUP_AND_RUN_DEMO.md) file.
 
 ---
 
@@ -83,9 +83,10 @@ Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/SETUP_AND_RUN_DEMO.md)
 
 Full documentation is available in the [docs/](docs/) folder, including:
 - [User Guide](docs/user_guide/) – Installation and setup (local all-in-one demo, server, node)
-- [Developer Reference](docs/DEVELOPER_REFERENCE.md/) – Architecture, code structure
-- [Architecture Overview](docs/ARCHITECTURE_OVERVIEW.md)
+- [Developer Reference](docs/developer_reference/) – Architecture, code structure
+- [Architecture Overview](docs/overview/ARCHITECTURE_OVERVIEW.md)
 - [Features & Configuration](docs/overview/FEATURES_AND_CONFIGURATION.md)
+- [Roadmap](docs/overview/ROADMAP.md)
 
 ---
 

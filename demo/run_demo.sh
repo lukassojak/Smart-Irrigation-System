@@ -41,19 +41,10 @@ fi
 # --- Start FastAPI Server ---
 if $HAS_GNOME_TERMINAL; then
   echo "Launching FastAPI Server in new terminal..."
-  gnome-terminal -- bash -c "cd '$SERVER_DIR' && source '$VENV_DIR/bin/activate' && python -m smart_irrigation_system.server.main; exec bash"
+  gnome-terminal -- bash -c "cd '$REPO_ROOT' && source '$VENV_DIR/bin/activate' && python -m smart_irrigation_system.server.main; exec bash"
 else
   echo "Starting FastAPI Server (background)..."
-  (cd "$SERVER_DIR" && python -m smart_irrigation_system.server.main > "$BASE_DIR/server.log" 2>&1 &) 
-fi
-
-# --- Start Node ---
-if $HAS_GNOME_TERMINAL; then
-  echo "Launching Node in new terminal..."
-  gnome-terminal -- bash -c "cd '$NODE_DIR' && source '$VENV_DIR/bin/activate' && python -m smart_irrigation_system.node.main; exec bash"
-else
-  echo "Starting Node (background)..."
-  (cd "$NODE_DIR" && python -m smart_irrigation_system.node.main > "$BASE_DIR/node.log" 2>&1 &) 
+  (cd "$REPO_ROOT" && python -m smart_irrigation_system.server.main > "$BASE_DIR/server.log" 2>&1 &) 
 fi
 
 # --- Start Web UI ---
@@ -69,10 +60,33 @@ else
   echo "Web UI directory not found at $WEB_DIR"
 fi
 
+# --- Start Node ---
+if $HAS_GNOME_TERMINAL; then
+  echo "Launching Node in new terminal..."
+  gnome-terminal -- bash -c "cd '$REPO_ROOT' && source '$VENV_DIR/bin/activate' && python -m smart_irrigation_system.node.main; exec bash"
+  echo "All components started!"
+else
+  echo
+  echo "Starting Node in foreground (interactive mode). It can be stopped with Ctrl+C or by typing 'shutdown'."
+  echo "+-------------------------------------------+"
+  echo "| Server API:    http://127.0.0.1:8000/docs |"
+  echo "| Web Dashboard: http://localhost:5173      |"
+  echo "+-------------------------------------------+"
+  echo
+  for i in {15..1}; do
+    echo -ne "Starting Node in $i seconds...\r"
+    sleep 1
+  done
+  cd "$REPO_ROOT"
+  echo
+  python3 -m smart_irrigation_system.node.main
+fi
+
 echo
-echo "All components started!"
-echo "Server API:   http://127.0.0.1:8000/docs"
-echo "Web Dashboard: http://localhost:3000"
+  echo "+-------------------------------------------+"
+  echo "| Server API:    http://127.0.0.1:8000/docs |"
+  echo "| Web Dashboard: http://localhost:5173      |"
+  echo "+-------------------------------------------+"
 echo
 if $HAS_GNOME_TERMINAL; then
   echo "Each component is running in its own terminal window."

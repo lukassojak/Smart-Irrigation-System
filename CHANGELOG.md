@@ -5,7 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.2] - 2025-11-02
+*Documentation and usability patch release focusing on simplified installation, local demo, and system demonstration.*
+
+### Added
+- **Automated installation script:** `demo/install_demo.sh` for simplified setup of Python/Node dependencies and environment creation.
+- **Automated demo runner:** `demo/run_demo.sh` supporting both GUI (multi-terminal) and headless (WSL/SSH) modes.
+  - Detects `gnome-terminal` and automatically launches Server, Node, and Web UI in separate windows if available.
+  - Fallback to background mode with live Node CLI in the foreground when GUI is not present.
+- **Demo documentation:**  
+  - `docs/user_guide/SETUP_AND_RUN_DEMO.md` – step-by-step guide for local demo on a single machine.  
+  - Clarified quick start instructions in `README.md` and linked demo guide.
+- **Combined dependency file:** `requirements_demo.txt` for all-in-one demo environment.
+- **Improved developer experience:** Added `.gitattributes` to enforce LF line endings for shell scripts.
+
+### Changed
+- Updated `README.md` with simplified and concise structure.
+- Updated `/docs/` structure for better separation between *user guides* and *developer references*.
+
+### Fixed
+- Links to developer reference in `README.md` fixed.
+- Environment activation and path issues in non-GUI environments.
+
+### Removed
+
+### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
+- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
+- Web UI currently includes only monitoring (`NodeList`) — no irrigation control or real-time updates.
+- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+- Server documentation and REST API usage examples are not yet included in the main documentation.
+
+---
+
+## [0.9.1] - 2025-10-29
+*Enhanced node status parsing and frontend updates for improved monitoring.*
 
 ### Added
 - New structured status parsing for node states:

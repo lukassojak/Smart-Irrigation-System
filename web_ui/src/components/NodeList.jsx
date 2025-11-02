@@ -81,7 +81,7 @@ export default function NodeList() {
         const status = info.status || parseStatus(info.last_status)
         const lastUpdate = info.last_update ? new Date(info.last_update) : null
         const now = new Date()
-        const isOnline = lastUpdate && now - lastUpdate < 1000 * 10 // 10 seconds
+        const isOnline = lastUpdate && now - lastUpdate < 1000 * 20 // 10 seconds
 
         return (
             <div

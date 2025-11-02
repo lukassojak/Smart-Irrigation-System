@@ -68,7 +68,4 @@ fi
 
 echo "Installation complete!"
 echo "You can now start the demo with:"
-echo "   source venv/bin/activate"
-echo "   python3 -m smart_irrigation_system.server.main"
-echo "   python3 -m smart_irrigation_system.node.main"
-echo "   cd smart_irrigation_system/web_ui && npm run dev"
+echo "   ./run_demo.sh"

@@ -56,15 +56,20 @@ This script will:
 This script will:
 - Start a local Mosquitto MQTT broker (if not already running)
 - Launch the simulated Node, Server, and Web UI
-- Each component opens in a separate terminal window
+- Each component opens in a separate terminal window (if GUI terminal is not available, or you are using SSH/WSL, it will run server and web UI in the background while Node runs in the current terminal)
+
+![Run Demo](../../other/run_demo_screenshot.png)
 
 ### 3️⃣ Access the Web UI
-After running the demo, open your web browser and navigate to:
+After running the demo, open your web browser and visit url:
 ```
-http://localhost:3000
+http://localhost:5173
 ```
 
 **You should see the Smart Irrigation System dashboard displaying simulated data.**
+*If the UI does not load, check the terminal window to see logs with the actual URL provided by Vite.*
+
+![Web UI Screenshot](../../other/dashboard_v0.9.0_screenshot.png)
 
 ---
 
@@ -127,10 +132,10 @@ In a third terminal, start the Web UI:
 cd ../web_ui
 npm run dev
 ```
-Once running, visit:
+Once running, visit the localhost URL provided in the terminal by Vite, typically:
 
 ```
-http://localhost:3000
+http://localhost:5173
 ```
 
 **You should see the Smart Irrigation System dashboard displaying simulated data.**
@@ -153,3 +158,19 @@ You can trigger irrigation actions via the Web UI and observe the Node respondin
 **- Refresh status** → fetches `/nodes` via REST.
 
 > In current implementation, the Web UI polls the fresh status every 3 seconds. The server updates the Node status cache every 10 seconds. Maximum delay for status updates is around 13 seconds.
+
+---
+
+## Troubleshooting
+- **MQTT Connection Issues**: Ensure Mosquitto is running and accessible at `localhost:1883`.
+- **Port Conflicts**: Make sure ports `8000` (Server) and `5173` (Web UI) are free.
+- **Dependency Errors**: Verify all dependencies are installed correctly in the virtual environment and Web UI.
+- **Permission Errors**: If you encounter `PermissionError` when starting the Node or Server (for example when logging to `/runtime/.../logs/`),
+make sure the project directory is owned by your current user:
+
+```bash
+sudo chown -R $(whoami):$(whoami) .
+```
+- **Web UI Not Loading**: The port provided by Vite may differ than `5173`.
+  - Simplified installation: Check the output of `run_demo.sh` for the logs location to find the output of Vite with the correct port and URL.
+  - Manual installation: Check the terminal output running the Vite server for the correct port and URL.
