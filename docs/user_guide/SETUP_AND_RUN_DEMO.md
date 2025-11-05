@@ -26,7 +26,7 @@ In this demo:
 
 ### System Requirements
 - **Python** ≥ 3.10  
-- **Node.js** ≥ 18 (LTS)  
+- **Node.js** ≥ 20 (LTS)  
 - **Mosquitto MQTT Broker**  
 - **Git**
 

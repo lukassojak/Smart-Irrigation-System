@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+- Changed Node.js version requirement to v20+ due to dependency updates.
+
+### Fixed
+- Fixed server node status saving issue by adding .gitkeep to `runtime/server/data/` folder.
+
+### Removed
+
+### Known Issues
+
 ## [0.9.2] - 2025-11-02
 *Documentation and usability patch release focusing on simplified installation, local demo, and system demonstration.*
 
@@ -31,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- The server fails to save node status file due to missing folder creation; `runtime/server/data/`.
 - Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
 - Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
 - When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).

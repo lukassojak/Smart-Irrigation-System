@@ -199,3 +199,6 @@ docs/DEV_NOTES.md
 docs/ROADMAP.md
 config_secrets.json
 system_log.log.bak
+
+# web ui
+!web_ui/src/lib/
