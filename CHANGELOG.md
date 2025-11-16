@@ -8,14 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Singleton pattern applied to `IrrigationController` to ensure only one instance exists during runtime.
+- Introduced IrrigationResult factory module `smart_irrigation_system.node.utils.result_factory` for creating structured irrigation result objects.
+- Added helper `_calc_result_values()` and `_map_state_to_outcome` in `IrrigationCircuit` for consistent result object creation.
 
 ### Changed
 - Changed Node.js version requirement to v20+ due to dependency updates.
+- Refactored `_irrigate()` method in `IrrigationCircuit` to utilize the new `IrrigationResult` factory for creating result objects:
+  - Removed direct instantiation of `IrrigationResult` in favor of factory methods.
+  - Consolidated all exception paths (KeyboardInterrupt, SystemExit, generic errors).
+  - Unified result creation to a single exit point using factory functions.
+  - Improved readability, reduced method complexity.
+- Replaced mutable global IrrigationResult template instances with safe factory-based creation.
+
 
 ### Fixed
 - Fixed server node status saving issue by adding .gitkeep to `runtime/server/data/` folder.
+- Eliminated thread-unsafe shared result templates in `IrrigationCircuit` that could lead to data corruption in multi-threaded scenarios.
 
 ### Removed
+- Node MQTT client verbose logging removed for cleaner output.
+- Removed predefined `IrrigationResult` objects in `IrrigationCircuit` to prevent shared mutable object issues.
 
 ### Known Issues
 
