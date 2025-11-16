@@ -18,6 +18,10 @@ from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 import smart_irrigation_system.node.utils.result_factory as result_factory
 
 
+class IrrigationStoppedException(Exception):
+    """Custom exception raised when irrigation is stopped by the user."""
+    pass
+
 
 class IrrigationCircuit:
     def __init__(self, name: str, circuit_id: int, relay_pin: int,
@@ -285,7 +289,7 @@ class IrrigationCircuit:
                 if stop_event.is_set():
                     self.logger.info(f"Irrigation stopped by user after {int(elapsed_time)} seconds.")
                     self.state = IrrigationState.STOPPED
-                    return None
+                    raise IrrigationStoppedException("Irrigation stopped by user")
                 time.sleep(0.1)
             
             self.state = IrrigationState.FINISHED
@@ -318,6 +322,10 @@ class IrrigationCircuit:
             wait_for_irrigation_completion()
             error = None
         
+        except IrrigationStoppedException as e:
+            error = str(e)
+            self.logger.info(f"Irrigation stopped after {int(elapsed_time)} seconds by user.")
+
         except KeyboardInterrupt:
             self.state = IrrigationState.INTERRUPTED
             error = "Received KeyboardInterrupt"
@@ -350,34 +358,6 @@ class IrrigationCircuit:
             self._target_duration = None
             self._start_time = None
             return result
-
-    # deprecated method for opening the valve for a specific duration
-    def _irrigate_deprecated(self, duration: int, stop_event) -> Optional[int]:
-        """Starts the irrigation process for a specified duration. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
-        def update_progress(elapsed):
-            """Updates the real-time metrics during irrigation."""
-            self._current_duration = elapsed
-
-        self.logger.info(f"Starting irrigation for {duration} seconds.")
-        # Should check if the circuit is already irrigating
-        self.state = IrrigationState.IRRIGATING
-        self.last_irrigation_time = datetime.now()  # Update the last irrigation time
-        try:
-            self._target_duration = duration
-            elapsed_time = self.valve.open(duration, stop_event, progress_callback=update_progress)
-            return elapsed_time
-        except Exception as e:
-            # NOTE: elapsed time won't be set in this case. This should be solved in future (the circuit state manager does not have a way to handle this yet)
-            self.state = IrrigationState.ERROR
-            self.logger.error(f"Error during irrigation: {e}")
-            raise e  # Re-raise the exception to indicate failure
-        finally:
-            if stop_event.is_set() and self.state == IrrigationState.IRRIGATING:
-                self.state = IrrigationState.STOPPED
-                self.logger.info(f"Irrigation stopped by user.")
-            elif self.state != IrrigationState.ERROR:
-                self.state = IrrigationState.FINISHED
-                self.logger.info(f"Irrigation finished successfully.")
 
     
     # ============================================================================================================

@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Node MQTT client verbose logging removed for cleaner output.
 - Removed predefined `IrrigationResult` objects in `IrrigationCircuit` to prevent shared mutable object issues.
+- Deleted deprecated method for irrigation in `IrrigationCircuit`.
 
 ### Known Issues
 
