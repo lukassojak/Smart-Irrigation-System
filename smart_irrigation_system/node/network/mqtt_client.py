@@ -35,14 +35,12 @@ class MQTTClient(threading.Thread):
 
     def _on_message(self, client, userdata, msg):
         payload = msg.payload.decode("utf-8")
-        self.logger.debug(f"Received message on {msg.topic}: {payload}")
         self.handler.handle(payload)
 
     # Publisher helper
     def publish_status(self, payload: dict):
         topic = f"irrigation/{self.node_id}/status"
         self.client.publish(topic, json.dumps(payload))
-        self.logger.debug(f"Published status to {topic}")
 
     # Thread main loop
     def run(self):
