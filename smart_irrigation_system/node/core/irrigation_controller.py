@@ -1,4 +1,3 @@
-
 import time, threading, atexit, sys, signal, os
 from typing import Dict, Any
 from datetime import datetime
@@ -40,12 +39,26 @@ WEATHER_CACHE_REFRESH_INTERVAL = 1 * 60  # seconds, how often to refresh the wea
 
 class IrrigationController:
     """The main irrigation controller that manages all the irrigation circuits. Pattern: Singleton"""
+    _instance = None
+    _lock = threading.Lock()
 
     # ============================================================================================================
     # Initialization and configuration loading
     # ============================================================================================================
 
+    def __new__(cls, *args, **kwargs):
+        """Singleton implementation"""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            else:
+                cls._instance.logger.warning("IrrigationController instance already exists, returning the existing instance.")
+        return cls._instance
+
     def __init__(self, config_global_path=CONFIG_GLOBAL_PATH, config_zones_path=CONFIG_ZONES_PATH):
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+
         self.logger = get_logger("IrrigationController")
         self.global_config_path = config_global_path
         self.zones_config_path = config_zones_path
@@ -81,6 +94,7 @@ class IrrigationController:
         atexit.register(self.cleanup)  # Ensure cleanup is called on exit
         
         self.logger.info("Environment: %s", self.global_config.automation.environment)
+        self._initialized = True
         self.logger.info("IrrigationController initialized with %d circuits.", len(self.circuits))
     
     def _register_signal_handlers(self):
