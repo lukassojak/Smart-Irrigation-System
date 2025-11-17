@@ -308,7 +308,7 @@ class IrrigationCircuit:
         
         return self._irrigate(target_duration, stop_event)
         
-    def _irrigate(self, duration: int, stop_event) -> IrrigationResult:
+    def _irrigate2(self, duration: int, stop_event) -> IrrigationResult:
         """
         Clean refactored irrigation logic.
         Handles one continuous irrigation run from start to finish.
@@ -441,7 +441,7 @@ class IrrigationCircuit:
 
             return result
         
-    def irrigate(self, duration: int, stop_event) -> IrrigationResult:
+    def _irrigate(self, duration: int, stop_event) -> IrrigationResult:
         # --- INIT PHASE ---
         init_result = self._irrigation_init(duration)
         if init_result is not None:
