@@ -9,13 +9,9 @@ class ControllerState(Enum):
 
 class IrrigationState(Enum):
     IDLE = "idle"                           # No irrigation is currently happening, circuit is ready
-    WAITING_FOR_FLOW = "waiting_for_flow"   # Waiting for the main valve flow capacity to be available
+    WAITING = "waiting"                     # Waiting to start irrigation, e.g., due to sequencing or flow constraints
     IRRIGATING = "irrigating"               # Currently irrigating
-    FINISHED = "finished"                   # Irrigation has finished
-    ERROR = "error"                         # An error occurred
-    STOPPED = "stopped"                     # Irrigation has been stopped by the user
-    INTERRUPTED = "interrupted"              # Irrigation was interrupted (e.g., power loss)
-    DISABLED = "disabled"                   # Irrigation circuit is disabled
+    DISABLED = "disabled"                   # Irrigation circuit is disabled by config or UI
 
 
 class IrrigationOutcome(Enum):

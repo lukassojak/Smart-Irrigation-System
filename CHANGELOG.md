@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Unified result creation to a single exit point using factory functions.
   - Improved readability, reduced method complexity.
 - Replaced mutable global IrrigationResult template instances with safe factory-based creation.
+- `IrrigationState` enum now use limited set of states: `IDLE`, `WAITING`, `IRRIGATING`, `DISABLED` - all the other states are now represented as outcomes in `IrrigationResult`.
 
 
 ### Fixed
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node MQTT client verbose logging removed for cleaner output.
 - Removed predefined `IrrigationResult` objects in `IrrigationCircuit` to prevent shared mutable object issues.
 - Deleted deprecated method for irrigation in `IrrigationCircuit`.
+- Removed states from `IrrigationState` enum that are now represented as outcomes in `IrrigationResult`.
 
 ### Known Issues
 
