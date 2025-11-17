@@ -43,7 +43,7 @@ def create_failure_invalid_water_amount(circuit_id: int, start_time: datetime, t
         target_duration=target_duration,
         actual_water_amount=0.0,
         target_water_amount=target_water_amount,
-        error="Target water amount must be greater than 0"
+        error="Invalid target water amount. Must be greater than zero."
     )
 
 def create_failure_circuit_not_idle(circuit_id: int, start_time: datetime, target_duration: int, target_water_amount: float) -> IrrigationResult:

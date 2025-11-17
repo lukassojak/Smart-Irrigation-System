@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Singleton pattern applied to `IrrigationController` to ensure only one instance exists during runtime.
 - Introduced IrrigationResult factory module `smart_irrigation_system.node.utils.result_factory` for creating structured irrigation result objects.
-- Added helper `_calc_result_values()` and `_map_state_to_outcome` in `IrrigationCircuit` for consistent result object creation.
+- Added helper `_calc_result_values()` in `IrrigationCircuit` for consistent result object creation.
+- Circuit state transitions and outcomes are now clearly defined and documented in `docs/developer_reference/CIRCUIT_STATE_MACHINE.md`.
 
 ### Changed
 - Changed Node.js version requirement to v20+ due to dependency updates.
@@ -21,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved readability, reduced method complexity.
 - Replaced mutable global IrrigationResult template instances with safe factory-based creation.
 - `IrrigationState` enum now use limited set of states: `IDLE`, `WAITING`, `IRRIGATING`, `DISABLED` - all the other states are now represented as outcomes in `IrrigationResult`.
+- Further major refactor of `IrrigationCircuit` to adopt new clean state/outcome architecture:
+  - Removed predefined `IrrigationResult` objects.
+  - All state transitions now result in creation of new `IrrigationResult` objects via factory methods.
+  - Replaced legacy pseudo-states (`FINISHED`, `STOPPED`, `INTERRUPTED`, `ERROR`) with a minimal runtime state machine and clear outcome representation.
+  - Introduced `outcome` runtime attribute in `IrrigationCircuit` representing the result of the last irrigation attempt.
+  - Centralized all the state transition logic in `_transition_state()` method for better maintainability.
+  - Redesigned _irrigate() to a three-phase execution model (init -> execute -> finalize) for clarity, testability and extensibility.
 
 
 ### Fixed
@@ -29,9 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Node MQTT client verbose logging removed for cleaner output.
-- Removed predefined `IrrigationResult` objects in `IrrigationCircuit` to prevent shared mutable object issues.
-- Deleted deprecated method for irrigation in `IrrigationCircuit`.
-- Removed states from `IrrigationState` enum that are now represented as outcomes in `IrrigationResult`.
+- Predefined `IrrigationResult` objects in `IrrigationCircuit` to prevent shared mutable object issues.
+- Deprecated method for irrigation in `IrrigationCircuit`.
+- States from `IrrigationState` enum that are now represented as outcomes in `IrrigationResult`.
+- Deprecated `_map_state_to_outcome()` method in `IrrigationCircuit`.
 
 ### Known Issues
 
