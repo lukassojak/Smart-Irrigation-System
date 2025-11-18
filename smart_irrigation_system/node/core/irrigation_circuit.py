@@ -1,5 +1,3 @@
-# testuje se target_duration is not None, ale pak se dělí self._target_duration - chyba když je 0
-
 from datetime import datetime, timedelta
 import time, threading
 from typing import Optional, Dict
@@ -123,6 +121,7 @@ class IrrigationCircuit:
     def state(self, new_state: IrrigationState):
         """Sets the current state of the irrigation circuit."""
         self._transition_state(new_state)
+        # callback to controller can be added here in the future
 
     @outcome.setter
     def outcome(self, new_outcome: IrrigationOutcome):
@@ -308,139 +307,6 @@ class IrrigationCircuit:
         
         return self._irrigate(target_duration, stop_event)
         
-    def _irrigate2(self, duration: int, stop_event) -> IrrigationResult:
-        """
-        Clean refactored irrigation logic.
-        Handles one continuous irrigation run from start to finish.
-        """
-
-        # ------------------------
-        # NESTED HELPERS (kept for now)
-        # ------------------------
-
-        def update_progress(elapsed):
-            """Updates the real-time progress tracking."""
-            self._current_duration = elapsed
-
-        def wait_for_irrigation_completion():
-            """Waits until irrigation finishes or user stops it."""
-            nonlocal elapsed_time
-
-            while time.time() - self._start_time < duration:
-                elapsed_time = time.time() - self._start_time
-                update_progress(elapsed_time)
-
-                if stop_event.is_set():
-                    raise IrrigationStoppedException(
-                        f"Irrigation stopped by user after {int(elapsed_time)} seconds."
-                    )
-
-                time.sleep(0.1)
-
-            # successful end
-            self.logger.debug(
-                f"Irrigation finished successfully after {int(elapsed_time)} seconds."
-            )
-
-        # ------------------------
-        # 1) GUARD: must be IDLE
-        # ------------------------
-
-        if self.state != IrrigationState.IDLE:
-            self.logger.warning(
-                f"Circuit {self.id} is not IDLE (state={self.state.name}). Cannot start irrigation."
-            )
-            result = result_factory.create_failure_circuit_not_idle(
-                circuit_id=self.id,
-                start_time=datetime.now().replace(microsecond=0),
-                target_duration=duration,
-                target_water_amount=round(self.get_circuit_consumption() * (duration / 3600), 3),
-            )
-            self.last_irrigation_time = result.start_time
-            self.last_irrigation_duration = 0
-            self.outcome = IrrigationOutcome.FAILED
-            self._last_irrigation_result = "error"
-            return result
-
-        # ------------------------
-        # 2) SETUP
-        # ------------------------
-
-        self.logger.debug(f"Starting irrigation for {duration} seconds.")
-        self.state = IrrigationState.IRRIGATING
-        self.last_irrigation_time = datetime.now()
-        self._target_duration = duration
-        elapsed_time = 0
-        self._start_time = time.time()
-
-        # Outcome and error placeholder
-        self.outcome = None
-        error = None
-
-        # ------------------------
-        # 3) EXECUTION
-        # ------------------------
-
-        try:
-            self.valve.state = RelayValveState.OPEN
-            wait_for_irrigation_completion()
-            # If this succeeds, it is success unless overridden by exceptions.
-            self.outcome = IrrigationOutcome.SUCCESS
-
-        except IrrigationStoppedException as e:
-            error = str(e)
-            self.outcome = IrrigationOutcome.STOPPED
-            self.logger.info(error)
-
-        except KeyboardInterrupt:
-            error = "Received KeyboardInterrupt"
-            self.outcome = IrrigationOutcome.INTERRUPTED
-            self.logger.info(f"Irrigation interrupted at {int(elapsed_time)} seconds (KeyboardInterrupt).")
-
-        except SystemExit:
-            error = "Received SystemExit"
-            self.outcome = IrrigationOutcome.INTERRUPTED
-            self.logger.info(f"Irrigation interrupted at {int(elapsed_time)} seconds (SystemExit).")
-
-        except Exception as e:
-            error = str(e)
-            self.outcome = IrrigationOutcome.FAILED
-            self.logger.error(f"Error during irrigation: {e}")
-
-        finally:
-            # ------------------------
-            # 4) ALWAYS CLEANUP
-            # ------------------------
-            self.valve.state = RelayValveState.CLOSED
-
-            # Compute result values
-            completed_duration, target_duration, actual_water, target_water = \
-                self._calc_result_values(elapsed_time, self._target_duration or 0)
-
-            result = result_factory.create_general(
-                circuit_id=self.id,
-                start_time=datetime.fromtimestamp(self._start_time).replace(microsecond=0),
-                completed_duration=completed_duration,
-                target_duration=target_duration,
-                actual_water_amount=actual_water,
-                target_water_amount=target_water,
-                success=(self.outcome == IrrigationOutcome.SUCCESS),
-                outcome=self.outcome,
-                error=error,
-            )
-
-            # ------------------------
-            # Reset state and runtime attributes
-            # ------------------------
-            self.state = IrrigationState.IDLE
-            self._last_irrigation_result = result.outcome.value
-            self._last_irrigation_duration = int(elapsed_time)
-            self._current_duration = 0
-            self._target_duration = None
-            self._start_time = None
-
-            return result
-        
     def _irrigate(self, duration: int, stop_event) -> IrrigationResult:
         # --- INIT PHASE ---
         init_result = self._irrigation_init(duration)
@@ -453,7 +319,6 @@ class IrrigationCircuit:
         # --- FINALIZATION PHASE ---
         return self._irrigation_finalize(elapsed_time, outcome, error, duration)
         
-
 
     def _irrigation_init(self, duration: int) -> Optional[IrrigationResult]:
         """Prepares circuit for irrigation. Returns IrrigationResult on failure, or None on success."""

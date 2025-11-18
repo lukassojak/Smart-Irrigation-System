@@ -12,7 +12,7 @@
     "irrigation_limits": {
         "min_percent": 0,
         "max_percent": 200,
-        "main_valve_max_flow": 1200
+        "main_valve_max_flow": 100
     },
     "automation": {
         "enabled": true,

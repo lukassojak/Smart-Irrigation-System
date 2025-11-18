@@ -12,7 +12,7 @@ from smart_irrigation_system.node.core.enums import IrrigationOutcome
 # 2. Add last_decision_time to track the last decision and reason of watering / not watering
 # In case the decision is to water manually by user (selected volume), the volume should not be
 # used in case of offline mode - in this case, it should use the last automatically calculated volume instead
-
+# create utility function for timestamp generation
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
