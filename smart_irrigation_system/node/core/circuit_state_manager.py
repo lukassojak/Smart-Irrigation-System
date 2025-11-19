@@ -284,7 +284,7 @@ class CircuitStateManager():
                 circuit_id=circuit_id,
                 start_time=time_utils.now(),
                 elapsed=0,
-                actual_water_amout=0,
+                actual_water_amount=0,
                 target_duration=0,
                 target_water_amount=0,
                 reason="Unclean shutdown during irrigation. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
