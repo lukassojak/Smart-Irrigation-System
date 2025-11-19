@@ -1,3 +1,5 @@
+# testuje se target_duration is not None, ale pak se dělí self._target_duration - chyba když je 0
+
 from datetime import datetime, timedelta
 import time, threading
 from typing import Optional, Dict
@@ -145,9 +147,9 @@ class IrrigationCircuit:
     
     def init_last_irrigation_data(self, state_manager: CircuitStateManager):
         """Initializes the last irrigation time from the circuit state manager."""
-        self._last_irrigation_time = state_manager.get_last_irrigation_time(self)
-        self._last_irrigation_duration = state_manager.get_last_irrigation_duration(self)
-        self._last_irrigation_result = state_manager.get_last_irrigation_result(self)
+        self._last_irrigation_time = state_manager.get_last_irrigation_time(self.id)
+        self._last_irrigation_duration = state_manager.get_last_irrigation_duration(self.id)
+        self._last_irrigation_result = state_manager.get_last_irrigation_outcome(self.id)
 
     def get_status_summary(self) -> Dict[str, str]:
         """Returns a summary of the irrigation circuit status."""

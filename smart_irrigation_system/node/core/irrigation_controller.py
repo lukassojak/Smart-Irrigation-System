@@ -337,11 +337,11 @@ class IrrigationController:
     def start_irrigation_circuit(self, circuit: IrrigationCircuit) -> threading.Thread:
         """Starts the irrigation process for a specified circuit in a new thread. Returns the thread object."""
         def thread_target():
-            self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
+            self.state_manager.irrigation_started(circuit.id)
             self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
             result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
             self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
-            self.state_manager.irrigation_finished(circuit, result)
+            self.state_manager.irrigation_finished(circuit.id, result)
             # after the irrigation is done, OR after interruption, remove the thread from the list
             with self.threads_lock:
                 current = threading.current_thread()
@@ -378,7 +378,7 @@ class IrrigationController:
                             not self.stop_event.is_set():
                         if wait_time >= MAX_WAIT_TIME:
                             result = circuit.flow_overload_timeout_trigerred(datetime.now())
-                            self.state_manager.irrigation_finished(circuit, result)
+                            self.state_manager.irrigation_finished(circuit.id, result)
                             raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
                         
                         self.logger.debug(f"Waiting for flow capacity for circuit {circuit.id}...")
@@ -426,7 +426,7 @@ class IrrigationController:
                 circuit.get_circuit_consumption() > self.global_config.irrigation_limits.main_valve_max_flow:
                     self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.get_circuit_consumption()} L/h) to start irrigation, skipping it.")
                     result = circuit.flow_overload_timeout_trigerred(datetime.now())
-                    self.state_manager.irrigation_finished(circuit, result)
+                    self.state_manager.irrigation_finished(circuit.id, result)
                     continue
 
                 t = self.start_irrigation_circuit(circuit) # start irrigation in a new thread
@@ -483,11 +483,11 @@ class IrrigationController:
 
         def manual_irrigation_thread_func():
             try:
-                self.state_manager.irrigation_started(circuit)  # Update the state manager that irrigation has started
+                self.state_manager.irrigation_started(circuit.id)  # Update the state manager that irrigation has started
                 self.logger.info(f"Manual irrigation for circuit {circuit.id} started with target {liter_amount} liters...")
                 result = circuit.irrigate_manual(liter_amount, self.stop_event)
                 self.logger.info(f"Manual irrigation for circuit {circuit.id} completed with result: {result}.")
-                self.state_manager.irrigation_finished(circuit, result)
+                self.state_manager.irrigation_finished(circuit.id, result)
             except Exception as e:
                 self.logger.error(f"Error during manual irrigation for circuit {circuit.id}: {e}")
             finally:
@@ -523,7 +523,7 @@ class IrrigationController:
             if circuit.state == IrrigationState.IRRIGATING:
                 self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to close valve.")
                 circuit.close_valve()
-        self.state_manager._handle_clean_shutdown()
+        self.state_manager.handle_clean_shutdown()
 
     
     # ===========================================================================================================

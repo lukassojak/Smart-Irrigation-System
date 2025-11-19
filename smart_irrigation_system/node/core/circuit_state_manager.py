@@ -5,21 +5,35 @@ import threading
 
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
-from smart_irrigation_system.node.core.enums import IrrigationOutcome
+from smart_irrigation_system.node.core.enums import IrrigationOutcome, IrrigationState, SnapshotCircuitState
 
 
-# 1. Possible problem with key being a string
-# 2. Add last_decision_time to track the last decision and reason of watering / not watering
-# In case the decision is to water manually by user (selected volume), the volume should not be
-# used in case of offline mode - in this case, it should use the last automatically calculated volume instead
 # create utility function for timestamp generation
+
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
+    _instance = None
+    _lock = threading.Lock()
+    
+    # =========================================================================
+    # Initialization
+    # =========================================================================
+
+    def __new__(cls, state_file: str, irrigation_log_file: str) -> "CircuitStateManager":
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(CircuitStateManager, cls).__new__(cls)
+        return cls._instance
+
+
     def __init__(self, state_file: str, irrigation_log_file: str) -> None:
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+
         self.logger = get_logger("CircuitStateManager")
         self.state_file = state_file                            # The state file is regulary updated 
-        self.state: dict[str, Any] = self.load_state()          # The internal state is loaded, then used to update the file
+        self.state: dict[str, Any] = self._load_state()          # The internal state is loaded, then used to update the file
         self.irrigation_log_file = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
 
         # File locks
@@ -29,12 +43,229 @@ class CircuitStateManager():
         # for optimization, quick access to circuits by their ID
         self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
         self._rebuild_circuit_index()
-        self.init_circuit_states()                              
+        self._init_circuit_states()                              
 
         self.logger.info(f"CircuitStateManager initialized.")
+
+
+
+    # =========================================================================
+    # Internal: Circuit entry management
+    # =========================================================================
+    
+    def _get_entry_by_id(self, circuit_id: int) -> dict | None:
+        if circuit_id in self.circuit_index:
+            idx = self.circuit_index[circuit_id]
+            return self.state["circuits"][idx]
+        return None
+
+
+    def _create_entry(self, circuit_id: int) -> dict:
+        entry = {
+            "id": circuit_id,
+            "circuit_state": SnapshotCircuitState.IDLE.value,
+            "last_irrigation": None,
+            "last_outcome": None,
+            "last_duration": None,
+            "last_volume": None,
+        }
+        self.state["circuits"].append(entry)
+        self._rebuild_circuit_index()
+        return entry
+
+
+    def _get_or_create_entry(self, circuit_id: int) -> dict:
+        entry = self._get_entry_by_id(circuit_id)
+        if entry is None:
+            self.logger.warning(f"Circuit with ID {circuit_id} not found in state. Creating a new entry.")
+            entry = self._create_entry(circuit_id)
+        return entry
     
 
-    def log_irrigation_result(self, result: IrrigationResult) -> None:
+    # ========================================================================
+    # Internal: Helper methods
+    # =======================================================================
+
+    def _now_iso(self) -> str:
+        """Returns current time as ISO8601 string without microseconds."""
+        return datetime.now().replace(microsecond=0).isoformat()
+    
+    def _now(self) -> datetime:
+        """Returns current time as datetime object without microseconds."""
+        return datetime.now().replace(microsecond=0)
+    
+
+    # =========================================================================
+    # Internal: State loading/saving & validation
+    # =========================================================================
+
+    def _save_state(self) -> None:
+        """Saves the current state to the state file and updates the last_updated timestamp."""
+        if not isinstance(self.state, dict):
+            self.logger.error("State is not a dictionary. Empty state will be saved.")
+            self.state = {}
+        
+        self.state.setdefault("circuits", [])
+        self.state["last_updated"] = self._now_iso()
+
+        with self.state_file_lock:
+            try:
+                with open(self.state_file, "w") as f:
+                    json.dump(self.state, f, indent=4)
+            except Exception as e:
+                self.logger.error(f"Failed to save state to {self.state_file}: {e}")
+
+
+    def _load_state(self) -> dict:
+        try:
+            with open(self.state_file, "r") as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
+            return {"last_updated": self._now_iso(), "circuits": []}
+        except json.JSONDecodeError:
+            self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
+            return {"last_updated": self._now_iso(), "circuits": []}
+        try:
+            self._validate_state(state)
+        except Exception as e:
+            self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
+            return {"last_updated": self._now_iso(), "circuits": []}
+        
+        return state    
+    
+
+    def _validate_state(self, state: dict) -> None:
+        """Validates the state structure. See zones_state_explained.md for details."""
+        if not isinstance(state, dict):
+            raise ValueError("State must be a dictionary")
+
+        # Validate last_updated
+        if "last_updated" not in state:
+            raise ValueError("State must contain 'last_updated' key")
+        try:
+            datetime.fromisoformat(state["last_updated"])
+        except Exception:
+            raise ValueError("Invalid 'last_updated' timestamp format")
+
+        # Validate circuits
+        circuits = state.get("circuits")
+        if not isinstance(circuits, list) or circuits is None:
+            raise ValueError("'circuits' must be a list")
+
+        for circuit in circuits:
+            if not isinstance(circuit, dict):
+                raise ValueError("Each circuit must be a dictionary")
+            
+            # Validate id key
+            if "id" not in circuit:
+                raise ValueError("Each circuit must contain 'id' key")
+            if not isinstance(circuit["id"], int):
+                raise ValueError("Circuit 'id' must be an integer")
+            
+            # Validate circuit_state key
+            if "circuit_state" not in circuit:
+                raise ValueError("Each circuit must contain 'circuit_state' key")
+            if circuit["circuit_state"] not in [state.value for state in SnapshotCircuitState]:
+                raise ValueError(f"Invalid 'circuit_state' value: {circuit['circuit_state']}")
+
+            # Validate last_irrigation key 
+            if "last_irrigation" not in circuit:
+                raise ValueError("Each circuit must contain 'last_irrigation' key")
+            if "last_irrigation" in circuit and circuit["last_irrigation"] is not None:
+                try:
+                    datetime.fromisoformat(circuit["last_irrigation"])
+                except Exception:
+                    raise ValueError("Invalid 'last_irrigation' timestamp format")
+            
+            # Validate last_outcome, last_duration, last_volume keys
+            if "last_outcome" not in circuit:
+                raise ValueError("Each circuit must contain 'last_outcome' key")
+            if circuit["last_outcome"] is not None and circuit["last_outcome"] not in [outcome.value for outcome in IrrigationOutcome]:
+                raise ValueError(f"Invalid 'last_outcome' value: {circuit['last_outcome']}")
+            if "last_duration" not in circuit:
+                raise ValueError("Each circuit must contain 'last_duration' key.")
+            if circuit["last_duration"] is not None and not isinstance(circuit["last_duration"], int):
+                raise ValueError("Circuit 'last_duration' must be an integer or None.")
+            if "last_volume" not in circuit:
+                raise ValueError("Each circuit must contain 'last_volume' key.")
+            if circuit["last_volume"] is not None and not isinstance(circuit["last_volume"], (int, float)):
+                raise ValueError("Circuit 'last_volume' must be a number or None.")
+
+
+    # =========================================================================
+    # Internal: Circuit index management and state loading/saving & validation
+    # =========================================================================
+
+    def _rebuild_circuit_index(self):
+        """Rebuilds the circuit index from the current state.
+    
+        Must be called after any structural change to `self.state["circuits"]`,
+        such as adding, removing or reordering circuits.
+        """
+        self.circuit_index = {int(c["id"]): i for i, c in enumerate(self.state.get("circuits", []))}  
+    
+
+    # =========================================================================
+    # Internal: State file management
+    # =========================================================================
+
+    def _init_circuit_states(self) -> None:
+        """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
+        unclean_shutdown_detected = False
+        recovered_circuits = []             # List of circuit IDs that were irrigating during unclean shutdown
+        for circuit in self.state.get("circuits", []):
+            if circuit.get("circuit_state") != SnapshotCircuitState.SHUTDOWN.value:
+                unclean_shutdown_detected = True
+                if circuit.get("circuit_state") == SnapshotCircuitState.IRRIGATING.value:
+                    # Interrupted irrigation detected
+                    circuit["last_outcome"] = IrrigationOutcome.INTERRUPTED.value
+                    circuit["last_duration"] = None
+                    circuit["last_volume"] = None
+                    # Unknown irrigation time due to unclean shutdown, set to current time
+                    circuit["last_irrigation"] = self._now_iso()
+                    recovered_circuits.append(circuit.get("id"))
+                    # Log the interrupted irrigation result
+                    self._log_missing_interrupted_result(circuit)
+
+            circuit["circuit_state"] = SnapshotCircuitState.IDLE.value
+        self._save_state()
+        if unclean_shutdown_detected:
+            self.logger.warning("Unclean shutdown detected.")
+            if recovered_circuits:
+                self.logger.warning(f"Circuits: [{', '.join(map(str, recovered_circuits))}] were irrigating during shutdown and have been marked as 'interrupted'.")
+
+
+    def _update_irrigation_result(self, circuit_id, result: IrrigationResult) -> None:
+        """Updates the last irrigation result and duration for a given circuit.
+        Updates the internal state and saves it to the file."""        
+        entry = self._get_or_create_entry(circuit_id)
+
+        # Set circuit state back to IDLE after irrigation
+        entry["circuit_state"] = SnapshotCircuitState.IDLE.value
+    
+        # .get() would be safer here, but we assume the structure is valid since we validated it in _load_state()
+        entry["last_irrigation"] = self._now_iso()
+        entry["last_outcome"] = result.outcome.value
+
+        # SKIPPED - last_duration and last_volume are set to 0
+        if result.outcome.value == IrrigationOutcome.SKIPPED.value:
+            entry["last_duration"] = 0
+            # entry["last_volume"] = 0.0
+            self._save_state()
+            return
+
+        # All the real-run outcomes
+        entry["last_duration"] = result.completed_duration
+        # entry["last_volume"]
+        self._save_state()
+
+    # =========================================================================
+    # Internal: Irrigation log management
+    # =========================================================================
+
+
+    def _log_irrigation_result(self, result: IrrigationResult) -> None:
         """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
         with self.irrigation_log_file_lock:
             try:
@@ -48,7 +279,8 @@ class CircuitStateManager():
                 except FileNotFoundError:
                     log_data = {}
         
-                irrigation_date = datetime.fromisoformat(result.to_dict()["start_time"]).date().isoformat()
+                irrigation_full_datetime = datetime.fromisoformat(result.to_dict()["start_time"])
+                irrigation_date = irrigation_full_datetime.date().isoformat()
                 if irrigation_date not in log_data:
                     log_data[irrigation_date] = []
                 log_data[irrigation_date].append(result.to_dict())
@@ -59,225 +291,77 @@ class CircuitStateManager():
             except Exception as e:
                 self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
 
-    
-    def _rebuild_circuit_index(self):
-        """Rebuilds the circuit index from the current state.
-    
-        ! Must be called manually after any structural change to `self.state["circuits"]`,
-        such as adding, removing or reordering circuits.
-        """
-        self.circuit_index = {int(c["id"]): i for i, c in enumerate(self.state.get("circuits", []))}
 
-    def load_state(self) -> dict:
-        try:
-            with open(self.state_file, "r") as f:
-                state = json.load(f)
-        except FileNotFoundError:
-            self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
-            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
-        except json.JSONDecodeError:
-            self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
-            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
-        try:
-            self._valid_state(state)
-        except Exception as e:
-            # single invalid circuit entry cause the whole state to be invalid, so we return a new empty state
-            self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
-            return {"last_updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"), "circuits": []}
-        
-        return state
-    
-    def save_state(self) -> None:
-        """Saves the current state to the state file and updates the last_updated timestamp."""
-        with self.state_file_lock:
-            try:
-                with open(self.state_file, "w") as f:
-                    json.dump(self.state, f, indent=4)
-            except Exception as e:
-                self.logger.error(f"Failed to save state to {self.state_file}: {e}")
-
-    
-    def _valid_state(self, state: dict) -> None:
-        """Validates the state structure. See zones_state_explained.md for details."""
-        if not isinstance(state, dict):
-            raise ValueError("State must be a dictionary")
-
-        # Check last_updated
-        if "last_updated" not in state:
-            raise ValueError("State must contain 'last_updated' key")
-        # None is not allowed for last_updated for now, if needed, wrap the try-except in a condition
-        try:
-            datetime.fromisoformat(state["last_updated"])
-        except Exception:
-            raise ValueError("Invalid 'last_updated' timestamp format")
-
-        # Check circuits
-        circuits = state.get("circuits")
-        if not isinstance(circuits, list) or circuits is None:
-            raise ValueError("'circuits' must be a list")
-
-        for circuit in circuits:
-            if not isinstance(circuit, dict):
-                raise ValueError("Each circuit must be a dictionary")
-            if "id" not in circuit:
-                raise ValueError("Each circuit must contain 'id' key")
-            if "irrigation_state" not in circuit:
-                raise ValueError("Each circuit must contain 'irrigation_state' key")
-            if "last_irrigation" in circuit and circuit["last_irrigation"] is not None:
-                try:
-                    datetime.fromisoformat(circuit["last_irrigation"])
-                except Exception:
-                    raise ValueError("Invalid 'last_irrigation' timestamp format")
-            if "last_result" not in circuit:
-                raise ValueError("Each circuit must contain 'last_result' key")
-            if circuit["last_result"] not in ["success", "failed", "skipped", "stopped", "interrupted", "error", None]:
-                raise ValueError(f"Invalid 'last_result' value: {circuit['last_result']}")
-            if "last_duration" not in circuit:
-                raise ValueError("Each circuit must contain 'last_duration' key.")
-
-        return True
-    
-
-    def get_last_irrigation_time(self, circuit: "IrrigationCircuit") -> Optional[datetime]:
-        """Returns the last irrigation time for a given circuit."""
-        circuit_index = self.circuit_index.get(circuit.id)
-        if circuit_index is None:
-            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
-            return None
-        result = self.state.get("circuits", {})[circuit_index].get("last_irrigation")
-        if result:
-            return datetime.fromisoformat(result)
-        return None
-
-    def get_last_irrigation_duration(self, circuit: "IrrigationCircuit") -> Optional[int]:
-        """Returns the last irrigation duration for a given circuit."""
-        circuit_index = self.circuit_index.get(circuit.id)
-        if circuit_index is None:
-            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
-            return None
-        result = self.state.get("circuits", {})[circuit_index].get("last_duration")
-        if result is not None:
-            return int(result)
-        return None
-    
-    def get_last_irrigation_result(self, circuit: "IrrigationCircuit") -> Optional[str]:
-        """Returns the last irrigation result for a given circuit."""
-        circuit_index = self.circuit_index.get(circuit.id)
-        if circuit_index is None:
-            self.logger.warning(f"Circuit with ID {circuit.id} not found in state.")
-            return None
-        result = self.state.get("circuits", {})[circuit_index].get("last_result")
-        if result is not None:
-            return str(result)
-        return None
-    
-    def irrigation_started(self, circuit: "IrrigationCircuit") -> None:
-        """Updates the last irrigation time to the current time for a given circuit.
-        This is called when the irrigation starts."""
-        circuit_index = self.circuit_index.get(circuit.id)
-        if circuit_index is None:
-            self.logger.warning(f"Circuit with ID {circuit.id} not found in state. Creating a new entry.")
-            self.create_circuit_entry(circuit)
-            circuit_index = self.circuit_index.get(circuit.id)
-        
-        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self.state["circuits"][circuit_index]["irrigation_state"] = "irrigating"  # Set irrigation state to running
-        self.save_state()
-    
-    def irrigation_finished(self, circuit: "IrrigationCircuit", result: IrrigationResult) -> None:
-        """Updates the circuit state based on the given IrrigationResult and records the result."""
-        self.update_irrigation_result(circuit, result.outcome.value, result.completed_duration)
-        self.log_irrigation_result(result)
-
-    def update_irrigation_result(self, circuit: "IrrigationCircuit", result: str, duration: int) -> None:
-        """Updates the last irrigation result and duration for a given circuit.
-        Updates the internal state and saves it to the file."""
-        
-        circuit_index = self.circuit_index.get(circuit.id)
-        if circuit_index is None:
-            self.logger.warning(f"Circuit with ID {circuit.id} not found in state. Creating a new entry.")
-            # create a new circuit entry if it does not exist
-            self.create_circuit_entry(circuit)
-            circuit_index = self.circuit_index.get(circuit.id)
-        
-        self.state["circuits"][circuit_index]["irrigation_state"] = "idle"  # Set irrigation state to idle after irrigation is done
-        
-
-    
-        # .get() would be safer here, but we assume the structure is valid since we validated it in load_state()
-        self.state["circuits"][circuit_index]["last_result"] = result
-        self.state["circuits"][circuit_index]["last_duration"] = duration                       # if "failed" or "error", duration is 0
-        if result == IrrigationOutcome.SUCCESS.value:
-            # In future, update last irrigation time only on successful irrigation ("last_irrigation_start_time")
-            pass
-        self.state["circuits"][circuit_index]["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S") # In future, replace it by "last_decision_time"
-        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self.save_state()
-        # Rebuild is not needed here, as we are only updating the last irrigation time and last_updated timestamp.
-
-
-    def create_circuit_entry(self, circuit: "IrrigationCircuit") -> None:
-        """Creates a new circuit entry in the state if it does not exist."""
-        if circuit.id in self.circuit_index:
-            self.logger.warning(f"Circuit with ID {circuit.id} already exists in state. Skipping creation.")
-            return
-        
-        new_entry = {
-            "id": str(circuit.id),
-            "irrigation_state": "idle",
-            "last_irrigation": None,
-            "last_result": None,
-            "last_duration": 0
-        }
-        self.state["circuits"].append(new_entry)
-        self._rebuild_circuit_index()
-
-    
-    def log_missing_interrupted_result(self, circuit: Dict[str, Any]) -> None:
+    def _log_missing_interrupted_result(self, circuit: Dict[str, Any]) -> None:
         """Logs an interrupted irrigation result for a circuit that was irrigating during an unclean shutdown."""
         try:
             interrupted_result = IrrigationResult(
                 circuit_id=circuit["id"],
                 success=False,
                 outcome=IrrigationOutcome.INTERRUPTED,
-                start_time=datetime.now().replace(microsecond=0),
+                start_time=self._now(),
                 completed_duration=0,
                 target_duration=0,
                 actual_water_amount=0.0,
                 target_water_amount=0.0,
                 error="Irrigation was interrupted due to unclean shutdown. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
             )
-            self.log_irrigation_result(interrupted_result)
+            self._log_irrigation_result(interrupted_result)
         except Exception as e:
             self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit.id}: {e}")
 
-    def init_circuit_states(self) -> None:
-        """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
-        unclean_shutdown_detected = False
-        recovered_circuits = []             # List of circuit IDs that were irrigating during unclean shutdown
-        for circuit in self.state.get("circuits", []):
-            if circuit.get("irrigation_state") != "shutdown":
-                self.logger.debug(f"Unclean shutdown detected on circuit {circuit.get('id')}.")
-                unclean_shutdown_detected = True
-                if circuit.get("irrigation_state") == "irrigating":
-                    circuit["last_result"] = "interrupted"
-                    circuit["last_duration"] = 0                                                # Duration is unknown
-                    circuit["last_irrigation"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")   # Update last irrigation time to now
-                    recovered_circuits.append(circuit.get("id"))
-                    # Log the interrupted irrigation result
-                    self.log_missing_interrupted_result(circuit)
-            circuit["irrigation_state"] = "idle"
-        self.save_state()
-        if unclean_shutdown_detected:
-            self.logger.warning("Unclean shutdown detected.")
-            if recovered_circuits:
-                self.logger.warning(f"Circuits: [{', '.join(map(str, recovered_circuits))}] were irrigating during shutdown and have been marked as 'interrupted'.")
+
+    # =========================================================================
+    # Public API
+    # =========================================================================
+
+    def get_last_irrigation_time(self, circuit_id: int) -> Optional[datetime]:
+        """Returns the last irrigation time for a given circuit."""
+        entry = self._get_or_create_entry(circuit_id)
+        last_irrigation = entry.get("last_irrigation")
+        if last_irrigation is not None:
+            return datetime.fromisoformat(last_irrigation)
+        return None
+
+
+    def get_last_irrigation_duration(self, circuit_id) -> Optional[int]:
+        """Returns the last irrigation duration for a given circuit."""
+        entry = self._get_or_create_entry(circuit_id)
+        duration = entry.get("last_duration")
+        if duration is not None:
+            return int(duration)
+        return None
+    
+
+    def get_last_irrigation_outcome(self, circuit_id) -> Optional[str]:
+        """Returns the last irrigation result for a given circuit."""
+        entry = self._get_or_create_entry(circuit_id)
+        raw = entry.get("last_outcome")
+        if raw is None:
+            return None
+        try:
+            return IrrigationOutcome(raw).value # temporary return .value to ensure backward compatibility
+        except ValueError:
+            self.logger.error(f"Invalid last_outcome value '{raw}' for circuit ID {circuit_id}.")
+    
+
+    def irrigation_started(self, circuit_id) -> None:
+        """Updates the last irrigation time to the current time for a given circuit.
+        This is called when the irrigation starts."""
+        entry = self._get_or_create_entry(circuit_id)
+        entry["circuit_state"] = SnapshotCircuitState.IRRIGATING.value
+        self._save_state()
+    
+
+    def irrigation_finished(self, circuit_id, result: IrrigationResult) -> None:
+        """Updates the circuit state based on the given IrrigationResult and records the result."""
+        self._update_irrigation_result(circuit_id, result)
+        self._log_irrigation_result(result)
 
     
-    def _handle_clean_shutdown(self) -> None:
+    def handle_clean_shutdown(self) -> None:
         """Sets all circuits to 'shutdown' state during a clean exit."""
         for circuit in self.state.get("circuits", []):
-            circuit["irrigation_state"] = "shutdown"
-        self.state["last_updated"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        self.save_state()
+            circuit["circuit_state"] = SnapshotCircuitState.SHUTDOWN.value
+        self._save_state()
         self.logger.debug("All circuits set to 'shutdown' state during clean exit.")

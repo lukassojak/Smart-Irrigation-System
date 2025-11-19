@@ -7,11 +7,19 @@ class ControllerState(Enum):
     ERROR = "error"
 
 
+# Run-time state of an irrigation circuit
 class IrrigationState(Enum):
     IDLE = "idle"                           # No irrigation is currently happening, circuit is ready
     WAITING = "waiting"                     # Waiting to start irrigation, e.g., due to sequencing or flow constraints
     IRRIGATING = "irrigating"               # Currently irrigating
     DISABLED = "disabled"                   # Irrigation circuit is disabled by config or UI
+
+
+# Persistent snapshot state of an irrigation circuit 
+class SnapshotCircuitState(Enum):
+    IDLE = "idle"                           # Circuit is idle
+    IRRIGATING = "irrigating"               # Circuit is currently irrigating
+    SHUTDOWN = "shutdown"                   # Circuit is shut down
 
 
 class IrrigationOutcome(Enum):

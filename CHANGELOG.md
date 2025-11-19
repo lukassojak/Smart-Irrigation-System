@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Support for `SnapshotCircuitState` enum (including SHUTDOWN).
+
+### Changed
+- Completely refactored `CircuitStateManager` to use new schema without legacy keys.
+- Unified snapshot format for circuits (`circuit_state`, `last_outcome`, `last_duration`, `last_volume`, `last_irrigation`).
+- Replaced all legacy fields (`irrigation_state`, `last_result`) with enum-based schema.
+- Updated all public API functions to operate on `circuit_id` instead of `IrrigationCircuit` instances (circular dependency removal).
+- Simplified irrigation result handling and unclean shutdown recovery logic.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
+- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
+- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+
+---
+
 ## [0.9.3] - 2025-11-17
 
 ### Added
@@ -43,6 +71,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deprecated `_map_state_to_outcome()` method in `IrrigationCircuit`.
 
 ### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
+- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
+- Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+
+---
 
 ## [0.9.2] - 2025-11-02
 *Documentation and usability patch release focusing on simplified installation, local demo, and system demonstration.*
@@ -73,8 +111,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The server fails to save node status file due to missing folder creation; `runtime/server/data/`.
 - Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
 - Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.9.1`.
-- When multiple zones are irrigating concurrently, only the first zone may appear in the UI (due to backend message format).
-- Web UI currently includes only monitoring (`NodeList`) — no irrigation control or real-time updates.
 - Build serving via FastAPI (`/web_ui/dist`) not yet finalized for production deployment.
 - `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
 - Configuration management not yet implemented.

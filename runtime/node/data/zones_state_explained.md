@@ -34,12 +34,11 @@ Typ: `array`
 **Aktuální - v2:**
 
 - `id`: Unikátní identifikátor okruhu. Musí odpovídat id z [`zones_config.json`](./../config/zones_config.json)
-- `circuit_state`: Aktuální stav okruhu. Může být: `IDLE`, `IRRIGATING`, `WAITING`, `ERROR`, `DISABLED`, `SHUTDOWN`.
-- `last_irrigation`: Datum a čas posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). *Nastaví se až po dokončení zavlažování.*
+- `circuit_state`: Aktuální stav okruhu. Může být: `IDLE`, `IRRIGATING`, `WAITING`, `ERROR`, `DISABLED`, `SHUTDOWN` (Aktuálně používáno pouze `IDLE` a `IRRIGATING`. Ostatní stavy jsou připraveny pro budoucí rozšíření.)
+- `last_irrigation`: Datum a čas posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). *Nastaví se až po dokončení zavlažování (v případě unclean shutdownu je nastaveno na čas restartu systému).*
 - `last_outcome`: Výsledek posledního pokusu o zavlažování. Může být: `SUCCESS`, `FAILED`, `STOPPED`, `INTERRUPTED`, `SKIPPED`, nebo `null` (pokud zatím nikdy neproběhlo). *Nastaví se až po dokončení zavlažování.*
-- `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo. *Nastaví se až po dokončení zavlažování.*
-- `last_volume`: Objem vody použitý při posledním zavlažování v litrech. `null`, pokud zatím nikdy neproběhlo. *Nastaví se až po dokončení zavlažování.*
-
+- `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo. `0` v případě, že `last_outcome` je `SKIPPED`. *Nastaví se až po dokončení zavlažování.*
+- `last_volume`: Objem vody použitý při posledním zavlažování v litrech. `null`, pokud zatím nikdy neproběhlo. `0` v případě, že `last_outcome` je `SKIPPED`. *Nastaví se až po dokončení zavlažování.*
 
 
 
