@@ -5,10 +5,9 @@ import threading
 
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
-from smart_irrigation_system.node.core.enums import IrrigationOutcome, IrrigationState, SnapshotCircuitState
-
-
-# create utility function for timestamp generation
+from smart_irrigation_system.node.core.enums import IrrigationOutcome, SnapshotCircuitState
+import smart_irrigation_system.node.utils.result_factory as result_factory
+import smart_irrigation_system.node.utils.time_utils as time_utils
 
 
 class CircuitStateManager():
@@ -32,21 +31,20 @@ class CircuitStateManager():
             return
 
         self.logger = get_logger("CircuitStateManager")
-        self.state_file = state_file                            # The state file is regulary updated 
-        self.state: dict[str, Any] = self._load_state()          # The internal state is loaded, then used to update the file
-        self.irrigation_log_file = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
+        self.state_file: str = state_file                            # The state file is regulary updated 
+        self.state: dict[str, Any] = self._load_state()              # The internal state is loaded, then used to update the file
+        self.irrigation_log_file: str = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
 
         # File locks
         self.state_file_lock = threading.Lock()
         self.irrigation_log_file_lock = threading.Lock()
 
-        # for optimization, quick access to circuits by their ID
-        self.circuit_index = {}                                 # ensures O(1) lookup time, key is circuit ID, value is index in the circuits list
-        self._rebuild_circuit_index()
+        # For optimization, quick access to circuits by their ID
+        self.circuit_index: dict[int, int] = {}          # Maps circuit ID to index in self.state["circuits"]
+        self._rebuild_circuit_index()                    # Build the index from the loaded state
         self._init_circuit_states()                              
 
         self.logger.info(f"CircuitStateManager initialized.")
-
 
 
     # =========================================================================
@@ -64,8 +62,8 @@ class CircuitStateManager():
         entry = {
             "id": circuit_id,
             "circuit_state": SnapshotCircuitState.IDLE.value,
-            "last_irrigation": None,
             "last_outcome": None,
+            "last_irrigation": None,
             "last_duration": None,
             "last_volume": None,
         }
@@ -82,19 +80,6 @@ class CircuitStateManager():
         return entry
     
 
-    # ========================================================================
-    # Internal: Helper methods
-    # =======================================================================
-
-    def _now_iso(self) -> str:
-        """Returns current time as ISO8601 string without microseconds."""
-        return datetime.now().replace(microsecond=0).isoformat()
-    
-    def _now(self) -> datetime:
-        """Returns current time as datetime object without microseconds."""
-        return datetime.now().replace(microsecond=0)
-    
-
     # =========================================================================
     # Internal: State loading/saving & validation
     # =========================================================================
@@ -106,7 +91,7 @@ class CircuitStateManager():
             self.state = {}
         
         self.state.setdefault("circuits", [])
-        self.state["last_updated"] = self._now_iso()
+        self.state["last_updated"] = time_utils.now_iso()
 
         with self.state_file_lock:
             try:
@@ -122,15 +107,15 @@ class CircuitStateManager():
                 state = json.load(f)
         except FileNotFoundError:
             self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
-            return {"last_updated": self._now_iso(), "circuits": []}
+            return {"last_updated": time_utils.now_iso(), "circuits": []}
         except json.JSONDecodeError:
             self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
-            return {"last_updated": self._now_iso(), "circuits": []}
+            return {"last_updated": time_utils.now_iso(), "circuits": []}
         try:
             self._validate_state(state)
         except Exception as e:
             self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
-            return {"last_updated": self._now_iso(), "circuits": []}
+            return {"last_updated": time_utils.now_iso(), "circuits": []}
         
         return state    
     
@@ -197,7 +182,7 @@ class CircuitStateManager():
     # Internal: Circuit index management and state loading/saving & validation
     # =========================================================================
 
-    def _rebuild_circuit_index(self):
+    def _rebuild_circuit_index(self) -> None:
         """Rebuilds the circuit index from the current state.
     
         Must be called after any structural change to `self.state["circuits"]`,
@@ -213,8 +198,9 @@ class CircuitStateManager():
     def _init_circuit_states(self) -> None:
         """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
         unclean_shutdown_detected = False
-        recovered_circuits = []             # List of circuit IDs that were irrigating during unclean shutdown
+        recovered_circuits = []  # List of circuit IDs that were irrigating during unclean shutdown
         for circuit in self.state.get("circuits", []):
+            circuit_id = circuit.get("id")
             if circuit.get("circuit_state") != SnapshotCircuitState.SHUTDOWN.value:
                 unclean_shutdown_detected = True
                 if circuit.get("circuit_state") == SnapshotCircuitState.IRRIGATING.value:
@@ -223,20 +209,21 @@ class CircuitStateManager():
                     circuit["last_duration"] = None
                     circuit["last_volume"] = None
                     # Unknown irrigation time due to unclean shutdown, set to current time
-                    circuit["last_irrigation"] = self._now_iso()
-                    recovered_circuits.append(circuit.get("id"))
-                    # Log the interrupted irrigation result
-                    self._log_missing_interrupted_result(circuit)
+                    circuit["last_irrigation"] = time_utils.now_iso()
+                    recovered_circuits.append(circuit_id)
+                    self._log_missing_interrupted_result(circuit_id)
 
             circuit["circuit_state"] = SnapshotCircuitState.IDLE.value
+
         self._save_state()
+
         if unclean_shutdown_detected:
             self.logger.warning("Unclean shutdown detected.")
             if recovered_circuits:
                 self.logger.warning(f"Circuits: [{', '.join(map(str, recovered_circuits))}] were irrigating during shutdown and have been marked as 'interrupted'.")
 
 
-    def _update_irrigation_result(self, circuit_id, result: IrrigationResult) -> None:
+    def _update_irrigation_result(self, circuit_id: int, result: IrrigationResult) -> None:
         """Updates the last irrigation result and duration for a given circuit.
         Updates the internal state and saves it to the file."""        
         entry = self._get_or_create_entry(circuit_id)
@@ -244,20 +231,17 @@ class CircuitStateManager():
         # Set circuit state back to IDLE after irrigation
         entry["circuit_state"] = SnapshotCircuitState.IDLE.value
     
-        # .get() would be safer here, but we assume the structure is valid since we validated it in _load_state()
-        entry["last_irrigation"] = self._now_iso()
         entry["last_outcome"] = result.outcome.value
 
-        # SKIPPED - last_duration and last_volume are set to 0
+        # SKIPPED - special case, no real irrigation happened
         if result.outcome.value == IrrigationOutcome.SKIPPED.value:
-            entry["last_duration"] = 0
-            # entry["last_volume"] = 0.0
             self._save_state()
             return
 
         # All the real-run outcomes
+        entry["last_irrigation"] = time_utils.to_iso(result.start_time)
         entry["last_duration"] = result.completed_duration
-        # entry["last_volume"]
+        entry["last_volume"] = result.actual_water_amount
         self._save_state()
 
     # =========================================================================
@@ -292,23 +276,23 @@ class CircuitStateManager():
                 self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
 
 
-    def _log_missing_interrupted_result(self, circuit: Dict[str, Any]) -> None:
+    def _log_missing_interrupted_result(self, circuit_id: int) -> None:
         """Logs an interrupted irrigation result for a circuit that was irrigating during an unclean shutdown."""
+
         try:
-            interrupted_result = IrrigationResult(
-                circuit_id=circuit["id"],
-                success=False,
-                outcome=IrrigationOutcome.INTERRUPTED,
-                start_time=self._now(),
-                completed_duration=0,
+            interrupted_result = result_factory.create_interrupted(
+                circuit_id=circuit_id,
+                start_time=time_utils.now(),
+                elapsed=0,
+                actual_water_amout=0,
                 target_duration=0,
-                actual_water_amount=0.0,
-                target_water_amount=0.0,
-                error="Irrigation was interrupted due to unclean shutdown. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
+                target_water_amount=0,
+                reason="Unclean shutdown during irrigation. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
             )
+            
             self._log_irrigation_result(interrupted_result)
         except Exception as e:
-            self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit.id}: {e}")
+            self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit_id}: {e}")
 
 
     # =========================================================================
@@ -320,11 +304,11 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         last_irrigation = entry.get("last_irrigation")
         if last_irrigation is not None:
-            return datetime.fromisoformat(last_irrigation)
+            return time_utils.from_iso(last_irrigation)
         return None
 
 
-    def get_last_irrigation_duration(self, circuit_id) -> Optional[int]:
+    def get_last_irrigation_duration(self, circuit_id: int) -> Optional[int]:
         """Returns the last irrigation duration for a given circuit."""
         entry = self._get_or_create_entry(circuit_id)
         duration = entry.get("last_duration")
@@ -333,7 +317,7 @@ class CircuitStateManager():
         return None
     
 
-    def get_last_irrigation_outcome(self, circuit_id) -> Optional[str]:
+    def get_last_irrigation_outcome(self, circuit_id: int) -> Optional[str]:
         """Returns the last irrigation result for a given circuit."""
         entry = self._get_or_create_entry(circuit_id)
         raw = entry.get("last_outcome")
@@ -345,7 +329,7 @@ class CircuitStateManager():
             self.logger.error(f"Invalid last_outcome value '{raw}' for circuit ID {circuit_id}.")
     
 
-    def irrigation_started(self, circuit_id) -> None:
+    def irrigation_started(self, circuit_id: int) -> None:
         """Updates the last irrigation time to the current time for a given circuit.
         This is called when the irrigation starts."""
         entry = self._get_or_create_entry(circuit_id)
@@ -353,7 +337,7 @@ class CircuitStateManager():
         self._save_state()
     
 
-    def irrigation_finished(self, circuit_id, result: IrrigationResult) -> None:
+    def irrigation_finished(self, circuit_id: int, result: IrrigationResult) -> None:
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)

@@ -13,8 +13,9 @@ from smart_irrigation_system.node.weather.global_conditions import GlobalConditi
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
-import smart_irrigation_system.node.utils.result_factory as result_factory
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
+import smart_irrigation_system.node.utils.result_factory as result_factory
+import smart_irrigation_system.node.utils.time_utils as time_utils
 
 
 PROGRESS_UPDATE_INTERVAL = 0.1  # seconds
@@ -217,18 +218,15 @@ class IrrigationCircuit:
     # Irrigation methods
     # ============================================================================================================
 
-    def flow_overload_timeout_trigerred(self, datetime_of_event: datetime) -> IrrigationResult:
+    def flow_overload_timeout_triggered(self, start_time: datetime) -> IrrigationResult:
         result = result_factory.create_flow_overload(
             circuit_id=self.id,
-            start_time=datetime_of_event.replace(microsecond=0),
+            start_time=start_time,
             target_duration=0,
             target_water_amount=0.0
         )
-        # calculate target duration and water amount for the result
         
-        self.last_irrigation_time = datetime_of_event
-        self.last_irrigation_duration = 0
-        self._last_irrigation_result = "error"
+        self.outcome = IrrigationOutcome.SKIPPED
         return result
 
     def irrigate_automatic(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> IrrigationResult:
@@ -270,7 +268,7 @@ class IrrigationCircuit:
             self.logger.info(f"No irrigation needed. Total adjustment is {total_adjustment}.")
             result = result_factory.create_skipped_due_to_conditions(
                 circuit_id=self.id,
-                start_time=datetime.now().replace(microsecond=0),
+                start_time=time_utils.now(),
                 target_duration=0,
                 target_water_amount=0.0
             )
@@ -298,7 +296,7 @@ class IrrigationCircuit:
             self.logger.warning(f"Target water amount must be greater than 0. Received: {target_water_amount} liters. No irrigation will be performed.")
             result = result_factory.create_failure_invalid_water_amount(
                 circuit_id=self.id,
-                start_time=datetime.now().replace(microsecond=0),
+                start_time=time_utils.now(),
                 target_duration=0,
                 target_water_amount=target_water_amount
             )
@@ -331,7 +329,7 @@ class IrrigationCircuit:
             )
             result = result_factory.create_failure_circuit_not_idle(
                 circuit_id=self.id,
-                start_time=datetime.now().replace(microsecond=0),
+                start_time=time_utils.now(),
                 target_duration=duration,
                 target_water_amount=round(self.get_circuit_consumption() * (duration / 3600), 3),
             )
@@ -346,10 +344,10 @@ class IrrigationCircuit:
         self.logger.debug(f"Starting irrigation for {duration} seconds.")
         self.state = IrrigationState.IRRIGATING
         self.outcome = None
-        self.last_irrigation_time = datetime.now()
+        self.last_irrigation_time = time_utils.now()
         self._target_duration = duration
         self._current_duration = 0
-        self._start_time = time.time()
+        self._start_time = time_utils.now()
 
 
     def _irrigation_execute(self, duration: int, stop_event) -> tuple[float, IrrigationOutcome, Optional[str]]:
@@ -367,9 +365,9 @@ class IrrigationCircuit:
             self.valve.state = RelayValveState.OPEN
 
             # Main loop
-            while time.time() - self._start_time < duration:
-                elapsed_time = time.time() - self._start_time
-                update_progress(elapsed_time)
+            while (time_utils.now() - self._start_time).total_seconds() < duration:
+                elapsed_time = (time_utils.now() - self._start_time).total_seconds()
+                update_progress(int(elapsed_time))
 
                 if stop_event.is_set():
                     outcome = IrrigationOutcome.STOPPED
@@ -419,7 +417,7 @@ class IrrigationCircuit:
         # Create result
         result = result_factory.create_general(
             circuit_id=self.id,
-            start_time=datetime.fromtimestamp(self._start_time).replace(microsecond=0),
+            start_time=self._start_time,
             completed_duration=c_duration,
             target_duration=t_duration,
             actual_water_amount=a_water,
@@ -468,7 +466,7 @@ class IrrigationCircuit:
         
         # Calculate the time difference from the last irrigation
         # Measured in whole days, ignoring the time part
-        time_difference = datetime.now().date() - last_irrigation_time.date()
+        time_difference = time_utils.now().date() - last_irrigation_time.date()
         # Check if the interval days have passed
         return time_difference >= timedelta(days=self.interval_days)
 
@@ -478,8 +476,8 @@ class IrrigationCircuit:
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Irrigation not allowed: Circuit is not in IDLE state. Current state: {self.state.name}.")
             return False
-        if not self._interval_days_passed(state_manager.get_last_irrigation_time(self)):
-            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self)}.")
+        if not self._interval_days_passed(state_manager.get_last_irrigation_time(self.id)):
+            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self.id)}.")
             return False
         if not self.enabled:
             self.logger.warning(f"Irrigation not allowed: Circuit {self.id} is disabled.")

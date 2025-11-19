@@ -8,13 +8,13 @@ def create_flow_overload(circuit_id: int, start_time: datetime, target_duration:
     return IrrigationResult(
         circuit_id=circuit_id,
         success=False,
-        outcome=IrrigationOutcome.FAILED,
+        outcome=IrrigationOutcome.SKIPPED,
         start_time=start_time,
         completed_duration=0,
         target_duration=target_duration,
         actual_water_amount=0.0,
         target_water_amount=target_water_amount,
-        error="Timeout: Flow overload"
+        error="Timeout: Flow overload."
     )
 
 

@@ -23,27 +23,31 @@ Typ: `string`
 Seznam jednotlivých zavlažovacích okruhů a jejich posledního známého stavu.
 Typ: `array`
 
-**Deprecated - v1:**
+
+
+**Každý prvek v poli `circuits` obsahuje následující pole:
 
 - `id`: Unikátní identifikátor okruhu. Musí odpovídat id z [`zones_config.json`](./../config/zones_config.json)
-- `irrigation_state`: Aktuální stav okruhu (ventilu). Může být: `idle`, `irrigating`. ZMĚNIT NA CIRCUIT_STATE A UDRŽOVAT STAV Z OBJEKTU (VOLAT MANAGER V SETTRU OKRUHU)
-- `last_irrigation`: Datum a čas posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00).
-- `last_result`: Výsledek posledního pokusu o zavlažování. Může být: `success`, `skipped`, `interrupted`, `error`, nebo `null` (pokud zatím nikdy neproběhlo).
-- `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo.
-
-**Aktuální - v2:**
-
-- `id`: Unikátní identifikátor okruhu. Musí odpovídat id z [`zones_config.json`](./../config/zones_config.json)
-- `circuit_state`: Aktuální stav okruhu. Může být: `IDLE`, `IRRIGATING`, `WAITING`, `ERROR`, `DISABLED`, `SHUTDOWN` (Aktuálně používáno pouze `IDLE` a `IRRIGATING`. Ostatní stavy jsou připraveny pro budoucí rozšíření.)
-- `last_irrigation`: Datum a čas posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). *Nastaví se až po dokončení zavlažování (v případě unclean shutdownu je nastaveno na čas restartu systému).*
-- `last_outcome`: Výsledek posledního pokusu o zavlažování. Může být: `SUCCESS`, `FAILED`, `STOPPED`, `INTERRUPTED`, `SKIPPED`, nebo `null` (pokud zatím nikdy neproběhlo). *Nastaví se až po dokončení zavlažování.*
+- `circuit_state`: Aktuální stav okruhu. Může být: `idle`, `irrigating`, `shutdown`.
+- `last_outcome`: Výsledek posledního pokusu o zavlažování. Může být: `success`, `failed`, `stopped`, `interrupted`, `skipped`, nebo `null` (pokud zatím nikdy neproběhlo). *Nastaví se až po dokončení zavlažování.*
+- `last_irrigation`: Datum a čas (začátku) posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). *Nastaví se až po dokončení zavlažování (v případě unclean shutdownu je nastaveno na čas restartu systému).*
 - `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo. `0` v případě, že `last_outcome` je `SKIPPED`. *Nastaví se až po dokončení zavlažování.*
 - `last_volume`: Objem vody použitý při posledním zavlažování v litrech. `null`, pokud zatím nikdy neproběhlo. `0` v případě, že `last_outcome` je `SKIPPED`. *Nastaví se až po dokončení zavlažování.*
+
+Datový model:
+```python
+"id": int
+"circuit_state": SnapshotCircuitState enum
+"last_irrigation": str | None
+"last_outcome": IrrigationOutcome enum | None
+"last_duration": int | None
+"last_volume": float | None
+```
 
 
 
 Pozn.:
+- V případě, kdy je `last_outcome` `SKIPPED`, jsou `last_irrigation`, `last_duration` a `last_volume` ponechány beze změny podle posledního skutečného zavlažování.
 - Hodnoty `null` jsou použity pro nové okruhy nebo takové, které zatím nebyly zavlažovány.
 - Všechny časové údaje jsou v UTC nebo je třeba si je sjednotit s ostatními částmi systému.
 - Tento soubor bude obvykle spravovat třída `CircuitStateManager`, která zajišťuje načtení, aktualizaci a zápis.
-- Je potřeba zajistit atomicitu operací zavlažení a aktualizace souboru `zones_state.json`.

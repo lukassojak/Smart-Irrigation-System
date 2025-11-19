@@ -12,6 +12,7 @@ from smart_irrigation_system.node.core.enums import IrrigationState, ControllerS
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
+import smart_irrigation_system.node.utils.time_utils as time_utils
 
 # Seed for the weather simulator to ensure reproducibility in tests
 WEATHER_SIMULATOR_SEED = 42
@@ -377,7 +378,7 @@ class IrrigationController:
                             > self.global_config.irrigation_limits.main_valve_max_flow) and \
                             not self.stop_event.is_set():
                         if wait_time >= MAX_WAIT_TIME:
-                            result = circuit.flow_overload_timeout_trigerred(datetime.now())
+                            result = circuit.flow_overload_timeout_triggered(time_utils.now())
                             self.state_manager.irrigation_finished(circuit.id, result)
                             raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
                         
@@ -425,7 +426,7 @@ class IrrigationController:
                 if self.global_config.automation.max_flow_monitoring and \
                 circuit.get_circuit_consumption() > self.global_config.irrigation_limits.main_valve_max_flow:
                     self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.get_circuit_consumption()} L/h) to start irrigation, skipping it.")
-                    result = circuit.flow_overload_timeout_trigerred(datetime.now())
+                    result = circuit.flow_overload_timeout_triggered(time_utils.now())
                     self.state_manager.irrigation_finished(circuit.id, result)
                     continue
 

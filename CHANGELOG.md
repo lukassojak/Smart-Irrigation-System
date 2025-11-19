@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+---
+
+## [0.9.4] - 2025-11-19
 
 ### Added
 - Support for `SnapshotCircuitState` enum (including SHUTDOWN).
@@ -16,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced all legacy fields (`irrigation_state`, `last_result`) with enum-based schema.
 - Updated all public API functions to operate on `circuit_id` instead of `IrrigationCircuit` instances (circular dependency removal).
 - Simplified irrigation result handling and unclean shutdown recovery logic.
+- `last_irrigation` value in `zones_state.json` is now set to the actual start time of irrigation instead of irrigation completion time.
+- Unified timestamp handling across the project using the new `time_utils` module.
+- Removed local timestamp helper functions in favor of centralized utilities.
+- Improved consistency between realtime irrigation timestamps, log entries and snapshot files.
 
 ### Fixed
 
