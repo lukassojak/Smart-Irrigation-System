@@ -44,7 +44,7 @@ class CircuitSnapshot:
     last_irrigation: Optional[datetime]
     last_duration: Optional[int]
     last_volume: Optional[float]
-    timestamp: datetime
+    timestamp: Optional[datetime]
 
 
 # ========================================

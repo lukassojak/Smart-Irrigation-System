@@ -1,5 +1,5 @@
 import json
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 from datetime import datetime
 import threading
 
@@ -8,8 +8,8 @@ from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.enums import IrrigationOutcome, SnapshotCircuitState
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
+from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 
-# Dict vs dict mixing
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
@@ -300,9 +300,43 @@ class CircuitStateManager():
     # Public API
     # =========================================================================
 
-    def get_circuit_snapshot(circuit_id) -> "CircuitSnapshot":
-        # TODO: Implement CircuitSnapshot data class and return its instance
-        pass
+    def get_circuit_snapshot(self, circuit_id: int) -> CircuitSnapshot:
+        """
+        Returns the persistent snapshot (last known metadata) of a circuit
+        as a `CircuitSnapshot` dataclass.
+        """
+        entry = self._get_or_create_entry(circuit_id)
+        
+        circuit_state = SnapshotCircuitState(entry.get("circuit_state"))
+        last_outcome_raw = entry.get("last_outcome")
+        last_irrigation_raw = entry.get("last_irrigation")
+        last_duration_raw = entry.get("last_duration")
+        last_volume_raw = entry.get("last_volume")
+        last_updated_raw = self.state.get("last_updated")
+
+        # Enum mapping
+        last_outcome = None
+        if isinstance(last_outcome_raw, str):
+            try:
+                last_outcome = IrrigationOutcome(last_outcome_raw)
+            except ValueError:
+                self.logger.error(f"Invalid last_outcome value '{last_outcome_raw}' for circuit ID {circuit_id}.")
+                last_outcome = None
+        
+        # Timestamp mapping
+        last_irrigation = time_utils.from_iso(last_irrigation_raw) if last_irrigation_raw is not None else None
+        timestamp = time_utils.from_iso(last_updated_raw) if last_updated_raw is not None else None
+
+        return CircuitSnapshot(
+            id=circuit_id,
+            circuit_state=circuit_state,
+            last_outcome=last_outcome,
+            last_irrigation=last_irrigation,
+            last_duration=int(last_duration_raw) if last_duration_raw is not None else None,
+            last_volume=float(last_volume_raw) if last_volume_raw is not None else None,
+            timestamp=timestamp
+        )
+    
 
     def get_last_irrigation_time(self, circuit_id: int) -> Optional[datetime]:
         """Returns the last irrigation time for a given circuit."""
