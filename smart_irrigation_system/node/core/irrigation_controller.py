@@ -12,6 +12,7 @@ from smart_irrigation_system.node.core.enums import IrrigationState, ControllerS
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
+from smart_irrigation_system.node.core.status_models import CircuitStatus, CircuitSnapshot, CircuitRuntimeStatus
 import smart_irrigation_system.node.utils.time_utils as time_utils
 
 # Seed for the weather simulator to ensure reproducibility in tests
@@ -71,8 +72,6 @@ class IrrigationController:
         # Initialize components
         self.global_conditions_provider = self._initialize_global_conditions_provider()
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH, IRRIGATION_LOG_PATH)
-        for circuit in self.circuits_list:
-            circuit.init_last_irrigation_data(self.state_manager)  # Initialize last irrigation data for each circuit
 
         # Initialize threading
         self.threads = []
@@ -196,6 +195,15 @@ class IrrigationController:
     # Status and information retrieval
     # ===========================================================================================================
 
+    def get_circuit_snapshot(self, circuit_id: int) -> CircuitSnapshot:
+        """Returns the persistent snapshot state of a given circuit."""
+        if circuit_id not in self.circuits:
+            raise ValueError(f"Circuit ID {circuit_id} does not exist.")
+        
+        snapshot = self.state_manager.get_circuit_snapshot(circuit_id)
+        return snapshot
+
+
     def get_status_message(self) -> str:
         """Returns a brief status message of the irrigation controller for mqtt publishing."""
         status = self.get_status()
@@ -254,8 +262,13 @@ class IrrigationController:
         circuit = self.circuits[circuit_number]
         if circuit.state != IrrigationState.IRRIGATING:
             return 0.0, 0.0
-        
-        _, _, _, target_water_amount, current_water_amount = circuit.get_progress
+        try:
+            runtime_status: CircuitRuntimeStatus = circuit.runtime_status
+            target_water_amount = runtime_status.target_volume if runtime_status.target_volume is not None else 0.0
+            current_water_amount = runtime_status.current_volume if runtime_status.current_volume is not None else 0.0
+        except Exception as e:
+            self.logger.error(f"Error getting runtime status for circuit {circuit_number}: {e}")
+            return 0.0, 0.0
         return target_water_amount, current_water_amount
         
     
@@ -280,7 +293,7 @@ class IrrigationController:
         total_consumption = 0.0
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
-                total_consumption += circuit.get_circuit_consumption()
+                total_consumption += circuit.circuit_consumption
         return total_consumption
     
     def get_irrigating_count(self) -> int:
@@ -340,7 +353,7 @@ class IrrigationController:
         def thread_target():
             self.state_manager.irrigation_started(circuit.id)
             self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
-            result = circuit.irrigate_automatic(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
+            result = circuit.irrigate_auto(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
             self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
             self.state_manager.irrigation_finished(circuit.id, result)
             # after the irrigation is done, OR after interruption, remove the thread from the list
@@ -374,7 +387,7 @@ class IrrigationController:
                     wait_time = 0
                     # NOTE: This is a blocking call, it will wait until the flow capacity is available
                     while (self.global_config.automation.max_flow_monitoring
-                            and self.get_current_consumption() + circuit.get_circuit_consumption()
+                            and self.get_current_consumption() + circuit.circuit_consumption
                             > self.global_config.irrigation_limits.main_valve_max_flow) and \
                             not self.stop_event.is_set():
                         if wait_time >= MAX_WAIT_TIME:
@@ -383,7 +396,7 @@ class IrrigationController:
                             raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
                         
                         self.logger.debug(f"Waiting for flow capacity for circuit {circuit.id}...")
-                        self.logger.info(f"Current consumption: {self.get_current_consumption()} L/h, Circuit consumption: {circuit.get_circuit_consumption()} L/h")
+                        self.logger.info(f"Current consumption: {self.get_current_consumption()} L/h, Circuit consumption: {circuit.circuit_consumption} L/h")
                         time.sleep(WAIT_INTERVAL_SECONDS)  # Wait for 1 second before checking again
                         wait_time += WAIT_INTERVAL_SECONDS
 
@@ -424,8 +437,8 @@ class IrrigationController:
 
                 # Check the current consumption against the main valve max flow limit
                 if self.global_config.automation.max_flow_monitoring and \
-                circuit.get_circuit_consumption() > self.global_config.irrigation_limits.main_valve_max_flow:
-                    self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.get_circuit_consumption()} L/h) to start irrigation, skipping it.")
+                circuit.circuit_consumption > self.global_config.irrigation_limits.main_valve_max_flow:
+                    self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.circuit_consumption} L/h) to start irrigation, skipping it.")
                     result = circuit.flow_overload_timeout_triggered(time_utils.now())
                     self.state_manager.irrigation_finished(circuit.id, result)
                     continue
@@ -486,7 +499,7 @@ class IrrigationController:
             try:
                 self.state_manager.irrigation_started(circuit.id)  # Update the state manager that irrigation has started
                 self.logger.info(f"Manual irrigation for circuit {circuit.id} started with target {liter_amount} liters...")
-                result = circuit.irrigate_manual(liter_amount, self.stop_event)
+                result = circuit.irrigate_man(liter_amount, self.stop_event)
                 self.logger.info(f"Manual irrigation for circuit {circuit.id} completed with result: {result}.")
                 self.state_manager.irrigation_finished(circuit.id, result)
             except Exception as e:
@@ -600,21 +613,3 @@ class IrrigationController:
         
         finally:
             self.logger.info("Main loop stopped.")
-
-
-    # ===========================================================================================================
-    # Debugging and testing methods
-    # ===========================================================================================================
-
-    def open_valves(self):
-        """Opens all valves for debugging purposes"""
-        self.logger.debug("Opening all valves for debugging purposes.")
-        for circuit in self.circuits.values():
-            circuit.open_valve()
-    
-    def close_valves(self):
-        """Closes all valves for debugging purposes"""
-        self.logger.debug("Closing all valves for debugging purposes.")
-        for circuit in self.circuits.values():
-            circuit.close_valve()
-    

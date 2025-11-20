@@ -14,6 +14,8 @@ from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
+from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+from smart_irrigation_system.node.core.enums import SnapshotCircuitState, IrrigationOutcome
 
 class IrrigationCLI:
     def __init__(self, controller: IrrigationController, refresh_interval_idle=1, refresh_interval_active=0.1,
@@ -377,10 +379,17 @@ class IrrigationCLI:
 
 
         for z in status['zones']:
+            zone_snapshot = None
+            try:
+                zone_snapshot: CircuitSnapshot = self.controller.get_circuit_snapshot(z['id'])
+            except ValueError:
+                continue
+            if zone_snapshot is None:
+                continue
             icon = state_icons.get(z['state'], "?")
-            base_volume: float = self.controller.get_circuit(z['id']).base_target_water_amount
+            base_volume: float = self.controller.get_circuit(z['id']).base_target_volume
             bv_str = f"{base_volume:.2f} L" if base_volume is not None else "N/A"
-            time: Optional[datetime] = self.controller.get_circuit(z['id']).last_irrigation_time
+            time: Optional[datetime] = zone_snapshot.last_irrigation
             if time is None:
                 t_str: Text = Text("N/A", style="dim")
             # if the date is today, show only time
@@ -390,7 +399,7 @@ class IrrigationCLI:
                 # if the date is not today, show full date and time in dim style
                 t_str: Text = Text(time.strftime("%d.%m.%Y %H:%M:%S"), style="dim")
 
-            vol = self.controller.get_circuit(z['id']).last_irrigation_volume
+            vol = zone_snapshot.last_volume
             if vol is None:
                 v_str: Text = Text("N/A", style="dim")
             elif vol == 0:
@@ -400,7 +409,7 @@ class IrrigationCLI:
             else:
                 v_str: Text = Text(f"{vol:.2f} L", style="green")
             
-            result = self.controller.get_circuit(z['id'])._last_irrigation_result
+            result = zone_snapshot.last_outcome.value if zone_snapshot.last_outcome else None
             if result is None:
                 r_str = Text("N/A", style="dim")
             elif result == "success":
@@ -427,7 +436,7 @@ class IrrigationCLI:
         tasks_panel_content = []
         for name, zone_id in irrigating_zones.items():
             target_water_amount, current_water_amount = self.controller.get_circuit_progress(zone_id)
-            
+        
             # Format zone ID (max 3 characters)
             zone_id_str = str(zone_id)[:2]
 
@@ -452,7 +461,6 @@ class IrrigationCLI:
             # Add a separator line for minimal spacing
             tasks_panel_content.append(" " * 3)  # Add 3 spaces for padding
 
-            # Simulated crash - removed
 
         # Combine all rows into a single string
         tasks_panel_text = "\n".join(tasks_panel_content) or "No tasks currently running."
@@ -464,7 +472,6 @@ class IrrigationCLI:
             expand=True,
             border_style="bold yellow"
         )
-
 
         # 4) Command logs panel
         # Create a text representation of the 3 recent logs

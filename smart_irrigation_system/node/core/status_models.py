@@ -20,13 +20,13 @@ from smart_irrigation_system.node.core.enums import IrrigationState, IrrigationO
 
 @dataclass
 class CircuitRuntimeStatus:
-    """Class to represent the runtime status of an irrigation circuit."""
+    """Class to represent the runtime status of an irrigation circuit. DTO from IrrigationCircuit."""
     state: IrrigationState
     is_irrigating: bool
     current_duration: Optional[int]
     target_duration: Optional[int]
-    current_water_amount: Optional[float]
-    target_water_amount: Optional[float]
+    current_volume: Optional[float]
+    target_volume: Optional[float]
     progress_percentage: Optional[float]
     timestamp: datetime
 

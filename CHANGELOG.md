@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Introduced `CircuitRuntimeStatus`, `CircuitSnapshot` and `CircuitStatus` dataclasses in `status_models.py` for structured and unified circuit state representation and snapshot handling.
+- Added a public API method `get_circuit_status(circuit_id: str) -> CircuitStatus` in `CircuitStateManager` for retrieving the current status of a specific circuit.
+- Introduced `runtime_status` property in `IrrigationCircuit` to provide real-time status information using the new dataclass structure.
+- Added precise water↔duration conversion utilities inside `IrrigationCircuit`.
+
+### Changed
+- Fully refactored `IrrigationCircuit` runtime architecture:
+  - Removed legacy `_last_*` attributes and deprecated API.
+  - Separated runtime state from historical circuit metadata.
+  - Replaced `get_progress()` with structured runtime status dataclass.
+  - Simplified irrigation loop.
+  - Cleaned irrigation init/execute/finalize phases.
+- Updated CLI and `IrrigationController` to use the new runtime status interface.
+- Improved calculation of target and current water amounts for both manual and automatic irrigation modes.
+
+### Fixed
+
+### Removed
+- Deprecated `SoilMoisture` and `MoistureSensorState` enums in `enums.py`.
+
+### Known Issues
+
 ---
 
 ## [0.9.4] - 2025-11-19
