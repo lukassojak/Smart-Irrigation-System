@@ -1,3 +1,5 @@
+# smart_irrigation_system/node/core/irrigation_circuit.py
+
 from datetime import datetime, timedelta
 import time, threading
 from typing import Optional
@@ -13,6 +15,8 @@ from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
 from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
+from smart_irrigation_system.node.core.irrigation_models import weather_irrigation_model
+
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
 
@@ -30,24 +34,26 @@ class IrrigationCircuit:
                  enabled: bool, even_area_mode: bool, target_mm: float,
                  zone_area_m2: float, liters_per_minimum_dripper: float,
                  interval_days: int, drippers: Drippers,
-                 correction_factors: CorrectionFactors, sensor_pins=None):
-        # self.on_state_update = on_state_update  # callback -> calls controller/state manager; possible future enhancement
+                 correction_factors: CorrectionFactors, calculation_model=None):
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
-        self.id = circuit_id
-        self.name = name
+        self.id: int = circuit_id
+        self.name: str = name
         self.valve = RelayValve(relay_pin)
-        self.enabled = enabled
-        self.even_area_mode = even_area_mode                            # True if the circuit uses even area mode
-        self.target_mm = target_mm                                      # Base target watering depth in mm (for even area mode, otherwise None)
-        self.zone_area_m2 = zone_area_m2                                # Area of the zone in square meters (for even area mode, otherwise None)
-        self.liters_per_minimum_dripper = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper (for non-even area mode, otherwise None)
-        self.interval_days = interval_days
-        self.drippers = drippers                                              # Instance of Drippers to manage dripper flow rates
-        self.local_correction_factors = correction_factors                    # Instance of CorrectionFactors for local adjustments
+        self.enabled: bool = enabled
+        self.even_area_mode: bool = even_area_mode
+        self.target_mm: float = target_mm
+        self.zone_area_m2: float = zone_area_m2
+        self.liters_per_minimum_dripper: float = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
+        self.interval_days: int = interval_days
+        self.drippers: Drippers = drippers
+        self.local_correction_factors: CorrectionFactors = correction_factors
+
+        # Calculation model for weather adjustments
+        self.calculation_model = calculation_model or weather_irrigation_model
 
         # Runtime state
-        self._state = IrrigationState.IDLE if self.enabled else IrrigationState.DISABLED
-        self._irrigating_lock = threading.Lock()
+        self._state: IrrigationState = IrrigationState.IDLE if self.enabled else IrrigationState.DISABLED
+        self._irrigating_lock: threading.Lock = threading.Lock()
 
         # Runtime time & water metrics
         self._start_time: Optional[datetime] = None      # Start time of the current irrigation
@@ -61,43 +67,23 @@ class IrrigationCircuit:
     # Public irrigation methods
     # ============================================================================================================
 
-    def irrigate_auto(self, global_config: GlobalConfig, global_conditions: GlobalConditions, stop_event) -> IrrigationResult:
-        """Starts the automatic irrigation process depending on global conditions. Returns an IrrigationResult."""
+    def irrigate_auto(self, 
+                      global_config: GlobalConfig,
+                      global_conditions: GlobalConditions,
+                      stop_event: threading.Event) -> IrrigationResult:
+        """Starts the automatic irrigation process based on weather conditions using the configured calculation model."""
         base_target_volume = self.base_target_volume
         self.logger.debug(f"Base target water amount is {base_target_volume} liters (even area mode: {self.even_area_mode}).")
 
-        # separate module to calculate adjustment based on global and local correction factors and weather conditions
-
-        standard_conditions = global_config.standard_conditions
-        # if there was more solar energy, rain, or temperature than the standard conditions, the delta will be POSITIVE
-        delta_solar = global_conditions.solar_total - standard_conditions.solar_total
-        delta_rain = global_conditions.rain_mm - standard_conditions.rain_mm
-        delta_temperature = global_conditions.temperature - standard_conditions.temperature_celsius
-
-        g_c = global_config.correction_factors
-        l_c = self.local_correction_factors
-
-        total_adjustment = (
-            (delta_solar * (g_c.solar + l_c.factors.get('solar', 0.0))) +
-            (delta_rain * (g_c.rain + l_c.factors.get('rain', 0.0))) +
-            (delta_temperature * (g_c.temperature + l_c.factors.get('temperature', 0.0)))
+        # Compute adjusted water amount using weather model
+        model_result: weather_irrigation_model.WeatherModelResult = self.calculation_model.compute_weather_adjusted_volume(
+            base_volume=base_target_volume,
+            global_config=global_config,
+            global_conditions=global_conditions,
+            local_factors=self.local_correction_factors
         )
 
-        self.logger.debug(f"Adjustments: Solar: {delta_solar * (g_c.solar + l_c.factors.get('solar', 0.0))}, "
-                            f"Rain: {delta_rain * (g_c.rain + l_c.factors.get('rain', 0.0))}, "
-                            f"Temperature: {delta_temperature * (g_c.temperature + l_c.factors.get('temperature', 0.0))}. "
-        )
-
-        # Adjust the target volume based on the total adjustment
-        adjusted_target_volume = base_target_volume * (1 + total_adjustment)
-        adjusted_target_volume = round(adjusted_target_volume, 3)  # Round to 3 decimal places for precision
-        self.logger.debug(f"Adjusted water amount is {adjusted_target_volume} liters. Total adjustment is {round(total_adjustment, 2)}.")
-
-        # separate function to validate total adjustment and adjusted water amount
-
-        # If total adjustment is -1 or less, no irrigation is needed
-        if total_adjustment <= -1:
-            self.logger.info(f"No irrigation needed. Total adjustment is {total_adjustment}.")
+        if model_result.should_skip:
             result = result_factory.create_skipped_due_to_conditions(
                 circuit_id=self.id,
                 start_time=time_utils.now(),
@@ -105,20 +91,16 @@ class IrrigationCircuit:
                 target_water_amount=0.0
             )
             return result
-
-        # Check bounds for the total adjusted volume
-        min_water_amount = global_config.irrigation_limits.min_percent / 100.0 * base_target_volume
-        max_water_amount = global_config.irrigation_limits.max_percent / 100.0 * base_target_volume
-        if not (min_water_amount <= adjusted_target_volume <= max_water_amount):
-            self.logger.info(f"Adjusted water amount {adjusted_target_volume} is out of bounds ({min_water_amount}, {max_water_amount}).")
-            adjusted_target_volume = max(min_water_amount, min(adjusted_target_volume, max_water_amount))
         
-        duration = self._volume_to_duration(adjusted_target_volume)
+        duration = self._volume_to_duration(model_result.final_volume)
         return self._irrigate(duration, stop_event)
         
 
-    def irrigate_man(self, target_volume: float, stop_event) -> IrrigationResult:
-        """Starts the manual irrigation process for a specified water amount. Returns the duration of irrigation in seconds, or None if irrigation was stopped."""
+    def irrigate_man(self, target_volume: float, stop_event: threading.Event) -> IrrigationResult:
+        """
+        Starts the manual irrigation process for a specified water amount.
+        Returns the duration of irrigation in seconds, or None if irrigation was stopped.
+        """
         target_duration = self._volume_to_duration(target_volume)
         
         if target_volume <= 0:
@@ -154,8 +136,10 @@ class IrrigationCircuit:
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Irrigation not allowed: Circuit is not in IDLE state. Current state: {self.state.name}.")
             return False
-        if not self._interval_days_passed(state_manager.get_last_irrigation_time(self.id)):
-            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {state_manager.get_last_irrigation_time(self.id)}.")
+        circuit_snapshot = state_manager.get_circuit_snapshot(self.id)
+        last_irrigation_time = circuit_snapshot.last_irrigation
+        if not self._interval_days_passed(last_irrigation_time):
+            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {last_irrigation_time}.")
             return False
         if not self.enabled:
             self.logger.warning(f"Irrigation not allowed: Circuit {self.id} is disabled.")
@@ -176,7 +160,7 @@ class IrrigationCircuit:
 
         # Duration
         current_duration: Optional[int] = int(self.current_duration) if self.current_duration is not None else None
-        target_duration: Optional[int] = self._target_duration
+        target_duration: Optional[int] = int(self._target_duration) if self._target_duration is not None else None
 
         # Water metrics
         current_volume: Optional[float] = self.current_volume
@@ -186,7 +170,7 @@ class IrrigationCircuit:
         if not is_irrigating or target_duration is None or target_duration == 0:
             progress_percentage: Optional[float] = None
         else:
-            progress_percentage = (current_duration / target_duration) * 100.0
+            progress_percentage = round((current_duration / target_duration) * 100.0, 2)
         
         return CircuitRuntimeStatus(
             state=state,
@@ -195,7 +179,7 @@ class IrrigationCircuit:
             target_duration=target_duration,
             current_volume=current_volume,
             target_volume=target_volume,
-            progress_percentage=round(progress_percentage, 2),
+            progress_percentage=progress_percentage,
             timestamp=time_utils.now()
         )
 
@@ -277,7 +261,7 @@ class IrrigationCircuit:
     # Private irrigation methods
     # ============================================================================================================
 
-    def _irrigate(self, target_duration: float, stop_event, target_volume: Optional[float] = None) -> IrrigationResult:
+    def _irrigate(self, target_duration: float, stop_event: threading.Event, target_volume: Optional[float] = None) -> IrrigationResult:
         # --- INIT PHASE ---
         init_result = self._irrigation_init(target_duration, target_volume)
         if init_result is not None:
@@ -316,7 +300,7 @@ class IrrigationCircuit:
         return None
 
 
-    def _irrigation_execute(self, duration: float, stop_event) -> tuple[float, IrrigationOutcome, Optional[str]]:
+    def _irrigation_execute(self, duration: float, stop_event: threading.Event) -> tuple[float, IrrigationOutcome, Optional[str]]:
         """Executes the irrigation process. Returns a tuple of (elapsed_time, outcome, error)."""
         elapsed_time: float = 0.0
         error: Optional[str] = None
@@ -392,6 +376,9 @@ class IrrigationCircuit:
     def _volume_to_duration(self, target_volume: float, precision: int = 3) -> float:
         """Calculates the target duration of irrigation based on the target water amount and global conditions."""
         total_consumption = self.circuit_consumption
+        if total_consumption <= 0:
+            self.logger.warning(f"Circuit consumption is zero or negative ({total_consumption} L/h). Cannot calculate duration.")
+            return 0.0
         duration_hours = target_volume / total_consumption  # in hours (liters / liters per hour = hours)
         duration_seconds = duration_hours * 60 * 60
         return round(duration_seconds, precision)
@@ -420,7 +407,3 @@ class IrrigationCircuit:
         time_difference = time_utils.now().date() - last_irrigation_time.date()
         # Check if the interval days have passed
         return time_difference >= timedelta(days=self.interval_days)
-
-
-
-        

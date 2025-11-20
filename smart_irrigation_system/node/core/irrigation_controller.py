@@ -31,8 +31,8 @@ ZONE_STATE_PATH = os.path.join(BASE_DIR, "runtime/node/data/zones_state.json")
 IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "runtime/node/data/irrigation_log.json")
 
 # Constants for irrigation process
-MAX_WAIT_TIME = 10    # seconds, should be time long enough for most of circuits to finish irrigation, in future maybe make it configurable, or automatically adjust it based on the circuit's average irrigation time
-WAIT_INTERVAL_SECONDS = 1  # seconds, how often to check the flow capacity when waiting for it to become available
+MAX_WAIT_TIME = 500    # seconds, should be time long enough for most of circuits to finish irrigation
+WAIT_INTERVAL_SECONDS = 5  # seconds, how often to check the flow capacity when waiting for it to become available
 
 # Constants for automatic irrigation main loop
 CHECK_INTERVAL = 5  # seconds, how often to check the time for irrigation

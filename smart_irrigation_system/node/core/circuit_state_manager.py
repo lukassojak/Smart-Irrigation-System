@@ -1,3 +1,5 @@
+# smart_irrigation_system/node/core/circuit_state_manager.py
+
 import json
 from typing import Optional, Any
 from datetime import datetime
@@ -32,19 +34,21 @@ class CircuitStateManager():
             return
 
         self.logger = get_logger("CircuitStateManager")
-        self.state_file: str = state_file                            # The state file is regulary updated 
-        self.state: dict[str, Any] = self._load_state()              # The internal state is loaded, then used to update the file
-        self.irrigation_log_file: str = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
 
         # File locks
         self.state_file_lock = threading.Lock()
         self.irrigation_log_file_lock = threading.Lock()
+
+        self.state_file: str = state_file                            # The state file is regulary updated 
+        self.state: dict[str, Any] = self._load_state()              # The internal state is loaded, then used to update the file
+        self.irrigation_log_file: str = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
 
         # For optimization, quick access to circuits by their ID
         self.circuit_index: dict[int, int] = {}          # Maps circuit ID to index in self.state["circuits"]
         self._rebuild_circuit_index()                    # Build the index from the loaded state
         self._init_circuit_states()                              
 
+        self._initialized = True
         self.logger.info(f"CircuitStateManager initialized.")
 
 
@@ -103,22 +107,23 @@ class CircuitStateManager():
 
 
     def _load_state(self) -> dict:
-        try:
-            with open(self.state_file, "r") as f:
-                state = json.load(f)
-        except FileNotFoundError:
-            self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
-            return {"last_updated": time_utils.now_iso(), "circuits": []}
-        except json.JSONDecodeError:
-            self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
-            return {"last_updated": time_utils.now_iso(), "circuits": []}
-        try:
-            self._validate_state(state)
-        except Exception as e:
-            self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
-            return {"last_updated": time_utils.now_iso(), "circuits": []}
-        
-        return state    
+        with self.state_file_lock:
+            try:
+                with open(self.state_file, "r") as f:
+                    state = json.load(f)
+            except FileNotFoundError:
+                self.logger.error(f"State file {self.state_file} not found. Returning new empty state.")
+                return {"last_updated": time_utils.now_iso(), "circuits": []}
+            except json.JSONDecodeError:
+                self.logger.error(f"State file {self.state_file} is corrupted. Returning new empty state.")
+                return {"last_updated": time_utils.now_iso(), "circuits": []}
+            try:
+                self._validate_state(state)
+            except Exception as e:
+                self.logger.error(f"Invalid state structure in {self.state_file}: {e}. Returning new empty state.")
+                return {"last_updated": time_utils.now_iso(), "circuits": []}
+            
+            return state    
     
 
     def _validate_state(self, state: dict) -> None:
@@ -245,10 +250,10 @@ class CircuitStateManager():
         entry["last_volume"] = result.actual_water_amount
         self._save_state()
 
+
     # =========================================================================
     # Internal: Irrigation log management
     # =========================================================================
-
 
     def _log_irrigation_result(self, result: IrrigationResult) -> None:
         """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
@@ -336,36 +341,6 @@ class CircuitStateManager():
             last_volume=float(last_volume_raw) if last_volume_raw is not None else None,
             timestamp=timestamp
         )
-    
-
-    def get_last_irrigation_time(self, circuit_id: int) -> Optional[datetime]:
-        """Returns the last irrigation time for a given circuit."""
-        entry = self._get_or_create_entry(circuit_id)
-        last_irrigation = entry.get("last_irrigation")
-        if last_irrigation is not None:
-            return time_utils.from_iso(last_irrigation)
-        return None
-
-
-    def get_last_irrigation_duration(self, circuit_id: int) -> Optional[int]:
-        """Returns the last irrigation duration for a given circuit."""
-        entry = self._get_or_create_entry(circuit_id)
-        duration = entry.get("last_duration")
-        if duration is not None:
-            return int(duration)
-        return None
-    
-
-    def get_last_irrigation_outcome(self, circuit_id: int) -> Optional[str]:
-        """Returns the last irrigation result for a given circuit."""
-        entry = self._get_or_create_entry(circuit_id)
-        raw = entry.get("last_outcome")
-        if raw is None:
-            return None
-        try:
-            return IrrigationOutcome(raw).value # temporary return .value to ensure backward compatibility
-        except ValueError:
-            self.logger.error(f"Invalid last_outcome value '{raw}' for circuit ID {circuit_id}.")
     
 
     def irrigation_started(self, circuit_id: int) -> None:

@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.10.0] - 2025-11-20
+*Major refactor of the irrigation circuit runtime architecture and introduction of structured status representation and pluggable irrigation calculation models.*
 
 ### Added
 - Introduced `CircuitRuntimeStatus`, `CircuitSnapshot` and `CircuitStatus` dataclasses in `status_models.py` for structured and unified circuit state representation and snapshot handling.
 - Added a public API method `get_circuit_status(circuit_id: str) -> CircuitStatus` in `CircuitStateManager` for retrieving the current status of a specific circuit.
 - Introduced `runtime_status` property in `IrrigationCircuit` to provide real-time status information using the new dataclass structure.
 - Added precise water↔duration conversion utilities inside `IrrigationCircuit`.
+- Introduced pluggable irrigation calculation model architecture enabling future replacement of weather-based logic.
+- Added `weather_irrigation_model` module implementing the default weather-based irrigation computation.
+- Added `WeatherModelResult` dataclass encapsulating full computation details (adjusted volume, bounds, skip decision, etc.).
 
 ### Changed
 - Fully refactored `IrrigationCircuit` runtime architecture:
@@ -22,11 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cleaned irrigation init/execute/finalize phases.
 - Updated CLI and `IrrigationController` to use the new runtime status interface.
 - Improved calculation of target and current water amounts for both manual and automatic irrigation modes.
+- `IrrigationCircuit.irrigate_auto()` rewritten to delegate all water amount computation to the configured calculation model.
+- Updated `IrrigationCircuit` constructor to accept calculation_model parameter, defaulting to the new weather model.
 
 ### Fixed
+- `CircuitStateManager` initialization fixed.
 
 ### Removed
 - Deprecated `SoilMoisture` and `MoistureSensorState` enums in `enums.py`.
+- Removed embedded water adjustment formulas from `IrrigationCircuit.irrigate_auto()` (now handled by external model)
 
 ### Known Issues
 
