@@ -9,6 +9,7 @@ from smart_irrigation_system.node.core.enums import IrrigationOutcome, SnapshotC
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
 
+# Dict vs dict mixing
 
 class CircuitStateManager():
     """A class to manage the state of a circuit. Pattern: Singleton."""
@@ -298,6 +299,10 @@ class CircuitStateManager():
     # =========================================================================
     # Public API
     # =========================================================================
+
+    def get_circuit_snapshot(circuit_id) -> "CircuitSnapshot":
+        # TODO: Implement CircuitSnapshot data class and return its instance
+        pass
 
     def get_last_irrigation_time(self, circuit_id: int) -> Optional[datetime]:
         """Returns the last irrigation time for a given circuit."""
