@@ -1,6 +1,8 @@
+# smart_irrigation_system/server/core/server_core.py
+
 import threading, os
 from smart_irrigation_system.server.core.mqtt_manager import MQTTManager
-from smart_irrigation_system.server.core.node_registry import NodeRegistry
+from smart_irrigation_system.server.core.node_registry import NodeRegistry, parse_node_status
 from smart_irrigation_system.server.core.zone_node_mapper import ZoneNodeMapper
 from smart_irrigation_system.server.utils.logger import get_logger
 
@@ -39,8 +41,18 @@ class IrrigationServer:
         self._running = False
 
     def get_node_summary(self):
-        return self.node_registry.nodes
-    
+        nodes = self.node_registry.nodes
+        parsed_nodes = {}
+
+        for node_id, data in nodes.items():
+            raw_status = data.get("last_status")
+            parsed_nodes[node_id] = {
+                **data,
+                "status": parse_node_status(raw_status)
+            }
+        return parsed_nodes
+
+
     def update_all_node_statuses(self):
         for node_id in self.zone_node_mapper.get_all_node_ids():
             command = {"action": "get_status"}

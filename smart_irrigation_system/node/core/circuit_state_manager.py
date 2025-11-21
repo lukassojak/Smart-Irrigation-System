@@ -1,16 +1,17 @@
 # smart_irrigation_system/node/core/circuit_state_manager.py
 
 import json
-from typing import Optional, Any
-from datetime import datetime
 import threading
+from typing import Any
+from datetime import datetime
 
-from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.enums import IrrigationOutcome, SnapshotCircuitState
+from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
-from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+from smart_irrigation_system.node.utils.logger import get_logger
 
 
 class CircuitStateManager():
@@ -39,13 +40,13 @@ class CircuitStateManager():
         self.state_file_lock = threading.Lock()
         self.irrigation_log_file_lock = threading.Lock()
 
-        self.state_file: str = state_file                            # The state file is regulary updated 
-        self.state: dict[str, Any] = self._load_state()              # The internal state is loaded, then used to update the file
-        self.irrigation_log_file: str = irrigation_log_file          # The irrigation log file is append-only, used for historical data. Contains dicts (key is date) of lists of IrrigationResult
+        self.state_file: str = state_file
+        self.state: dict[str, Any] = self._load_state()     # The internal state is loaded, then used to update the file
+        self.irrigation_log_file: str = irrigation_log_file # The irrigation log file is append-only, used for historical data.
 
         # For optimization, quick access to circuits by their ID
-        self.circuit_index: dict[int, int] = {}          # Maps circuit ID to index in self.state["circuits"]
-        self._rebuild_circuit_index()                    # Build the index from the loaded state
+        self.circuit_index: dict[int, int] = {}             # Maps circuit ID to index in self.state["circuits"]
+        self._rebuild_circuit_index()                       # Build the index from the loaded state
         self._init_circuit_states()                              
 
         self._initialized = True
@@ -207,6 +208,7 @@ class CircuitStateManager():
         recovered_circuits = []  # List of circuit IDs that were irrigating during unclean shutdown
         for circuit in self.state.get("circuits", []):
             circuit_id = circuit.get("id")
+            # The circuit is considered uncleanly shutdown if its state is not 'shutdown'
             if circuit.get("circuit_state") != SnapshotCircuitState.SHUTDOWN.value:
                 unclean_shutdown_detected = True
                 if circuit.get("circuit_state") == SnapshotCircuitState.IRRIGATING.value:

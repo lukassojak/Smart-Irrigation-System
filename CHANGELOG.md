@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved calculation of target and current water amounts for both manual and automatic irrigation modes.
 - `IrrigationCircuit.irrigate_auto()` rewritten to delegate all water amount computation to the configured calculation model.
 - Updated `IrrigationCircuit` constructor to accept calculation_model parameter, defaulting to the new weather model.
+- Minor refactor of `routes.py` to use the new refactored `get_node_summary` method.
 
 ### Fixed
 - `CircuitStateManager` initialization fixed.
@@ -139,6 +140,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `README.md` with simplified and concise structure.
 - Updated `/docs/` structure for better separation between *user guides* and *developer references*.
 - Updated architecture diagram in `README.md` to reflect local demo setup and planned final architecture.
+- Minor refactors in `routes.py`:
+  - Unified response structures and added consistent HTTPException usage.
+  - Removed outdated inline parsing logic; node status parsing is now fully handled in `IrrigationServer.get_node_summary()`.
+  - Enhanced `IrrigationServer.get_node_summary()` to return parsed node status data, centralizing logic that was previously duplicated in `routes.py`.
+- Minor cleanup and structural improvements across:
+  - `CircuitStateManager` (imports, comments)
+  - `IrrigationCircuit` (imports, comments)
 
 ### Fixed
 - Links to developer reference in `README.md` fixed.

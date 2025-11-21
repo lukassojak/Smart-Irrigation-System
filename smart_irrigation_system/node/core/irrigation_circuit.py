@@ -1,24 +1,30 @@
 # smart_irrigation_system/node/core/irrigation_circuit.py
 
+import time
+import threading
 from datetime import datetime, timedelta
-import time, threading
 from typing import Optional
 
+from smart_irrigation_system.node.core.enums import (
+    IrrigationState,
+    RelayValveState,
+    IrrigationOutcome,
+)
 from smart_irrigation_system.node.core.relay_valve import RelayValve
-from smart_irrigation_system.node.core.enums import IrrigationState, RelayValveState, IrrigationOutcome
 from smart_irrigation_system.node.core.drippers import Drippers
 from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
-from smart_irrigation_system.node.config.global_config import GlobalConfig
-from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
-from smart_irrigation_system.node.utils.logger import get_logger
-from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
 from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
+from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.irrigation_models import weather_irrigation_model
+
+from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
+from smart_irrigation_system.node.utils.logger import get_logger
 
 
 PROGRESS_UPDATE_INTERVAL = 0.1  # seconds
