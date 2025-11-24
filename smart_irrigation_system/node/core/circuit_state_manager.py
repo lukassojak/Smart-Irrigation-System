@@ -357,6 +357,8 @@ class CircuitStateManager():
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
+        if circuit_id == 2:
+            raise RuntimeError("TEST CRASH - SIMULATED THREAD FAILURE")
 
     
     def handle_clean_shutdown(self) -> None:

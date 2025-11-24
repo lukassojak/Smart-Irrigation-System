@@ -169,10 +169,10 @@ class IrrigationController:
         stopping = self.stop_event.is_set()
         with self.threads_lock:
             previous_state = self.controller_state
-            any_alive = any(t.is_alive() for t in self.threads)
             if stopping:
                 self.controller_state = ControllerState.STOPPING
-            elif any_alive:
+            # elif any_alive
+            elif any(t.is_alive() for t in self.threads):
                 self.controller_state = ControllerState.IRRIGATING
             else:
                 self.controller_state = ControllerState.IDLE
@@ -189,6 +189,11 @@ class IrrigationController:
         
         self.controller_state = ControllerState.ERROR
         self.logger.error("Controller state set to ERROR.")
+
+    
+    # ===========================================================================================================
+    # Threading and concurrency management
+    # ===========================================================================================================
 
 
     # ===========================================================================================================
@@ -351,6 +356,7 @@ class IrrigationController:
     def start_irrigation_circuit(self, circuit: IrrigationCircuit) -> threading.Thread:
         """Starts the irrigation process for a specified circuit in a new thread. Returns the thread object."""
         def thread_target():
+            # TODO: Handle exceptions within the thread and clean up & update state accordingly
             self.state_manager.irrigation_started(circuit.id)
             self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
             result = circuit.irrigate_auto(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
@@ -458,7 +464,7 @@ class IrrigationController:
 
     def stop_irrigation(self):
         """Stops all irrigation processes"""
-        if self.controller_state == ControllerState.IDLE:
+        if any(t.is_alive() for t in self.threads) == False:
             self.logger.info("No irrigation processes are running. Nothing to stop.")
             return
 

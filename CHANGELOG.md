@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+- Refactored `RelayValve` to simplify GPIO handling and improve reliability.
+- Changed `RelayValve` public API: use `set_state(state: RelayValveState)` to change valve state, `state` property is now read-only.
+
+### Fixed
+- Stop irrigation handling improved to ensure better reliability.s
+
+### Removed
+
+### Known Issues
+
+---
+
 ## [0.10.0] - 2025-11-20
 *Major refactor of the irrigation circuit runtime architecture and introduction of structured status representation and pluggable irrigation calculation models.*
 
