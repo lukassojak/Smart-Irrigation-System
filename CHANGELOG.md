@@ -5,19 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.11.0] - 2025-11-24
+*Improved valve error handling, unified fail-safe logic, fault isolation, and minor API cleanup.*
 
 ### Added
 - `exceptions.py` module with custom exception classes for better error handling.
+- Implemented unified fail-safe logic for valve failures, including best-effort closing attempts and circuit fault flagging.
+- Updated `IrrigationCircuit` to mark circuits as faulty (`has_fault`, `last_fault_reason`) and improve fault isolation.
 
 ### Changed
 - Refactored `RelayValve` to simplify GPIO handling and improve reliability.
 - Changed `RelayValve` public API: use `set_state(state: RelayValveState)` to change valve state, `state` property is now read-only.
+- Centralized valve error handling into `_handle_valve_failure()` for clearer architecture and safer fail-states.
 
 ### Fixed
 - Stop irrigation handling improved to ensure better reliability
+- Moved `_start_time` assignment from `_irrigation_init()` to `_irrigation_execute()` to ensure accurate timing.
+- Improved reliability of valve shutdown sequence in `_irrigation_finalize()` by handling close failures explicitly and safely.
 
 ### Removed
+- Direct valve error logging from `RelayValve` and circuit methods to avoid log duplication.
 
 ### Known Issues
 

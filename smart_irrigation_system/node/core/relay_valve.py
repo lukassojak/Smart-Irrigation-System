@@ -83,10 +83,8 @@ class RelayValve:
     def set_state(self, new_state: RelayValveState, retry: int = MAX_RETRIES) -> None:
         """
         High-level safe request to change the valve state with retries.
+        :raises RelayValveStateError: If the valve fails to reach the desired state after retries.
         """
-        if new_state not in (RelayValveState.OPEN, RelayValveState.CLOSED):
-            raise ValueError(f"Invalid state: {new_state}.")
-        
         if new_state == self._state:
             self.logger.debug(f"Valve is already in state {new_state}. No action taken.")
             return
@@ -102,7 +100,6 @@ class RelayValve:
                 self.logger.warning(f"Attempt {attempt + 1} to set valve state failed: {e}")
                 time.sleep(RETRY_DELAY)
         
-        self.logger.error(f"Failed to set valve state to {new_state} after {retry} attempts.")
         raise RelayValveStateError("Failed to set valve state", attempted_state=new_state) from last_exception
 
 

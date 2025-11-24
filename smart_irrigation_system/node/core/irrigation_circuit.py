@@ -10,6 +10,9 @@ from smart_irrigation_system.node.core.enums import (
     RelayValveState,
     IrrigationOutcome,
 )
+
+import smart_irrigation_system.node.exceptions as exceptions
+
 from smart_irrigation_system.node.core.relay_valve import RelayValve
 from smart_irrigation_system.node.core.drippers import Drippers
 from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
@@ -65,6 +68,9 @@ class IrrigationCircuit:
         self._start_time: Optional[datetime] = None      # Start time of the current irrigation
         self._target_duration: Optional[float] = None    # Target duration of irrigation in seconds
         self._target_volume: Optional[float] = None      # Target water volume in liters
+
+        self.has_fault: bool = False
+        self.last_fault_reason: Optional[str] = None
 
         self.logger.info(f"Irrigation Circuit {self.id} initialized with state {self._state.name}.")
 
@@ -139,6 +145,9 @@ class IrrigationCircuit:
 
     def is_irrigation_allowed(self, state_manager: CircuitStateManager) -> bool:
         """Checks if irrigation is needed based on global conditions and circuit settings."""
+        if self.has_fault:
+            self.logger.warning(f"Irrigation not allowed: Circuit {self.id} has a fault. Reason: {self.last_fault_reason}.")
+            return False
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Irrigation not allowed: Circuit is not in IDLE state. Current state: {self.state.name}.")
             return False
@@ -152,6 +161,43 @@ class IrrigationCircuit:
             return False
         return True
     
+    # ============================================================================================================
+    # Public debugging methods
+    # ============================================================================================================
+
+    def open_valve(self, timeout_seconds: float, stop_event: threading.Event) -> None:
+        if self.state != IrrigationState.IDLE:
+            self.logger.warning(f"Cannot open valve: Circuit is not in IDLE state. Current state: {self.state.name}.")
+            return
+        
+        self.logger.info(f"Force-opening valve for up to {int(timeout_seconds)} seconds.")
+
+        try:
+            self.valve.set_state(RelayValveState.OPEN)
+        except exceptions.RelayValveStateError as e:
+            self.logger.error(f"Failed to open valve: {e}")
+            self._handle_valve_failure(failed_state=RelayValveState.OPEN, reason=str(e))
+            return
+
+        start: datetime = time_utils.now()
+        elapsed: float = 0.0
+        while elapsed < timeout_seconds:
+            if stop_event.is_set():
+                self.logger.info("Valve open operation stopped by user.")
+                break
+            time.sleep(PROGRESS_UPDATE_INTERVAL)
+            elapsed = (time_utils.now() - start).total_seconds()
+        
+        self.valve.set_state(RelayValveState.CLOSED)
+
+
+    def close_valve(self) -> None:
+        self.logger.info("Force-closing valve.")
+        try:
+            self.valve.set_state(RelayValveState.CLOSED)
+        except exceptions.RelayValveStateError as e:
+            self._handle_valve_failure(failed_state=RelayValveState.CLOSED, reason=str(e))
+
 
     # ============================================================================================================
     # Runtime status properties
@@ -300,7 +346,6 @@ class IrrigationCircuit:
         # Setup
         self.logger.debug(f"Starting irrigation for {int(target_duration)} seconds.")
         self.state = IrrigationState.IRRIGATING
-        self._start_time = time_utils.now()
         self._target_duration = target_duration
         self._target_volume = target_volume
         return None
@@ -312,8 +357,14 @@ class IrrigationCircuit:
         error: Optional[str] = None
         outcome: Optional[IrrigationOutcome] = None
         try:
-            self.valve.state = RelayValveState.OPEN
+            self.valve.set_state(RelayValveState.OPEN)
+        except exceptions.RelayValveStateError as e:
+            self._handle_valve_failure(failed_state=RelayValveState.OPEN, reason=str(e))
+            outcome = IrrigationOutcome.FAILED
+            return elapsed_time, outcome, str(e)
 
+        self._start_time = time_utils.now()
+        try:
             # Main loop
             elapsed_time = 0.0
             while elapsed_time < duration:
@@ -352,7 +403,10 @@ class IrrigationCircuit:
 
     def _irrigation_finalize(self, elapsed_time: float, outcome: IrrigationOutcome, error: Optional[str]) -> IrrigationResult:
         """Finalizes the irrigation process and returns the IrrigationResult."""
-        self.valve.state = RelayValveState.CLOSED
+        try:
+            self.valve.set_state(RelayValveState.CLOSED)
+        except exceptions.RelayValveStateError as e:
+            self._handle_valve_failure(failed_state=RelayValveState.CLOSED, reason=str(e))
         
         result = result_factory.create_general(
             circuit_id=self.id,
@@ -404,7 +458,6 @@ class IrrigationCircuit:
     
     def _interval_days_passed(self, last_irrigation_time: Optional[datetime]) -> bool:
         """Checks if the interval days have passed since the last irrigation."""
-
         if last_irrigation_time is None:
             return True
         
@@ -413,3 +466,19 @@ class IrrigationCircuit:
         time_difference = time_utils.now().date() - last_irrigation_time.date()
         # Check if the interval days have passed
         return time_difference >= timedelta(days=self.interval_days)
+    
+
+    def _handle_valve_failure(self, failed_state: RelayValveState, reason: str = None) -> None:
+        """Handles valve failure by setting fault state and logging."""
+        # In future, extend with CircuitHealth enum, persistent logging, callback to controller
+        self.has_fault = True
+        self.last_fault_reason = reason
+        if failed_state == RelayValveState.OPEN:
+            self.logger.error(f"Failed to open valve: {reason}")
+            # If failed to open, try to best-effort close (MVP)
+            try:
+                self.valve.set_state(RelayValveState.CLOSED)
+            except exceptions.RelayValveStateError as e:
+                self.logger.critical(f"Closing valve after open failure also failed: {e}")
+        else:
+            self.logger.critical(f"Failed to close valve: {reason}")
