@@ -35,33 +35,15 @@ from typing import Optional, Callable
 
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.core.enums import RelayValveState
+from smart_irrigation_system.node.exceptions import (
+    RelayValveStateError,
+    GPIOInitializationError,
+    GPIOWriteError,
+)
 
 MAX_RETRIES = 3  # Maximum number of retries for state change
 RETRY_DELAY = 1  # Delay between retries, in seconds
 TOLERANCE = 0.5  # Tolerance for time checks, in seconds
-
-
-class RelayValveError(Exception):
-    """Custom exception for RelayValve errors."""
-    pass
-
-class RelayValveStateError(RelayValveError):
-    """
-    Exception raised when the relay valve fails to reach the desired state.
-    Attributes:
-        attempted_state (RelayValveState): The state that was attempted to be set.
-    """
-    def __init__(self, message: str, attempted_state: RelayValveState):
-        super().__init__(message)
-        self.attempted_state = attempted_state
-
-class GPIOInitializationError(RelayValveError):
-    """Exception raised when GPIO initialization fails."""
-    pass
-
-class GPIOWriteError(RelayValveError):
-    """Exception raised when writing to GPIO fails."""
-    pass
 
 
 class RelayValve:
@@ -106,7 +88,7 @@ class RelayValve:
             raise ValueError(f"Invalid state: {new_state}.")
         
         if new_state == self._state:
-            self.logger.warning(f"Valve is already in state {new_state}. No action taken.")
+            self.logger.debug(f"Valve is already in state {new_state}. No action taken.")
             return
         
         last_exception: Optional[Exception] = None
@@ -120,7 +102,7 @@ class RelayValve:
                 self.logger.warning(f"Attempt {attempt + 1} to set valve state failed: {e}")
                 time.sleep(RETRY_DELAY)
         
-        self.logger.critical(f"Failed to set valve state to {new_state} after {retry} attempts.")
+        self.logger.error(f"Failed to set valve state to {new_state} after {retry} attempts.")
         raise RelayValveStateError("Failed to set valve state", attempted_state=new_state) from last_exception
 
 
@@ -139,4 +121,4 @@ class RelayValve:
         # TODO: Add verification logic if hardware feedback is available
 
         self._state = new_state
-        self.logger.info(f"Valve on pin {self.pin} -> {new_state.name}")
+        self.logger.debug(f"Valve on pin {self.pin} -> {new_state.name}")

@@ -8,13 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `exceptions.py` module with custom exception classes for better error handling.
 
 ### Changed
 - Refactored `RelayValve` to simplify GPIO handling and improve reliability.
 - Changed `RelayValve` public API: use `set_state(state: RelayValveState)` to change valve state, `state` property is now read-only.
 
 ### Fixed
-- Stop irrigation handling improved to ensure better reliability.s
+- Stop irrigation handling improved to ensure better reliability
 
 ### Removed
 
