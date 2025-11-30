@@ -55,5 +55,6 @@ class CircuitSnapshot:
 class CircuitStatus:
     """Class to represent the combined status of an irrigation circuit."""
     id: int
+    name: str
     runtime_status: CircuitRuntimeStatus
     snapshot: CircuitSnapshot

@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
-
+# MUTABLE CONFIG OBJECTS
+# When reloading config in runtime, existing reference to GlobalConfig instance should be updated, not replaced!
 
 class LogLevel(str, Enum):
     DEBUG = "DEBUG"

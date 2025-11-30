@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Introduced new modular controller subsystem under `node/core/controller/`:
+  - `ThreadManager`: unified and safe worker thread lifecycle manager with
+    typed task groups and centralised exception handling.
+  - `TaskPlanner`: planning layer responsible for preparing irrigation execution
+    batches using an injected `BatchStrategy`.
+  - `BatchStrategy`: pluggable batching strategy (initial implementation: single-batch).
+  - `IrrigationExecutor`: dedicated executor layer for running irrigation tasks
+    in worker threads and signalling lifecycle events to `CircuitStateManager`.
+  - `StatusAggregator`: combines runtime and persistent snapshot data into
+    unified `CircuitStatus` objects for Controller API use.
+  - `TaskScheduler`: cron-like scheduler for periodic node-level background
+    tasks (freeze protect, leak detection, etc.).
+- Added `AutoIrrigationService` skeleton (initial architecture) responsible for the
+  high-level logic of automatic irrigation cycles, including safe future scheduling hooks.
+- Added supporting utility functions to `time_utils.py` for cron-like scheduling and time calculations.
+
+### Changed
+- Added preliminary `ControllerCore` class as a replacement for
+  `IrrigationController`. ControllerCore now composes and orchestrates all
+  new subsystems (planner, executor, thread manager, scheduler).
+- Refactored internal controller/bootstrap logic to load global and zone configs
+  in preparation for full migration from the old `IrrigationController`.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.13.0`.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
+
+### Notes
+- The newly introduced modules constitute the foundation of the ongoing large-scale
+  refactor. Current functionality primarily includes architecture scaffolding.
+- Old `IrrigationController` remains functional for now; replacement by
+  `ControllerCore` will be finished in the next iteration of the refactor.
+
+---
+
 ## [0.11.0] - 2025-11-24
 *Improved valve error handling, unified fail-safe logic, fault isolation, and minor API cleanup.*
 
@@ -27,6 +73,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct valve error logging from `RelayValve` and circuit methods to avoid log duplication.
 
 ### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.13.0`.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
 
 ---
 
@@ -63,6 +115,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed embedded water adjustment formulas from `IrrigationCircuit.irrigate_auto()` (now handled by external model)
 
 ### Known Issues
+- Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
+- Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.13.0`.
+- `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
+- Configuration management not yet implemented.
+- Authentication and access control for REST API endpoints are not yet included.
+- Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
 
 ---
 
