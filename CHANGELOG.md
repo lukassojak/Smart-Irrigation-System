@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   new subsystems (planner, executor, thread manager, scheduler).
 - Refactored internal controller/bootstrap logic to load global and zone configs
   in preparation for full migration from the old `IrrigationController`.
+- Updated `ControllerCore` to include deprecated API methods from the old `IrrigationController` for backward compatibility.
+- Added placeholder implementations to ensure CLI and MQTT interfaces continue to function during refactor transition.
 
 ### Fixed
 
