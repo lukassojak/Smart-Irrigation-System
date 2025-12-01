@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in preparation for full migration from the old `IrrigationController`.
 - Updated `ControllerCore` to include deprecated API methods from the old `IrrigationController` for backward compatibility.
 - Added placeholder implementations to ensure CLI and MQTT interfaces continue to function during refactor transition.
+- Split circuit irrigation checks into `needs_irrigation()` and `is_safe_to_irrigate()` for clearer separation of business and runtime logic.
 
 ### Fixed
 

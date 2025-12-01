@@ -143,23 +143,57 @@ class IrrigationCircuit:
     # Public check methods
     # ============================================================================================================
 
-    def is_irrigation_allowed(self, state_manager: CircuitStateManager) -> bool:
-        """Checks if irrigation is needed based on global conditions and circuit settings."""
+    def needs_irrigation(self, state_manager: CircuitStateManager) -> bool:
+        """
+        Checks if irrigation is needed based on global conditions and circuit settings.
+
+        The method implements business logic to determine if the circuit requires irrigation based
+        on its enabled status and the interval since the last irrigation. 
+        
+        :param state_manager: CircuitStateManager to get last irrigation time.
+        :return: True if irrigation is needed, False otherwise.
+        """
+
+        if not self.enabled:
+            self.logger.debug(f"Irrigation not needed: Circuit is disabled.")
+            return False
+
+        circuit_snapshot = state_manager.get_circuit_snapshot(self.id)
+        last_irrigation_time = circuit_snapshot.last_irrigation
+        if not self._interval_days_passed(last_irrigation_time):
+            self.logger.debug(f"Irrigation not needed: Interval days have not passed since the last irrigation. Last irrigation time: {last_irrigation_time}.")
+            return False
+        
+        return True
+
+    def is_safe_to_irrigate(self) -> bool:
+        """
+        Checks if the circuit is in a safe state to start irrigation.
+
+        The method checks for faults and ensures the circuit is in the IDLE state.
+
+        :return: True if it is safe to irrigate, False otherwise.
+        """
         if self.has_fault:
-            self.logger.warning(f"Irrigation not allowed: Circuit {self.id} has a fault. Reason: {self.last_fault_reason}.")
+            self.logger.warning(f"Irrigation not allowed: Circuit has a fault. Reason: {self.last_fault_reason}.")
             return False
         if self.state != IrrigationState.IDLE:
             self.logger.warning(f"Irrigation not allowed: Circuit is not in IDLE state. Current state: {self.state.name}.")
             return False
-        circuit_snapshot = state_manager.get_circuit_snapshot(self.id)
-        last_irrigation_time = circuit_snapshot.last_irrigation
-        if not self._interval_days_passed(last_irrigation_time):
-            self.logger.debug(f"Irrigation not allowed: Interval days have not passed since the last irrigation. Last irrigation time: {last_irrigation_time}.")
-            return False
-        if not self.enabled:
-            self.logger.warning(f"Irrigation not allowed: Circuit {self.id} is disabled.")
-            return False
         return True
+        
+
+    # deprecated
+    def is_irrigation_allowed(self, state_manager: CircuitStateManager) -> bool:
+        """
+        BACKWARD-COMPAT: combine all checks.
+        NOT for internal use. Will be removed.
+        """
+
+        return (
+            self.is_safe_to_irrigate() and
+            self.needs_irrigation(state_manager)
+        )
     
     # ============================================================================================================
     # Public debugging methods
