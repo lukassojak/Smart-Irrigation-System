@@ -1,11 +1,10 @@
 # smart_irrigation_system/node/core/controller/task_planner.py
 
-# TODO: Create interface for BatchStrategy and implement TaskPlanner using it.
-
 from enum import Enum, auto
 
-from smart_irrigation_system.node.core.controller.batch_strategy import BatchStrategy
+from smart_irrigation_system.node.interfaces import BatchStrategyLike, CircuitPlanningLike
 
+from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 
 class PlannedState(Enum):
     PENDING = auto()
@@ -26,16 +25,29 @@ class TaskPlanner:
     Does not run irrigation – only planning.
     """
     
-    def __init__(self, batch_strategy):
-        self.batch_strategy: BatchStrategy = batch_strategy
+    def __init__(self, batch_strategy: BatchStrategyLike):
+        self.batch_strategy: BatchStrategyLike = batch_strategy
         self.tasks: dict[int, PlannedTask] = {}
         self.batches: list[list[int]] = []
-        self.batch_index = 0
+        self.batch_index: int = 0
 
-    def plan(self, circuit_ids: list[int]):
+    def plan(self,
+             circuits: dict[int, CircuitPlanningLike],
+             state_manager: CircuitStateManager) -> None:
         """Prepare planner internal state."""
-        self.tasks = {cid: PlannedTask(cid) for cid in circuit_ids}
-        self.batches = self.batch_strategy.select_batches(circuit_ids)
+
+        # Filter circuits that need irrigation
+        filtered_circuits: dict[int, CircuitPlanningLike] = {
+            circuit_id: circuit for circuit_id, circuit in circuits.items()
+            if circuit.needs_irrigation(state_manager)
+        }
+        
+        self.tasks: dict[int, PlannedTask] = {
+            circuit_id: PlannedTask(circuit_id)
+            for circuit_id, _ in filtered_circuits.items()
+        }
+
+        self.batches = self.batch_strategy.select_batches(list(filtered_circuits.values()))
         self.batch_index = 0
     
     def get_next_batch(self) -> list[int] | None:

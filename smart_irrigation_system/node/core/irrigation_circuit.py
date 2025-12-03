@@ -168,7 +168,7 @@ class IrrigationCircuit:
 
     def is_safe_to_irrigate(self) -> bool:
         """
-        Checks if the circuit is in a safe state to start irrigation.
+        Checks if the circuit is in a safe state to start irrigation. Run-time safety check before irrigation.
 
         The method checks for faults and ensures the circuit is in the IDLE state.
 

@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `AutoIrrigationService` skeleton (initial architecture) responsible for the
   high-level logic of automatic irrigation cycles, including safe future scheduling hooks.
 - Added supporting utility functions to `time_utils.py` for cron-like scheduling and time calculations.
+- Introduced typed interfaces for Planner, Executor, and BatchStrategy:
+  - Added `CircuitPlanningLike`, `CircuitExecutionLike`, and `BatchStrategyLike` Protocols to `interfaces.py`.
+  - Updated `TaskPlanner` to use `CircuitPlanningLike` objects instead of circuit ids.
+  - Changed `BatchStrategy` to `SimpleBatchStrategy`.
+  - Added filtering logic in `TaskPlanner.plan()` to use `needs_irrigation(state_manager)`.
 
 ### Changed
 - Added preliminary `ControllerCore` class as a replacement for

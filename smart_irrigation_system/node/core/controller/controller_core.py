@@ -1,4 +1,4 @@
-# node/core/controller/controller_core.py
+# smart_irrigation_system/node/core/controller/controller_core.py
 
 import os, atexit, sys, signal, threading
 
@@ -12,7 +12,7 @@ from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 
-from smart_irrigation_system.node.core.controller.batch_strategy import BatchStrategy
+from smart_irrigation_system.node.core.controller.batch_strategy import SimpleBatchStrategy
 from smart_irrigation_system.node.core.controller.irrigation_executor import IrrigationExecutor
 from smart_irrigation_system.node.core.controller.status_aggregator import StatusAggregator
 from smart_irrigation_system.node.core.controller.task_scheduler import TaskScheduler
@@ -60,7 +60,7 @@ class ControllerCore:
                                                  IRRIGATION_LOG_PATH)
         self.thread_manager = ThreadManager()
         self.task_scheduler = TaskScheduler(self.thread_manager)
-        self.batch_strategy = BatchStrategy()
+        self.batch_strategy = SimpleBatchStrategy()
         self.task_planner = TaskPlanner(self.batch_strategy)
         self.irrigation_executor = IrrigationExecutor(
             circuits=self.circuits,

@@ -28,7 +28,7 @@ class IrrigationExecutor:
         """
         Execute the irrigation plan prepared by the TaskPlanner.
         
-        :param planner: TaskPlanner with prepared plan.
+        :param planner: TaskPlanner with prepared plan. Must be already planned by calling planner.plan().
         :param global_config: Global configuration of the node.
         :param conditions_provider: Provider of current weather conditions.
         """
