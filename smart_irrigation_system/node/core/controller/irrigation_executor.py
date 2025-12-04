@@ -15,6 +15,12 @@ from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.controller.task_planner import TaskPlanner
 from smart_irrigation_system.node.core.controller.thread_manager import ThreadManager, TaskType, WorkerHandle
 
+from smart_irrigation_system.node.weather.recent_weather_fetcher import RecentWeatherFetcher
+from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
+from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
+
+# Temporary constant for maximum irrigation time per batch for join timeout
+MAX_IRRIGATING_TIME_PER_BATCH_SECONDS = 2 * 60 * 60  # 2 hours
 
 class IrrigationExecutor:
     def __init__(self,
@@ -27,10 +33,10 @@ class IrrigationExecutor:
         self.thread_manager = thread_manager
         self.on_circuit_done = on_circuit_done
 
-        self.logger = get_logger(__name__)
+        self.logger = get_logger(self.__class__.__name__)
         self.stop_event = threading.Event()
 
-    def execute_plan(self, planner: TaskPlanner, global_config: GlobalConfig, conditions_provider) -> None:
+    def execute_plan(self, planner: TaskPlanner, global_config: GlobalConfig, conditions_provider: RecentWeatherFetcher | WeatherSimulator) -> None:
         """
         Execute the irrigation plan prepared by the TaskPlanner.
         
@@ -42,7 +48,8 @@ class IrrigationExecutor:
             batch = planner.get_next_batch()
             if batch is None:
                 break
-
+            
+            current_conditions: GlobalConditions = conditions_provider.get_current_conditions()
             # Start irrigation for each circuit in the batch
             for circuit_id in batch:
                 circuit = self.circuits.get(circuit_id)
@@ -55,11 +62,12 @@ class IrrigationExecutor:
                     planner.mark_done(circuit_id)
                     continue
     
-                self._start_irrigation(circuit_id, planner, global_config, conditions_provider)
+                self.logger.info(f"Starting irrigation for Circuit ID {circuit_id}.")
+                self._start_irrigation(circuit_id, planner, global_config, current_conditions)
             
             # Wait for all circuits in the batch to complete
             # Includes also all manually started irrigation tasks
-            self.thread_manager.join_all_workers(task_type=TaskType.IRRIGATION)
+            self.thread_manager.join_all_workers(task_type=TaskType.IRRIGATION, timeout=MAX_IRRIGATING_TIME_PER_BATCH_SECONDS)
 
 
     def stop_all_irrigation(self, timeout: float = 10.0) -> None:
@@ -75,20 +83,22 @@ class IrrigationExecutor:
 
 
     def _start_irrigation(self, circuit_id: int, planner: TaskPlanner,
-                          global_config: GlobalConfig, conditions_provider) -> None:
+                          global_config: GlobalConfig, current_conditions: GlobalConditions) -> None:
         def worker():
             try:
                 self.state_manager.irrigation_started(circuit_id)
                 result: IrrigationResult = circuit.irrigate_auto(
                     global_config=global_config,
-                    conditions_provider=conditions_provider,
+                    global_conditions=current_conditions,
                     stop_event=self.stop_event
                 )
                 self.state_manager.irrigation_finished(circuit_id, result)
+                self.logger.info(f"Irrigation for Circuit ID {circuit_id} completed successfully.")
             # TODO: replace with specific exceptions
             except Exception as e:
+                self.logger.error(f"Irrigation for Circuit ID {circuit_id} failed: {e}")
                 # TODO: implement irrigation failure handling in CircuitStateManager
-                self.state_manager.irrigation_failed(circuit_id, str(e))
+                # self.state_manager.irrigation_failed(circuit_id, str(e))
             finally:
                 planner.mark_done(circuit_id)
                 if self.on_circuit_done:

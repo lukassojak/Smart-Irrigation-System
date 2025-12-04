@@ -12,6 +12,8 @@ from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
 from smart_irrigation_system.node.network.server_command_handler import ServerCommandHandler
 
+from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
+
 
 # === Configuration ===
 I2C_SCL = 5  # GPIO pin for I2C SCL
@@ -45,7 +47,7 @@ def main():
 
     # Initialize the Irrigation Controller
     try:
-        controller = IrrigationController()
+        controller = ControllerCore()
         time.sleep(0.5)
         print(".", end="", flush=True)
     except Exception as e:

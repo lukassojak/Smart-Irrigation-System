@@ -10,7 +10,7 @@ from smart_irrigation_system.node.utils.logger import get_logger
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
-from smart_irrigation_system.node.core.enums import ControllerState
+from smart_irrigation_system.node.core.enums import ControllerState, IrrigationState
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 
@@ -30,7 +30,7 @@ WEATHER_SIMULATOR_SEED = 42
 
 # Determine the base directory of the project
 BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../..")
+    os.path.join(os.path.dirname(__file__), "../../../..")
 )
 
 # Paths to configuration and data files
@@ -77,6 +77,11 @@ class ControllerCore:
         self._state_lock = threading.Lock()
         self._controller_state = ControllerState.IDLE
         self._register_signal_handlers()
+        atexit.register(self._cleanup)
+
+        # ---- Deprecated attributes for backward compatibility ----
+        self.global_conditions_provider = self.conditions_provider
+
         self.logger.info("ControllerCore initialized successfully.")
 
 
@@ -101,13 +106,21 @@ class ControllerCore:
     
     def start_auto_cycle(self) -> None:
         """Start the automatic irrigation cycle immediately."""
+        self.logger.info("Starting automatic irrigation cycle...")
+        self._on_irrigation_start()
+        try:
+            self.task_planner.plan(self.circuits, self.state_manager)
+            self.irrigation_executor.execute_plan(
+                planner=self.task_planner,
+                global_config = self.global_config,
+                conditions_provider = self.conditions_provider
+            )
+        except Exception as e:
+            self.logger.error(f"Error starting automatic irrigation cycle: {e}")
+        finally:
+            self._on_irrigation_finish()
+            self.logger.info("Automatic irrigation cycle finished.")
 
-        self.task_planner.plan(list(self.circuits.keys()))
-        self.irrigation_executor.execute_plan(
-            planner=self.task_planner,
-            global_config = self.global_config,
-            conditions_provider = self.conditions_provider
-        )
         
 
     def start_manual_irrigation(self, circuit_id: int, volume_liters: float) -> None:
@@ -166,7 +179,7 @@ class ControllerCore:
     def get_status_message(self) -> str:
         """Returns a brief status message of the irrigation controller for mqtt publishing."""
 
-        self.logger.warning("get_status_message is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_status_message is deprecated and may be removed in future versions.")
         status = self.get_status()
         status_msg = f"Controller State: {status['controller_state']}, Auto Enabled: {not status['auto_stopped']}, Auto Paused: {status['auto_paused']}, Currently Irrigating Zones: {self.get_currently_irrigating_zones()}"
         return status_msg
@@ -175,7 +188,7 @@ class ControllerCore:
     def get_currently_irrigating_zones(self) -> list[int]:
         """Returns a list of IDs of currently irrigating zones."""
 
-        self.logger.warning("get_currently_irrigating_zones is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_currently_irrigating_zones is deprecated and may be removed in future versions.")
         irrigating_zones = []
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
@@ -188,7 +201,7 @@ class ControllerCore:
     def get_circuit_snapshot(self, circuit_id: int) -> CircuitSnapshot:
         """Returns the persistent snapshot state of a given circuit."""
 
-        self.logger.warning("get_circuit_snapshot is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_circuit_snapshot is deprecated and may be removed in future versions.")
         if circuit_id not in self.circuits.keys():
             raise ValueError(f"Circuit ID {circuit_id} does not exist.")
         
@@ -199,7 +212,7 @@ class ControllerCore:
     def get_status(self) -> dict:
         """Returns comprehensive snapshot of the irrigation controller's status."""
 
-        self.logger.warning("get_status is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_status is deprecated and may be removed in future versions.")
         # Fetch global conditions
         cached_conditions_str = self.conditions_provider.get_conditions_str()
 
@@ -235,7 +248,7 @@ class ControllerCore:
         from smart_irrigation_system.node.core.enums import IrrigationState
         from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
 
-        self.logger.warning("get_circuit_progress is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_circuit_progress is deprecated and may be removed in future versions.")
         if circuit_number not in self.circuits:
             raise ValueError(f"Circuit number {circuit_number} does not exist.")
         
@@ -257,13 +270,13 @@ class ControllerCore:
 
         import time
 
-        self.logger.warning("get_daily_irrigation_time is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_daily_irrigation_time is deprecated and may be removed in future versions.")
         return time.struct_time((0, 0, 0, self.global_config.automation.scheduled_hour, self.global_config.automation.scheduled_minute, 0, 0, 0, -1))
     
     def get_circuit(self, circuit_number):
         """Returns the circuit object for a given circuit number"""
 
-        self.logger.warning("get_circuit is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_circuit is deprecated and may be removed in future versions.")
         if circuit_number in self.circuits.keys():
             return self.circuits[circuit_number]
         else:
@@ -272,13 +285,13 @@ class ControllerCore:
     def get_state(self) -> ControllerState:
         """Returns the current state of the irrigation controller"""
 
-        self.logger.warning("get_state is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_state is deprecated and may be removed in future versions.")
         return self._controller_state
         
     def get_current_consumption(self) -> float:
         """Returns the total consumption of all irrigating circuits in liters per hour"""
 
-        self.logger.warning("get_current_consumption is deprecated and may be removed in future versions.")
+        # self.logger.warning("get_current_consumption is deprecated and may be removed in future versions.")
         total_consumption = 0.0
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
@@ -296,7 +309,7 @@ class ControllerCore:
     def start_automatic_irrigation(self):
         """Starts automatic irrigation based on the configured schedule."""
         
-        self.logger.warning("start_automatic_irrigation is deprecated and not supported in ControllerCore.")
+        self.logger.warning("start_automatic_irrigation is deprecated and may be removed in future versions.")
         self.start_auto_cycle()
     
     def stop_irrigation(self):
@@ -352,7 +365,7 @@ class ControllerCore:
     
     def _init_global_conditions_provider(self) -> RecentWeatherFetcher | WeatherSimulator:
         """Initialize the global weather conditions provider based on configuration."""
-        if self.global_config.use_weathersimulator:
+        if self.global_config.automation.use_weathersimulator:
             self.logger.info("Using Weather Simulator as conditions provider.")
             return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
         else:
@@ -405,4 +418,22 @@ class ControllerCore:
 
     def _on_executor_error(self, circuit_id: int, exception: Exception):
         self._set_error_state(f"IrrigationExecutor error on circuit {circuit_id}: {exception}")
+
+
+    # ==================================================================================================================
+    # Private methods - Cleanup
+    # =================================================================================================================
+
+
+    def _cleanup(self):
+        """Cleans up the resources used by the irrigation controller"""
+        self.logger.info("Cleaning up resources...")
+        if self.controller_state != ControllerState.IDLE:
+            self.stop_irrigation()
+        # Check if all valves are closed
+        for circuit in self.circuits.values():
+            if circuit.state == IrrigationState.IRRIGATING:
+                self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to close valve.")
+                circuit.close_valve()
+        self.state_manager.handle_clean_shutdown()
 
