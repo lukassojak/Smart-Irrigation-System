@@ -483,7 +483,7 @@ class IrrigationController:
         self._update_controller_state()
         self.logger.info("Stopping circuits done.")
 
-    def manual_irrigation(self, circuit_number: int, liter_amount: float) -> IrrigationResult:
+    def manual_irrigation(self, circuit_number: int, liter_amount: float) -> None:
         """Starts manual irrigation for a specified circuit and liter amount in a separate thread."""
         if circuit_number not in self.circuits:
             self.logger.warning(f"Circuit number {circuit_number} does not exist.")

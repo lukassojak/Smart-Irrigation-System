@@ -4,6 +4,8 @@ import os, atexit, sys, signal, threading
 
 import smart_irrigation_system.node.config.config_loader as config_loader
 
+from typing import Optional
+
 from smart_irrigation_system.node.utils.logger import get_logger
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
@@ -87,6 +89,10 @@ class ControllerCore:
         """Get the current state of the irrigation controller."""
         with self._state_lock:
             return self._controller_state
+        
+    
+    def get_status_snapshot(circuit_ids: Optional[list[int]] = None) -> dict:
+        pass
 
 
     # ==================================================================================================================
@@ -106,15 +112,18 @@ class ControllerCore:
 
     def start_manual_irrigation(self, circuit_id: int, volume_liters: float) -> None:
         """Start manual irrigation for a specific circuit with the given volume in liters."""
-        pass
+
+        self.logger.warning("start_manual_irrigation is not yet implemented in ControllerCore.")
 
     def stop_all_irrigation(self, timeout: float = 10.0) -> None:
         """Stop all ongoing irrigation tasks."""
-        pass
+
+        self.logger.warning("stop_all_irrigation is not yet implemented in ControllerCore.")
 
     def stop_circuit_irrigation(self, circuit_id: int, timeout: float = 10.0) -> None:
         """Stop irrigation for a specific circuit."""
-        pass
+        
+        self.logger.warning("stop_circuit_irrigation is not yet implemented in ControllerCore.")
 
 
     # ==================================================================================================================
@@ -157,6 +166,7 @@ class ControllerCore:
     def get_status_message(self) -> str:
         """Returns a brief status message of the irrigation controller for mqtt publishing."""
 
+        self.logger.warning("get_status_message is deprecated and may be removed in future versions.")
         status = self.get_status()
         status_msg = f"Controller State: {status['controller_state']}, Auto Enabled: {not status['auto_stopped']}, Auto Paused: {status['auto_paused']}, Currently Irrigating Zones: {self.get_currently_irrigating_zones()}"
         return status_msg
@@ -165,6 +175,7 @@ class ControllerCore:
     def get_currently_irrigating_zones(self) -> list[int]:
         """Returns a list of IDs of currently irrigating zones."""
 
+        self.logger.warning("get_currently_irrigating_zones is deprecated and may be removed in future versions.")
         irrigating_zones = []
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
@@ -177,6 +188,7 @@ class ControllerCore:
     def get_circuit_snapshot(self, circuit_id: int) -> CircuitSnapshot:
         """Returns the persistent snapshot state of a given circuit."""
 
+        self.logger.warning("get_circuit_snapshot is deprecated and may be removed in future versions.")
         if circuit_id not in self.circuits.keys():
             raise ValueError(f"Circuit ID {circuit_id} does not exist.")
         
@@ -187,6 +199,7 @@ class ControllerCore:
     def get_status(self) -> dict:
         """Returns comprehensive snapshot of the irrigation controller's status."""
 
+        self.logger.warning("get_status is deprecated and may be removed in future versions.")
         # Fetch global conditions
         cached_conditions_str = self.conditions_provider.get_conditions_str()
 
@@ -222,6 +235,7 @@ class ControllerCore:
         from smart_irrigation_system.node.core.enums import IrrigationState
         from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
 
+        self.logger.warning("get_circuit_progress is deprecated and may be removed in future versions.")
         if circuit_number not in self.circuits:
             raise ValueError(f"Circuit number {circuit_number} does not exist.")
         
@@ -239,13 +253,17 @@ class ControllerCore:
         
     
     def get_daily_irrigation_time(self):
-        import time
         """Returns the daily irrigation time based on the global configuration"""
+
+        import time
+
+        self.logger.warning("get_daily_irrigation_time is deprecated and may be removed in future versions.")
         return time.struct_time((0, 0, 0, self.global_config.automation.scheduled_hour, self.global_config.automation.scheduled_minute, 0, 0, 0, -1))
     
     def get_circuit(self, circuit_number):
         """Returns the circuit object for a given circuit number"""
 
+        self.logger.warning("get_circuit is deprecated and may be removed in future versions.")
         if circuit_number in self.circuits.keys():
             return self.circuits[circuit_number]
         else:
@@ -253,23 +271,53 @@ class ControllerCore:
     
     def get_state(self) -> ControllerState:
         """Returns the current state of the irrigation controller"""
+
+        self.logger.warning("get_state is deprecated and may be removed in future versions.")
         return self._controller_state
         
     def get_current_consumption(self) -> float:
         """Returns the total consumption of all irrigating circuits in liters per hour"""
+
+        self.logger.warning("get_current_consumption is deprecated and may be removed in future versions.")
         total_consumption = 0.0
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
                 total_consumption += circuit.circuit_consumption
         return total_consumption
     
+    def get_irrigating_count(self) -> int:
+        """Checks how many threads are currently running"""
+
+        self.logger.warning("get_irrigating_count is deprecated and not supported in ControllerCore.")
+        return 0
+    
+    # ----------------- Deprecated Irrigation Control Methods -----------------------
+
+    def start_automatic_irrigation(self):
+        """Starts automatic irrigation based on the configured schedule."""
+        
+        self.logger.warning("start_automatic_irrigation is deprecated and not supported in ControllerCore.")
+        self.start_auto_cycle()
+    
+    def stop_irrigation(self):
+        """Stops all ongoing irrigation tasks."""
+        
+        self.logger.warning("stop_irrigation is deprecated and not supported in ControllerCore.")
+        self.stop_all_irrigation()
+
+    def manual_irrigation(self, circuit_number: int, liter_amount: float) -> None:
+        """Starts manual irrigation for a specific circuit with the given volume in liters."""
+        
+        self.logger.warning("manual_irrigation is deprecated and not supported in ControllerCore.")
+        self.start_manual_irrigation(circuit_number, liter_amount)
+
+
     # ----------------- Deprecated Main Loop Methods -----------------------
 
     def start_main_loop(self):
         """Starts the main loop for automatic irrigation management. Only one instance of the main loop can run at a time."""
         
         self.logger.warning("start_main_loop is deprecated and not supported in ControllerCore.")
-
 
     def stop_main_loop(self):
         """Stops the main loop for automatic irrigation management"""

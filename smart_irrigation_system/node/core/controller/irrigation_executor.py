@@ -3,7 +3,12 @@
 import threading
 from collections.abc import Callable
 
+from smart_irrigation_system.node.interfaces import CircuitExecutionLike
+
 from smart_irrigation_system.node.config.global_config import GlobalConfig
+
+from smart_irrigation_system.node.utils.logger import get_logger
+
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
@@ -13,7 +18,7 @@ from smart_irrigation_system.node.core.controller.thread_manager import ThreadMa
 
 class IrrigationExecutor:
     def __init__(self,
-                 circuits: dict[int, IrrigationCircuit],
+                 circuits: dict[int, CircuitExecutionLike],
                  state_manager: CircuitStateManager,
                  thread_manager: ThreadManager,
                  on_circuit_done: Callable[[int], None] | None = None):
@@ -22,6 +27,7 @@ class IrrigationExecutor:
         self.thread_manager = thread_manager
         self.on_circuit_done = on_circuit_done
 
+        self.logger = get_logger(__name__)
         self.stop_event = threading.Event()
 
     def execute_plan(self, planner: TaskPlanner, global_config: GlobalConfig, conditions_provider) -> None:
@@ -39,6 +45,16 @@ class IrrigationExecutor:
 
             # Start irrigation for each circuit in the batch
             for circuit_id in batch:
+                circuit = self.circuits.get(circuit_id)
+                if circuit is None:
+                    self.logger.error(f"Circuit ID {circuit_id} not found in executor circuits. Skipping.")
+                    continue
+                
+                if not circuit.is_safe_to_irrigate():
+                    self.logger.warning(f"Circuit ID {circuit_id} is not safe to irrigate. Skipping.")
+                    planner.mark_done(circuit_id)
+                    continue
+    
                 self._start_irrigation(circuit_id, planner, global_config, conditions_provider)
             
             # Wait for all circuits in the batch to complete
