@@ -68,6 +68,7 @@ class CircuitStateManager():
         entry = {
             "id": circuit_id,
             "circuit_state": SnapshotCircuitState.IDLE.value,
+            "last_decision": None,
             "last_outcome": None,
             "last_irrigation": None,
             "last_duration": None,
@@ -161,6 +162,15 @@ class CircuitStateManager():
             if circuit["circuit_state"] not in [state.value for state in SnapshotCircuitState]:
                 raise ValueError(f"Invalid 'circuit_state' value: {circuit['circuit_state']}")
 
+            # Validate last_decision key
+            if "last_decision" not in circuit:
+                raise ValueError("Each circuit must contain 'last_decision' key")
+            if "last_decision" in circuit and circuit["last_decision"] is not None:
+                try:
+                    datetime.fromisoformat(circuit["last_decision"])
+                except Exception:
+                    raise ValueError("Invalid 'last_decision' timestamp format")
+
             # Validate last_irrigation key 
             if "last_irrigation" not in circuit:
                 raise ValueError("Each circuit must contain 'last_irrigation' key")
@@ -218,6 +228,7 @@ class CircuitStateManager():
                     circuit["last_volume"] = None
                     # Unknown irrigation time due to unclean shutdown, set to current time
                     circuit["last_irrigation"] = time_utils.now_iso()
+                    circuit["last_decision"] = time_utils.now_iso()
                     recovered_circuits.append(circuit_id)
                     self._log_missing_interrupted_result(circuit_id)
 
@@ -233,13 +244,14 @@ class CircuitStateManager():
 
     def _update_irrigation_result(self, circuit_id: int, result: IrrigationResult) -> None:
         """Updates the last irrigation result and duration for a given circuit.
-        Updates the internal state and saves it to the file."""        
+        Updates the internal state and saves it to the file."""
+        self.logger.debug(f"Updating irrigation result for circuit ID {circuit_id} with outcome {result.outcome.value}.")        
         entry = self._get_or_create_entry(circuit_id)
 
-        # Set circuit state back to IDLE after irrigation
+        # Set circuit state back to IDLE, update last outcome and last decision
         entry["circuit_state"] = SnapshotCircuitState.IDLE.value
-    
         entry["last_outcome"] = result.outcome.value
+        entry["last_decision"] = time_utils.to_iso(result.start_time)
 
         # SKIPPED - special case, no real irrigation happened
         if result.outcome.value == IrrigationOutcome.SKIPPED.value:
@@ -315,6 +327,7 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         
         circuit_state = SnapshotCircuitState(entry.get("circuit_state"))
+        last_decision_raw = entry.get("last_decision")
         last_outcome_raw = entry.get("last_outcome")
         last_irrigation_raw = entry.get("last_irrigation")
         last_duration_raw = entry.get("last_duration")
@@ -332,11 +345,13 @@ class CircuitStateManager():
         
         # Timestamp mapping
         last_irrigation = time_utils.from_iso(last_irrigation_raw) if last_irrigation_raw is not None else None
+        last_decision = time_utils.from_iso(last_decision_raw) if last_decision_raw is not None else None
         timestamp = time_utils.from_iso(last_updated_raw) if last_updated_raw is not None else None
 
         return CircuitSnapshot(
             id=circuit_id,
             circuit_state=circuit_state,
+            last_decision=last_decision,
             last_outcome=last_outcome,
             last_irrigation=last_irrigation,
             last_duration=int(last_duration_raw) if last_duration_raw is not None else None,
@@ -349,6 +364,7 @@ class CircuitStateManager():
         """Updates the last irrigation time to the current time for a given circuit.
         This is called when the irrigation starts."""
         entry = self._get_or_create_entry(circuit_id)
+        self.logger.debug(f"Setting circuit ID {circuit_id} state to 'irrigating'.")
         entry["circuit_state"] = SnapshotCircuitState.IRRIGATING.value
         self._save_state()
     
@@ -357,8 +373,8 @@ class CircuitStateManager():
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
-        if circuit_id == 2:
-            raise RuntimeError("TEST CRASH - SIMULATED THREAD FAILURE")
+        # if circuit_id == 2:
+            # raise RuntimeError("TEST CRASH - SIMULATED THREAD FAILURE (should be caught and logged)")
 
     
     def handle_clean_shutdown(self) -> None:

@@ -43,7 +43,7 @@
             "id": 3,
             "name": "Skleník",
             "relay_pin": 3,
-            "enabled": false,
+            "enabled": true,
             "even_area_mode": false,
             "target_mm": null,
             "zone_area_m2": null,

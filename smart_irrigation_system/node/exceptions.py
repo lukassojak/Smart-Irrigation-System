@@ -24,3 +24,12 @@ class GPIOInitializationError(RelayValveError):
 class GPIOWriteError(RelayValveError):
     """Exception raised when writing to GPIO fails."""
     pass
+
+
+class WorkerThreadError(Exception):
+    """Custom exception for worker thread errors."""
+    pass
+
+class WorkerThreadAlreadyExistsError(WorkerThreadError):
+    """Exception raised when attempting to create a worker thread that already exists."""
+    pass

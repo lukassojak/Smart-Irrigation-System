@@ -29,6 +29,7 @@ Typ: `array`
 
 - `id`: Unikátní identifikátor okruhu. Musí odpovídat id z [`zones_config.json`](./../config/zones_config.json)
 - `circuit_state`: Aktuální stav okruhu. Může být: `idle`, `irrigating`, `shutdown`.
+- `last_decision`: Datum a čas (začátku) posledního rozhodnutí o zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). `null`, pokud zatím nikdy nebylo učiněno. *Nastaví se při každém rozhodnutí o zavlažování (včetně přeskakování).*
 - `last_outcome`: Výsledek posledního pokusu o zavlažování. Může být: `success`, `failed`, `stopped`, `interrupted`, `skipped`, nebo `null` (pokud zatím nikdy neproběhlo). *Nastaví se až po dokončení zavlažování.*
 - `last_irrigation`: Datum a čas (začátku) posledního zavlažování v ISO 8601 formátu (např. 2025-06-21T20:00:00). *Nastaví se až po dokončení zavlažování (v případě unclean shutdownu je nastaveno na čas restartu systému).*
 - `last_duration`: Délka posledního zavlažování v sekundách. `null`, pokud zatím nikdy neproběhlo. `0` v případě, že `last_outcome` je `SKIPPED`. *Nastaví se až po dokončení zavlažování.*
@@ -38,7 +39,8 @@ Datový model:
 ```python
 "id": int
 "circuit_state": SnapshotCircuitState enum
-"last_irrigation": str | None
+"last_decision": datetime | None
+"last_irrigation": datetime | None
 "last_outcome": IrrigationOutcome enum | None
 "last_duration": int | None
 "last_volume": float | None

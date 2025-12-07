@@ -28,7 +28,7 @@
         "log_level": "INFO"
     },
     "weather_api": {
-        "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
-        "history_url": "https://api.ecowitt.net/api/v3/device/history"
+        "realtime_url": "https://api.ecowitt.net/api/v3/device/real_timeX",
+        "history_url": "https://api.ecowitt.net/api/v3/device/historyX"
     }
 }

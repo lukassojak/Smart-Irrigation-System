@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `TaskPlanner` to use `CircuitPlanningLike` objects instead of circuit ids.
   - Changed `BatchStrategy` to `SimpleBatchStrategy`.
   - Added filtering logic in `TaskPlanner.plan()` to use `needs_irrigation(state_manager)`.
+- Added `last_decision` field to circuit snapshot model and persisted state.
+- Implemented worker-level exceptions (`WorkerThreadError`, `WorkerThreadAlreadyExistsError`).
+- Added new `TaskType.EXECUTOR` and support for executor-specific workers.
+- Manual and automatic irrigation now run via executor workers (non-blocking dispatch).
+- Added callback registration mechanism in `IrrigationExecutor` for granular lifecycle notifications.
 
 ### Changed
 - Added preliminary `ControllerCore` class as a replacement for
@@ -38,8 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `ControllerCore` to include deprecated API methods from the old `IrrigationController` for backward compatibility.
 - Added placeholder implementations to ensure CLI and MQTT interfaces continue to function during refactor transition.
 - Split circuit irrigation checks into `needs_irrigation()` and `is_safe_to_irrigate()` for clearer separation of business and runtime logic.
+- Extended status model (`CircuitSnapshot`) with new `last_decision` field.
 
 ### Fixed
+- Improved recovery from unclean shutdown to also update `last_decision`.
 
 ### Removed
 

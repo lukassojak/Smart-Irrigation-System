@@ -40,9 +40,11 @@ class DashboardLogHandler(logging.Handler):
         self.logs = deque(maxlen=max_logs)
 
     def emit(self, record):
-        msg = self.format(record)
-        self.logs.append((record.levelname, msg))
-
+        try:
+            msg = self.format(record)
+            self.logs.append((record.levelname, msg))
+        except Exception:
+            self.handleError(record)
 
 
 def get_dashboard_log_handler(max_logs=5):

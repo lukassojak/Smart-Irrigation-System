@@ -71,47 +71,19 @@ def compute_weather_adjusted_volume(
         local_factors=local_factors,
     )
 
-    logger.debug(
-        "Weather adjustments - Solar: %.5f, Rain: %.5f, Temperature: %.5f, Total: %.5f",
-        solar_adj,
-        rain_adj,
-        temp_adj,
-        total_adjustment,
-    )
-
     # 2) Raw adjusted volume (rounded to 3 decimals)
     adjusted_volume = _apply_adjustment(base_volume, total_adjustment)
 
-    logger.debug(
-        "Base target water amount: %.3f L, adjusted by total factor %.5f -> %.3f L",
-        base_volume,
-        1.0 + total_adjustment,
-        adjusted_volume,
-    )
 
     # 3) Decide whether to skip irrigation entirely
     should_skip = _should_skip_irrigation(total_adjustment)
-    if should_skip:
-        logger.info(
-            "No irrigation needed based on weather model. "
-            "Total adjustment %.5f <= -1.0 (100%% reduction or more).",
-            total_adjustment,
-        )
 
     # 4) Bounds (min/max percent) and clamping – only if we actually irrigate
     min_volume, max_volume = _compute_bounds(base_volume, global_config)
 
     if not should_skip:
         final_volume = _clamp_volume(adjusted_volume, min_volume, max_volume)
-        if final_volume != adjusted_volume:
-            logger.info(
-                "Adjusted water amount %.3f L out of bounds (%.3f L, %.3f L). "
-                "Clamped to %.3f L.",
-                adjusted_volume,
-                min_volume,
-                max_volume,
-                final_volume,
-            )
+
     else:
         # When skipping irrigation, resulting volume is 0.0
         final_volume = 0.0

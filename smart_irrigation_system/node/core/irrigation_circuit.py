@@ -85,7 +85,6 @@ class IrrigationCircuit:
                       stop_event: threading.Event) -> IrrigationResult:
         """Starts the automatic irrigation process based on weather conditions using the configured calculation model."""
         base_target_volume = self.base_target_volume
-        self.logger.debug(f"Base target water amount is {base_target_volume} liters (even area mode: {self.even_area_mode}).")
 
         # Compute adjusted water amount using weather model
         model_result: weather_irrigation_model.WeatherModelResult = self.calculation_model.compute_weather_adjusted_volume(
@@ -94,6 +93,20 @@ class IrrigationCircuit:
             global_conditions=global_conditions,
             local_factors=self.local_correction_factors
         )
+
+        # log detailed model result
+        self.logger.debug(
+            f"Weather model computed result: "
+            f"base_volume={model_result.base_volume} L (even area mode: {self.even_area_mode}), "
+            f"total_adjustment={model_result.total_adjustment}, "
+            f"adjusted_volume={model_result.adjusted_volume} L, "
+            f"min_volume={model_result.min_volume} L, "
+            f"max_volume={model_result.max_volume} L, "
+            f"final_volume={model_result.final_volume} L, "
+            f"should_skip={model_result.should_skip}"
+        )
+
+         # Handle skip case
 
         if model_result.should_skip:
             result = result_factory.create_skipped_due_to_conditions(
@@ -161,6 +174,7 @@ class IrrigationCircuit:
         circuit_snapshot = state_manager.get_circuit_snapshot(self.id)
         last_irrigation_time = circuit_snapshot.last_irrigation
         if not self._interval_days_passed(last_irrigation_time):
+            # TODO: removed logging here
             self.logger.debug(f"Irrigation not needed: Interval days have not passed since the last irrigation. Last irrigation time: {last_irrigation_time}.")
             return False
         

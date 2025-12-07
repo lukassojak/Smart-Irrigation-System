@@ -1,6 +1,6 @@
 # smart_irrigation_system/node/core/controller/controller_core.py
 
-import os, atexit, sys, signal, threading
+import os, atexit, sys, signal, threading, time
 
 import smart_irrigation_system.node.config.config_loader as config_loader
 
@@ -19,10 +19,12 @@ from smart_irrigation_system.node.core.controller.irrigation_executor import Irr
 from smart_irrigation_system.node.core.controller.status_aggregator import StatusAggregator
 from smart_irrigation_system.node.core.controller.task_scheduler import TaskScheduler
 from smart_irrigation_system.node.core.controller.task_planner import TaskPlanner
-from smart_irrigation_system.node.core.controller.thread_manager import ThreadManager
+from smart_irrigation_system.node.core.controller.thread_manager import ThreadManager, TaskType
 
 from smart_irrigation_system.node.weather.recent_weather_fetcher import RecentWeatherFetcher
 from smart_irrigation_system.node.weather.weather_simulator import WeatherSimulator
+
+from smart_irrigation_system.node.exceptions import WorkerThreadError, WorkerThreadAlreadyExistsError
 
 
 # Seed for the weather simulator to ensure reproducibility in tests
@@ -64,11 +66,7 @@ class ControllerCore:
         self.task_scheduler = TaskScheduler(self.thread_manager)
         self.batch_strategy = SimpleBatchStrategy()
         self.task_planner = TaskPlanner(self.batch_strategy)
-        self.irrigation_executor = IrrigationExecutor(
-            circuits=self.circuits,
-            state_manager=self.state_manager,
-            thread_manager=self.thread_manager
-        )
+        self.irrigation_executor = self._init_irrigation_executor()
         self.agg: StatusAggregator = StatusAggregator(
             circuits=self.circuits,
             state_manager=self.state_manager
@@ -106,32 +104,74 @@ class ControllerCore:
     
     def start_auto_cycle(self) -> None:
         """Start the automatic irrigation cycle immediately."""
+        def auto_cycle_wrapper():
+            try:
+                self.irrigation_executor.execute_plan(
+                    planner=self.task_planner,
+                    global_config=self.global_config,
+                    conditions_provider=self.conditions_provider
+                )
+                self.logger.info("Automatic irrigation cycle completed successfully.")
+            except Exception as e:
+                self.logger.error(f"Error during automatic irrigation cycle: {e}")
+                self._on_executor_error(circuit_id=-1, exception=e)
+
+        # Check if executor is already running
+        if self.thread_manager.get_running_workers(TaskType.EXECUTOR):
+            self.logger.warning("IrrigationExecutor is already running. Cannot start another automatic irrigation cycle.")
+            return
+
         self.logger.info("Starting automatic irrigation cycle...")
-        self._on_irrigation_start()
+        self.task_planner.plan(circuits=self.circuits,
+                               state_manager=self.state_manager)
+        
         try:
-            self.task_planner.plan(self.circuits, self.state_manager)
-            self.irrigation_executor.execute_plan(
-                planner=self.task_planner,
-                global_config = self.global_config,
-                conditions_provider = self.conditions_provider
+            self.thread_manager.start_worker(
+                worker_name="auto_irrigation_cycle",
+                task_type=TaskType.EXECUTOR,
+                target_fn=auto_cycle_wrapper
             )
+        except WorkerThreadAlreadyExistsError:
+            self.logger.warning("IrrigationExecutor is already running. Cannot start another automatic irrigation cycle.")
         except Exception as e:
             self.logger.error(f"Error starting automatic irrigation cycle: {e}")
-        finally:
-            self._on_irrigation_finish()
-            self.logger.info("Automatic irrigation cycle finished.")
-
+            self._on_executor_error(circuit_id=-1, exception=e)
         
 
     def start_manual_irrigation(self, circuit_id: int, volume_liters: float) -> None:
         """Start manual irrigation for a specific circuit with the given volume in liters."""
+        def manual_irrigation_wrapper():
+            try:
+                self.irrigation_executor.execute_manual(circuit_id, volume_liters)
+            except Exception as e:
+                self.logger.error(f"Error during manual irrigation for circuit {circuit_id}: {e}")
+                self._on_executor_error(circuit_id=circuit_id, exception=e)
 
-        self.logger.warning("start_manual_irrigation is not yet implemented in ControllerCore.")
+        try:
+            self.thread_manager.start_worker(
+                worker_name=f"manual_irrigation_circuit_{circuit_id}",
+                task_type=TaskType.EXECUTOR,
+                target_fn=manual_irrigation_wrapper
+            )
+        except WorkerThreadAlreadyExistsError:
+            self.logger.warning(f"Manual irrigation for circuit {circuit_id} is already running.")
+        except Exception as e:
+            self.logger.error(f"Error during manual irrigation for circuit {circuit_id}: {e}")
+            self._on_executor_error(circuit_id=circuit_id, exception=e)
+        
 
     def stop_all_irrigation(self, timeout: float = 10.0) -> None:
         """Stop all ongoing irrigation tasks."""
 
-        self.logger.warning("stop_all_irrigation is not yet implemented in ControllerCore.")
+        self.logger.info("Stopping all ongoing irrigation tasks...")
+        try:
+            self.irrigation_executor.stop_all_irrigation(timeout=timeout)
+            self.logger.info("All irrigation tasks stopped.")
+        except TimeoutError as e:
+            self.logger.error(f"Timeout while stopping all irrigation tasks: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error while stopping all irrigation tasks: {e}")
+
 
     def stop_circuit_irrigation(self, circuit_id: int, timeout: float = 10.0) -> None:
         """Stop irrigation for a specific circuit."""
@@ -145,10 +185,12 @@ class ControllerCore:
 
     def enable_auto_irrigation(self) -> None:
         """Enable automatic irrigation scheduling."""
+        # This is run-time enabling and will not persist after restart
         pass
 
     def disable_auto_irrigation(self) -> None:
         """Disable automatic irrigation scheduling."""
+        # This is run-time disabling and will not persist after restart
         pass
 
     def reload_config(self, global_config_path: str = CONFIG_GLOBAL_PATH) -> None:
@@ -315,13 +357,13 @@ class ControllerCore:
     def stop_irrigation(self):
         """Stops all ongoing irrigation tasks."""
         
-        self.logger.warning("stop_irrigation is deprecated and not supported in ControllerCore.")
+        self.logger.warning("stop_irrigation is deprecated and may be removed in future versions.")
         self.stop_all_irrigation()
 
     def manual_irrigation(self, circuit_number: int, liter_amount: float) -> None:
         """Starts manual irrigation for a specific circuit with the given volume in liters."""
         
-        self.logger.warning("manual_irrigation is deprecated and not supported in ControllerCore.")
+        self.logger.warning("manual_irrigation is deprecated and may be removed in future versions.")
         self.start_manual_irrigation(circuit_number, liter_amount)
 
 
@@ -373,6 +415,24 @@ class ControllerCore:
             max_interval_days = max((circuit.interval_days for circuit in self.circuits.values()), default=1)
             return RecentWeatherFetcher(self.global_config, max_interval_days)
         
+    def _init_irrigation_executor(self) -> IrrigationExecutor:
+        """Initialize the IrrigationExecutor with necessary components and register callbacks."""
+        executor = IrrigationExecutor(
+            circuits=self.circuits,
+            state_manager=self.state_manager,
+            thread_manager=self.thread_manager
+        )
+        executor.register_callbacks(
+            on_irrigation_start=self._on_irrigation_start,
+            on_auto_irrigation_finish=self._on_auto_irrigation_finish,
+            on_man_irrigation_finish=self._on_man_irrigation_finish,
+            on_irrigation_stopped=self._on_irrigation_stopped,
+            on_executor_error=self._on_executor_error,
+            on_irrigation_waiting=self._on_irrigation_waiting,
+            on_irrigation_failed=self._on_irrigation_failure
+        )
+        return executor
+        
     def _register_signal_handlers(self):
         def shutdown_handler(signum, frame):
             self.logger.info(f"Received signal {signum}, performing clean shutdown...")
@@ -403,18 +463,37 @@ class ControllerCore:
         """Set the controller to ERROR state"""
         self._controller_state = ControllerState.ERROR
         self.logger.error(f"Controller entered ERROR state: {reason}")
-        # Stop all irrigation tasks
-        self.stop_all_irrigation()
+        # Additional error handling can be added here (e.g., notifications, alerts)
 
     def _on_irrigation_start(self):
         """Callback for when irrigation starts."""
         self._set_state(ControllerState.IRRIGATING)
+        # Additional actions on irrigation start can be added here
+        # e.g., MQTT notifications
+    
+    def _on_irrigation_waiting(self, circuit_id: int, msg: str):
+        # Callback for when irrigation is waiting to start on a circuit (eg. due to flow limits)
+        # MQTT notifications can be added here
+        pass
 
-    def _on_irrigation_finish(self):
+    def _on_irrigation_failure(self, circuit_id: int, reason: str):
+        # Callback for when irrigation fails on a circuit
+        # MQTT notifications can be added here
+        pass
+
+    def _on_irrigation_stop_requested(self):
+        self._set_state(ControllerState.STOPPING)
+
+    def _on_auto_irrigation_finish(self):
         self._set_state(ControllerState.IDLE)
 
-    def _on_irrigation_stop_request(self):
-        self._set_state(ControllerState.STOPPING)
+    def _on_man_irrigation_finish(self, circuit_id: int):
+        # update state only if no other irrigation is ongoing
+        # MQTT notifications can be added here
+        pass
+
+    def _on_irrigation_stopped(self):
+        self._set_state(ControllerState.IDLE)
 
     def _on_executor_error(self, circuit_id: int, exception: Exception):
         self._set_error_state(f"IrrigationExecutor error on circuit {circuit_id}: {exception}")
@@ -430,6 +509,7 @@ class ControllerCore:
         self.logger.info("Cleaning up resources...")
         if self.controller_state != ControllerState.IDLE:
             self.stop_irrigation()
+            time.sleep(1)  # Give some time for irrigation to stop
         # Check if all valves are closed
         for circuit in self.circuits.values():
             if circuit.state == IrrigationState.IRRIGATING:

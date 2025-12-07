@@ -40,6 +40,7 @@ class CircuitSnapshot:
     """Class to represent the persistent snapshot state of an irrigation circuit."""
     id: int
     circuit_state: SnapshotCircuitState
+    last_decision: Optional[datetime]
     last_outcome: Optional[IrrigationOutcome]
     last_irrigation: Optional[datetime]
     last_duration: Optional[int]
