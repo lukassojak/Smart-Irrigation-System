@@ -12,7 +12,7 @@ from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.enums import ControllerState, IrrigationState
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+from smart_irrigation_system.node.core.status_models import CircuitStatus, CircuitRuntimeStatus, ControllerStatusSummary, ControllerFullStatus
 
 from smart_irrigation_system.node.core.controller.batch_strategy import SimpleBatchStrategy
 from smart_irrigation_system.node.core.controller.irrigation_executor import IrrigationExecutor
@@ -94,8 +94,56 @@ class ControllerCore:
             return self._controller_state
         
     
-    def get_status_snapshot(circuit_ids: Optional[list[int]] = None) -> dict:
-        pass
+    def get_circuit_full_status(self, circuit_id: int) -> CircuitStatus:
+        """
+        Get the full status (runtime + snapshot) of a specific circuit.
+        
+        :param circuit_id: ID of the circuit to get status for.
+        :return: CircuitStatus object combining runtime and snapshot data.
+        :raises ValueError: if the circuit_id is not found.
+        """
+
+        return self.agg.get_circuit_status(circuit_id)
+    
+
+    def get_circuit_runtime_status(self, circuit_id: int) -> CircuitRuntimeStatus:
+        """
+        Get the runtime status of a specific circuit.
+        
+        :param circuit_id: ID of the circuit to get status for.
+        :return: CircuitRuntimeStatus object.
+        :raises ValueError: if the circuit_id is not found.
+        """
+
+        try:
+            circuit = self.circuits[circuit_id]
+        except KeyError:
+            raise ValueError(f"Circuit ID {circuit_id} not found in circuits.")
+        
+        return circuit.runtime_status
+    
+
+    def get_controller_status_summary(self) -> ControllerStatusSummary:
+        """
+        Get a summary of the controller's overall status.
+        
+        :return: ControllerStatusSummary object.
+        """
+
+        return ControllerStatusSummary(
+            circuit_ids=list(self.circuits.keys()),
+            controller_state=self.controller_state
+        )
+    
+    def get_controller_full_status(self) -> ControllerFullStatus:
+        """
+        Get the full status of the controller including all circuit statuses.
+        
+        :return: ControllerFullStatus object.
+        """
+
+        css = self.get_controller_status_summary()
+        return self.agg.get_controller_full_status(css)
 
 
     # ==================================================================================================================
@@ -183,8 +231,7 @@ class ControllerCore:
 
     def stop_circuit_irrigation(self, circuit_id: int, timeout: float = 10.0) -> None:
         """Stop irrigation for a specific circuit."""
-        
-        self.logger.warning("stop_circuit_irrigation is not yet implemented in ControllerCore.")
+        raise NotImplementedError("stop_circuit_irrigation is not yet implemented in ControllerCore.")
 
 
     # ==================================================================================================================
@@ -206,7 +253,7 @@ class ControllerCore:
         Reload global and zones configuration from the specified paths.
         Modifies the current configuration in place.
         """
-        pass
+        raise NotImplementedError("reload_config is not yet implemented in ControllerCore.")
 
     # ==================================================================================================================
     # Public API - Shutdown & Restart
@@ -218,7 +265,7 @@ class ControllerCore:
 
     def restart(self) -> None:
         """Restart the controller."""
-        pass
+        raise NotImplementedError("restart is not yet implemented in ControllerCore.")
     
 
     # ==================================================================================================================
@@ -412,7 +459,7 @@ class ControllerCore:
 
     # ----------------- CLI -----------------------
 
-    def get_circuit_snapshot(self, circuit_id: int) -> CircuitSnapshot:
+    def get_circuit_snapshot(self, circuit_id: int) -> CircuitStatus:
         """Returns the persistent snapshot state of a given circuit."""
 
         # self.logger.warning("get_circuit_snapshot is deprecated and may be removed in future versions.")

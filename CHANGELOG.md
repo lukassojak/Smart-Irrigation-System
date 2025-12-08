@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Reduced log severity for transient and expected weather API issues in `RecentWeatherFetcher` and `EcowittAPI`.
+- New structured status models for controller status representation in `status_models.py`.
+- Added new status retrieval API methods in `ControllerCore` using the new structured status models and  `StatusAggregator`.
 
 ### Changed
 - Improved fallback handling in `RecentWeatherFetcher` to avoid noisy ERROR logs when operating offline or when API secrets are invalid.

@@ -3,7 +3,7 @@
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 
-from smart_irrigation_system.node.core.status_models import CircuitSnapshot, CircuitRuntimeStatus, CircuitStatus
+from smart_irrigation_system.node.core.status_models import CircuitSnapshot, CircuitRuntimeStatus, CircuitStatus, ControllerFullStatus, ControllerStatusSummary
 
 
 class StatusAggregator:
@@ -24,6 +24,7 @@ class StatusAggregator:
         :return: CircuitStatus object combining runtime and snapshot data.
         :raises ValueError: if the circuit_id is not found.
         """
+        
         try:
             circuit = self.circuits[circuit_id]
         except KeyError:
@@ -44,7 +45,22 @@ class StatusAggregator:
         :return: Dictionary mapping circuit IDs to their CircuitStatus objects.
         :raises ValueError: if any circuit_id is not found.
         """
+
         statuses = {}
         for circuit_id in self.circuits.keys():
             statuses[circuit_id] = self.get_circuit_status(circuit_id)
         return statuses
+    
+    def get_controller_full_status(self, css: ControllerStatusSummary) -> ControllerFullStatus:
+        """
+        Get the full status of the controller including all circuit statuses.
+        
+        :param css: ControllerStatusSummary object.
+        :return: ControllerFullStatus object.
+        """
+
+        all_statuses = self.get_all_statuses()
+        return ControllerFullStatus(
+            summary=css,
+            circuit_statuses=all_statuses
+        )

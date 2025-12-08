@@ -11,11 +11,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from smart_irrigation_system.node.core.enums import IrrigationState, IrrigationOutcome, SnapshotCircuitState
+from smart_irrigation_system.node.core.enums import IrrigationState, IrrigationOutcome, SnapshotCircuitState, ControllerState
 
 
 # ========================================
-# Runtime (IrrigationCircuit)
+# Circuit Runtime (IrrigationCircuit)
 # ========================================
 
 @dataclass
@@ -32,7 +32,7 @@ class CircuitRuntimeStatus:
 
 
 # ========================================
-# Persistent Snapshot (CircuitStateManager)
+# Circuit Persistent Snapshot (CircuitStateManager)
 # ========================================
 
 @dataclass
@@ -49,8 +49,8 @@ class CircuitSnapshot:
 
 
 # ========================================
-# Combined Status (IrrigationController)
-# =======================================
+# Circuit Combined Status (IrrigationController)
+# ========================================
 
 @dataclass
 class CircuitStatus:
@@ -59,3 +59,25 @@ class CircuitStatus:
     name: str
     runtime_status: CircuitRuntimeStatus
     snapshot: CircuitSnapshot
+
+
+# ========================================
+# Controller Status Summary
+# ========================================
+
+@dataclass
+class ControllerStatusSummary:
+    """Class to represent a summary of the controller's overall status."""
+    circuit_ids: list[int]
+    controller_state: ControllerState
+
+
+# ========================================
+# Controller Full Status
+# ========================================
+
+@dataclass
+class ControllerFullStatus:
+    """Class to represent the full status of the controller, including all circuits."""
+    summary: ControllerStatusSummary
+    circuit_statuses: dict[int, CircuitStatus]
