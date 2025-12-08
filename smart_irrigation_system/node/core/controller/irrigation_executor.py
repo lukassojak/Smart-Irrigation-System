@@ -47,7 +47,8 @@ class IrrigationExecutor:
                            on_irrigation_stopped: Callable = lambda: None,
                            on_executor_error: Callable[[int, Exception], None] = lambda circuit_id, e: None,
                            on_irrigation_waiting: Callable[[int, str], None] = lambda circuit_id, msg: None,
-                           on_irrigation_failed: Callable[[int, str], None] = lambda circuit_id, reason: None
+                           on_irrigation_failed: Callable[[int, str], None] = lambda circuit_id, reason: None,
+                           on_irrigation_stop_requested: Callable = lambda: None
                            ) -> None:
         """
         Register callback functions for various irrigation events.
@@ -60,6 +61,7 @@ class IrrigationExecutor:
         self._on_executor_error = on_executor_error
         self._on_irrigation_waiting = on_irrigation_waiting
         self._on_irrigation_failed = on_irrigation_failed
+        self._on_irrigation_stop_requested = on_irrigation_stop_requested
     
 
     def execute_manual(self, circuit_id: int, volume: float) -> None:
@@ -85,9 +87,9 @@ class IrrigationExecutor:
             return
         
         self.logger.info(f"Starting manual irrigation for Circuit ID {circuit_id} with target volume {volume}L.")
-        self._on_irrigation_start()
         try:
             handle = self._start_man_irrigation(circuit_id, volume)
+            self._on_irrigation_start()
             self.thread_manager.join_worker_handle(worker_handle=handle, timeout=MAX_IRRIGATING_TIME_PER_BATCH_SECONDS)
             self._on_man_irrigation_finish(circuit_id)
         except TimeoutError as e:
@@ -107,7 +109,6 @@ class IrrigationExecutor:
         :param conditions_provider: Provider of current weather conditions.
         """
 
-        self._on_irrigation_start()
         try:
             while True:
                 batch = planner.get_next_batch()
@@ -130,6 +131,7 @@ class IrrigationExecutor:
         
                     self.logger.info(f"Starting irrigation for Circuit ID {circuit_id}.")
                     self._start_auto_irrigation(circuit_id, planner, global_config, current_conditions)
+                    self._on_irrigation_start()
                 
                 # Wait for all circuits in the batch to complete
                 # Includes also all manually started irrigation tasks
@@ -155,6 +157,7 @@ class IrrigationExecutor:
         """
 
         self.stop_event.set()
+        self._on_irrigation_stop_requested()
         try:
             self.thread_manager.join_all_workers(task_type=TaskType.IRRIGATION, timeout=timeout)
             self._on_irrigation_stopped()

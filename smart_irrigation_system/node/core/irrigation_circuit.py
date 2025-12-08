@@ -376,6 +376,7 @@ class IrrigationCircuit:
 
     def _irrigation_init(self, target_duration: float, target_volume: Optional[float]) -> Optional[IrrigationResult]:
         """Prepares circuit for irrigation. Returns IrrigationResult on failure, or None on success."""
+
         # If target_volume is provided by the caller, use it; otherwise, calculate it from target_duration
         target_volume = self._duration_to_volume(target_duration) if target_volume is None else target_volume
         # Guard: must be IDLE
@@ -401,6 +402,7 @@ class IrrigationCircuit:
 
     def _irrigation_execute(self, duration: float, stop_event: threading.Event) -> tuple[float, IrrigationOutcome, Optional[str]]:
         """Executes the irrigation process. Returns a tuple of (elapsed_time, outcome, error)."""
+
         elapsed_time: float = 0.0
         error: Optional[str] = None
         outcome: Optional[IrrigationOutcome] = None
@@ -451,6 +453,7 @@ class IrrigationCircuit:
 
     def _irrigation_finalize(self, elapsed_time: float, outcome: IrrigationOutcome, error: Optional[str]) -> IrrigationResult:
         """Finalizes the irrigation process and returns the IrrigationResult."""
+
         try:
             self.valve.set_state(RelayValveState.CLOSED)
         except exceptions.RelayValveStateError as e:

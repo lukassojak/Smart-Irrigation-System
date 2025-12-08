@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.12.0] - 2025-12-08
+*Major refactor of the irrigation controller architecture with introduction of modular subsystems for planning, execution, scheduling, and thread management.*
 
 ### Added
 - Introduced new modular controller subsystem under `node/core/controller/`:
@@ -33,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added new `TaskType.EXECUTOR` and support for executor-specific workers.
 - Manual and automatic irrigation now run via executor workers (non-blocking dispatch).
 - Added callback registration mechanism in `IrrigationExecutor` for granular lifecycle notifications.
+- Introduced `_refresh_state()` as the unified state resolution mechanism for `ControllerCore`.
+  Controller state is now derived exclusively from currently running IRRIGATION workers,
+  ensuring deterministic and race-free state transitions.
+- Added periodic scheduler task `refresh_state` (5-second interval) to maintain controller
+  state consistency and support future features (e.g., external status polling).
 
 ### Changed
 - Added preliminary `ControllerCore` class as a replacement for
@@ -47,10 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Improved recovery from unclean shutdown to also update `last_decision`.
+- Prevented automatic and manual irrigation from starting while controller is in ERROR state.
+- Ensured consistent state transitions when irrigation is stopped or when multiple irrigation
+  tasks complete in rapid succession.
 
 ### Removed
+- Old `_set_state()` implementation and outdated state transition logic.
 
 ### Known Issues
+- The automatic irrigation service is currently not fully implemented; automatic irrigation functionality remains disabled.
 - Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
 - Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.13.0`.
 - `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
@@ -59,10 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node ID is currently hardcoded in `/start_irrigation` (`"node1"`). Dynamic assignment from NodeRegistry will be implemented in the next iteration.
 
 ### Notes
-- The newly introduced modules constitute the foundation of the ongoing large-scale
-  refactor. Current functionality primarily includes architecture scaffolding.
-- Old `IrrigationController` remains functional for now; replacement by
-  `ControllerCore` will be finished in the next iteration of the refactor.
+- The newly introduced modules constitute the foundation of the ongoing large-scale refactor. Current functionality primarily includes architecture scaffolding.
+- All the `IrrigationController` public API methods are currently proxied to `ControllerCore` for backward compatibility.
+- Deprecated `start_main_loop`, `stop_main_loop`, `resume_main_loop`, `pause_main_loop` continues to exist for backward compatibility but remains non-functional.
 
 ---
 

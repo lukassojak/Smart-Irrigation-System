@@ -10,6 +10,8 @@ import smart_irrigation_system.node.utils.time_utils as time_utils
 
 from smart_irrigation_system.node.core.controller.thread_manager import ThreadManager, TaskType, WorkerHandle
 
+from smart_irrigation_system.node.utils.logger import get_logger
+
 
 LOOP_SLEEP_INTERVAL = 1.0  # seconds
 
@@ -33,6 +35,8 @@ class TaskScheduler:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
+        self.logger = get_logger(self.__class__.__name__)
+
 
     def register_task(self, name: str, fn: Callable,
                       interval: int, async_mode: bool = True,
@@ -47,6 +51,7 @@ class TaskScheduler:
         :param initial_delay: Initial delay before the first execution in seconds.
         :raises ValueError: if a task with the same name is already registered.
         """
+
         if name in self.tasks:
             raise ValueError(f"Task with name '{name}' is already registered.")
         
@@ -58,6 +63,8 @@ class TaskScheduler:
             initial_delay=initial_delay
         )
 
+        self.logger.info(f"Registered task '{name}' with interval {interval}s (async_mode={async_mode}, initial_delay={initial_delay}s).")
+
 
     def unregister_task(self, name: str) -> None:
         """
@@ -66,19 +73,25 @@ class TaskScheduler:
         :param name: Name of the task to unregister.
         :raises ValueError: if a task with the given name is not registered.
         """
+
         if name not in self.tasks:
             raise ValueError(f"Task with name '{name}' is not registered.")
         self.tasks.pop(key=name)
 
+        self.logger.info(f"Unregistered task '{name}'.")
+
 
     def start(self) -> None:
         """Start the task scheduler."""
+
         if self._thread is not None and self._thread.is_alive():
             return
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run_loop, name="TaskScheduler", daemon=True)
         self._thread.start()
+        self.logger.info("TaskScheduler started.")
     
+
     def stop(self, timeout: float = 10.0) -> None:
         """
         Stop the task scheduler. Wait for the scheduler thread to terminate.
@@ -86,12 +99,16 @@ class TaskScheduler:
         :param timeout: maximum time to wait for the scheduler thread to stop. Defaults to 10 seconds.
         :raises TimeoutError: if the scheduler thread fails to stop within the given timeout.
         """
+
         self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=timeout)
             if self._thread.is_alive():
                 raise TimeoutError("Failed to stop TaskScheduler thread within the given timeout.")
             self._thread = None
+        
+        self.logger.info("TaskScheduler stopped.")
+
 
     def _run_loop(self) -> None:
         while not self._stop_event.is_set():
