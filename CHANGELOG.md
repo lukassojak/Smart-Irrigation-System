@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Reduced log severity for transient and expected weather API issues in `RecentWeatherFetcher` and `EcowittAPI`.
+
+### Changed
+- Improved fallback handling in `RecentWeatherFetcher` to avoid noisy ERROR logs when operating offline or when API secrets are invalid.
+- Normalized logging in EcowittAPI converters to WARN on malformed or partial data structures.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+
+### Notes
+
+---
+
 ## [0.12.0] - 2025-12-08
 *Major refactor of the irrigation controller architecture with introduction of modular subsystems for planning, execution, scheduling, and thread management.*
 

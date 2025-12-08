@@ -63,9 +63,9 @@ def temperature_api_call(fetcher, start_date: datetime, end_date: datetime) -> d
                 for epoch, value in temperature_list.items()
             }
         else:
-            fetcher.logger.error(f"Unexpected data structure for temperature list: {temperature_list}")
+            fetcher.logger.warning(f"Unexpected data structure for temperature list: {temperature_list}")
     except Exception as e:
-        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+        fetcher.logger.warning(f"Unexpected error while converting timestamps: {e}")
 
     try:
         return data.get("data").get("outdoor").get("temperature").get("list", [])
@@ -101,9 +101,9 @@ def rainfall_api_call_history(fetcher, start_date: datetime, end_date: datetime)
                 for epoch, value in rainfall_list.items()
             }
         else:
-            fetcher.logger.error(f"Unexpected data structure for rainfall list: {rainfall_list}")
+            fetcher.logger.warning(f"Unexpected data structure for rainfall list: {rainfall_list}")
     except Exception as e:
-        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+        fetcher.logger.warning(f"Unexpected error while converting timestamps: {e}")
 
     try:
         return data.get("data").get("rainfall").get("yearly", {}).get("list", {})
@@ -139,9 +139,9 @@ def solar_api_call_history(fetcher, start_date: datetime, end_date: datetime) ->
                 for epoch, value in solar_list.items()
             }
         else:
-            fetcher.logger.error(f"Unexpected data structure for solar list: {solar_list}")
+            fetcher.logger.warning(f"Unexpected data structure for solar list: {solar_list}")
     except Exception as e:
-        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+        fetcher.logger.warning(f"Unexpected error while converting timestamps: {e}")
 
     try:
         return data.get("data").get("solar_and_uvi").get("solar", {}).get("list", {})
@@ -176,11 +176,11 @@ def all_api_call_real_time(fetcher) -> dict[str, list]:
             int(data["data"]["rainfall"]["yearly"]["time"])
         ).strftime("%Y-%m-%d %H:%M:%S")
     except KeyError as e:
-        fetcher.logger.error(f"Error converting timestamps to human-readable format: {e}")
+        fetcher.logger.warning(f"Error converting timestamps to human-readable format: {e}")
     except ValueError as e:
-        fetcher.logger.error(f"Invalid timestamp value: {e}")
+        fetcher.logger.warning(f"Invalid timestamp value: {e}")
     except Exception as e:
-        fetcher.logger.error(f"Unexpected error while converting timestamps: {e}")
+        fetcher.logger.warning(f"Unexpected error while converting timestamps: {e}")
 
 
     try:
@@ -254,21 +254,21 @@ def test_api_secrets_valid(fetcher, global_config) -> bool:
             if data.get("code") == 0:
                 return True
             elif data.get("code") == -1:
-                fetcher.logger.error("Cannot validate API secrets: Too frequent requests.")
+                fetcher.logger.warning("Cannot validate API secrets: Too frequent requests.")
             elif data.get("code") == 40010:
-                fetcher.logger.error("Invalid API secrets: Invalid application key.")
+                fetcher.logger.warning("Invalid API secrets: Invalid application key.")
             elif data.get("code") == 40011:
-                fetcher.logger.error("Invalid API secrets: Invalid API key.")
+                fetcher.logger.warning("Invalid API secrets: Invalid API key.")
             elif data.get("code") == 40012:
-                fetcher.logger.error("Invalid API secrets: Invalid device MAC address.")
+                fetcher.logger.warning("Invalid API secrets: Invalid device MAC address.")
             else:
-                fetcher.logger.error(f"Cannot validate API secrets.")
+                fetcher.logger.warning(f"Cannot validate API secrets.")
 
             return False
         except Exception as e:
-            fetcher.logger.error(f"Error parsing API response: {e}")
+            fetcher.logger.warning(f"Error parsing API response: {e}")
             return False
     else:
-        fetcher.logger.error(f"API call failed with status code {response.status_code}: {response.text}")
+        fetcher.logger.warning(f"API call failed with status code {response.status_code}: {response.text}")
         return False
     

@@ -49,16 +49,15 @@ class RecentWeatherFetcher:
         try:
             self.connecting = True
             if not test_api_secrets_valid(self, global_config):
-                self.logger.error("Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
+                self.logger.warning("Invalid API secrets. Please check your configuration. RecentWeatherFetcher will use standard conditions as fallback.")
                 self._use_standard_conditions = True
             else:
                 self.logger.info("API secrets validated successfully.")
         except requests.exceptions.ConnectionError as e:
-            self.logger.error(f"Connection error while validating API secrets: {e}.")
-            self.logger.warning("Internet connection issue. RecentWeatherFetcher will try to connect later.")
+            self.logger.warning(f"Internet connection issue while validating API secrets. RecentWeatherFetcher will try to connect later.")
             self.try_reconnect = True
         except Exception as e:
-            self.logger.error(f"Error while validating API secrets: {e}. RecentWeatherFetcher will use standard conditions as fallback.")
+            self.logger.warning(f"Error while validating API secrets. RecentWeatherFetcher will use standard conditions as fallback.")
             self._use_standard_conditions = True
         finally:
             self.connecting = False
@@ -153,7 +152,7 @@ class RecentWeatherFetcher:
             interval_days = INTERVAL_DAYS_LIMIT
 
         if self._use_standard_conditions:
-            self.logger.error("Cannot update current conditions. Using standard conditions as fallback.")
+            self.logger.warning("Cannot update current conditions. Using standard conditions as fallback.")
             return self._standard_conditions
 
         if self.try_reconnect:
@@ -281,7 +280,7 @@ class RecentWeatherFetcher:
         """Updates the cache for temperatures and rainfall data."""
         self.logger.debug("Updating cache for temperatures, rainfall, solar, and real-time weather data.")
         if self._use_standard_conditions:
-            self.logger.error("Cannot update cache. Using standard conditions as fallback.")
+            self.logger.warning("Cannot update cache. Using standard conditions as fallback.")
             return
         
         self._cache_temperatures()
