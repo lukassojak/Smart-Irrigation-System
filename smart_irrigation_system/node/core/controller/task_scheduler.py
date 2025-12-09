@@ -4,7 +4,7 @@ import threading
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import smart_irrigation_system.node.utils.time_utils as time_utils
 
@@ -117,7 +117,7 @@ class TaskScheduler:
                 if task.last_run is None:
                     if task.initial_delay > 0:
                         # Not yet time for the first run
-                        if (time_utils.elapsed_seconds(now - time_utils.from_iso(time_utils.to_iso(now - task.initial_delay)), now) < 0):
+                        if time_utils.elapsed_seconds(now - timedelta(seconds=task.initial_delay), now) < 0:
                             continue
                     # First run
                     self._execute_task(task)

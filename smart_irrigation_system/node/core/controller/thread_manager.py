@@ -126,7 +126,7 @@ class ThreadManager:
         :raises TimeoutError: if any worker fails to join within the given timeout.
         """
 
-        self.logger.debug(f"Joining all workers of type '{task_type}' with timeout {timeout} seconds.")
+        self.logger.debug(f"Joining all workers of type '{task_type or 'any'}' with timeout {timeout} seconds.")
         with self._lock:
             workers_to_join = [
                 worker_handle for worker_handle in self._workers.values()
@@ -137,7 +137,7 @@ class ThreadManager:
             if worker_handle.thread.is_alive():
                 raise TimeoutError(f"Worker '{worker_handle.name}' failed to join within {timeout} seconds.")
 
-        self.logger.debug(f"All workers of type '{task_type}' have been joined.")
+        self.logger.debug(f"All workers of type '{task_type or 'any'}' have been joined.")
     
     def join_worker_handle(self, worker_handle: WorkerHandle, timeout: float = 10.0) -> None:
         """

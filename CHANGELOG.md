@@ -5,26 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-- Reduced log severity for transient and expected weather API issues in `RecentWeatherFetcher` and `EcowittAPI`.
-- New structured status models for controller status representation in `status_models.py`.
-- Added new status retrieval API methods in `ControllerCore` using the new structured status models and  `StatusAggregator`.
-
-### Changed
-- Improved fallback handling in `RecentWeatherFetcher` to avoid noisy ERROR logs when operating offline or when API secrets are invalid.
-- Normalized logging in EcowittAPI converters to WARN on malformed or partial data structures.
-
-### Fixed
-
-### Removed
-
-### Known Issues
-
-### Notes
-
----
 
 ## [0.12.0] - 2025-12-08
 *Major refactor of the irrigation controller architecture with introduction of modular subsystems for planning, execution, scheduling, and thread management.*
@@ -60,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ensuring deterministic and race-free state transitions.
 - Added periodic scheduler task `refresh_state` (5-second interval) to maintain controller
   state consistency and support future features (e.g., external status polling).
+- New structured status models for controller status representation in `status_models.py`.
+- Added new status retrieval API methods in `ControllerCore` using the new structured status models and  `StatusAggregator`.
 
 ### Changed
 - Added preliminary `ControllerCore` class as a replacement for
@@ -71,6 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added placeholder implementations to ensure CLI and MQTT interfaces continue to function during refactor transition.
 - Split circuit irrigation checks into `needs_irrigation()` and `is_safe_to_irrigate()` for clearer separation of business and runtime logic.
 - Extended status model (`CircuitSnapshot`) with new `last_decision` field.
+- Reduced log severity for transient and expected weather API issues in `RecentWeatherFetcher` and `EcowittAPI`.
+- Improved fallback handling in `RecentWeatherFetcher` to avoid noisy ERROR logs when operating offline or when API secrets are invalid.
+- Normalized logging in EcowittAPI converters to WARN on malformed or partial data structures.
 
 ### Fixed
 - Improved recovery from unclean shutdown to also update `last_decision`.
@@ -82,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Old `_set_state()` implementation and outdated state transition logic.
 
 ### Known Issues
-- The automatic irrigation service is currently not fully implemented; automatic irrigation functionality remains disabled.
+- The automatic irrigation service does not implement `initial_delay` feature yet.
 - Parser currently supports only the default Node MQTT format; additional metrics will require format extension.
 - Backend still returns `last_status` as a raw text string; parsing of irrigation zones and states is done client-side. This is planned to be addressed in the next patch. Server will provide structured data in future - planned for `v0.13.0`.
 - `ZoneNodeMapper` currently uses a static mapping returning `"node1"`.
