@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+- `TaskScheduler.unregister_task()` fixed to correctly remove registered tasks.
+
+### Removed
+
+### Known Issues
+
+---
 
 ## [0.12.0] - 2025-12-08
 *Major refactor of the irrigation controller architecture with introduction of modular subsystems for planning, execution, scheduling, and thread management.*

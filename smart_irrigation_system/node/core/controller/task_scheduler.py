@@ -76,7 +76,7 @@ class TaskScheduler:
 
         if name not in self.tasks:
             raise ValueError(f"Task with name '{name}' is not registered.")
-        self.tasks.pop(key=name)
+        self.tasks.pop(name)
 
         self.logger.info(f"Unregistered task '{name}'.")
 
