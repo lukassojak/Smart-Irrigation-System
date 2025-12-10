@@ -18,6 +18,33 @@ Complete the full stable architecture of the Smart Irrigation System, integratin
 
 ---
 
+## Phase 3.5 – Node Architecture Refactor (v0.12.0, December 2025)
+
+**Goal:**  
+Replace the legacy monolithic `IrrigationController` with a fully modular, testable, and reliable
+edge-node architecture designed for multi-node scalability and real-time control.
+
+**Highlights:**
+- Introduced new modular controller subsystem (`ControllerCore`) composed of:
+  - **ThreadManager** – unified and safe worker lifecycle manager  
+  - **IrrigationExecutor** – dedicated execution layer for manual & automatic irrigation  
+  - **TaskPlanner + BatchStrategy** – irrigation planning and pluggable batching strategies
+  - **TaskScheduler** – cron-like scheduling of periodic background tasks
+  - **StatusAggregator** – unified runtime + snapshot status model  
+  - **AutoIrrigationService** – scheduled automatic irrigation orchestration  
+- Controller state machine redesigned:
+  - State now derived exclusively from active irrigation workers  
+  - Deterministic transitions (`IDLE → IRRIGATING → STOPPING → IDLE` or `ERROR`)  
+- Fully non-blocking irrigation execution (each circuit in its own IRRIGATION worker)
+- Improved safe shutdown (executor stop, worker joining, final valve checks)
+- Backward compatibility preserved via `LegacyControllerAPI`
+
+**Outcome:**  
+A robust, scalable, and testable node architecture that forms the basis for the upcoming
+multi-node system and full dashboard integration in Phase 4.
+
+---
+
 ## Phase 3 – Web UI prototype (v0.9.0, October 2025)
 
 **Goal:**  

@@ -21,21 +21,33 @@ Each **edge node** (typically a Raspberry Pi Zero 2 W) manages one or more irrig
 
 ---
 
-### 2. Weather-Based Irrigation
-The system dynamically adjusts watering based on:
+### 2. Weather-Based Irrigation (v0.12+)
+Since v0.10 the irrigation volume is computed by a pluggable **Weather Irrigation Model**.
+The model receives:
+- the circuit configuration,
+- the last known weather conditions,
+- global irrigation limits and correction factors.
+
+The model returns a `WeatherModelResult` containing:
+- final target volume,
+- bounds (min/max),
+- skip flag,
+- computation details.
+
+> All computation is isolated in the model layer and can be replaced or extended.
+
+The system dynamically adjusts watering based on recent weather data (forecast support planned for future releases).
 
 **Recent weather data:**
-- Real-time weather data is fetched via a weather API (e.g., Ecowitt station).
-- Each node computes required water volume using **global correction factors** & **per-zone correction factors** derived from weather conditions.
-- Maximum and minimum thresholds can be defined to avoid over- or under-watering.
+- Real-time weather data is fetched via a weather API.
+- The required water volume is computed by Weather Irrigation Model for each zone using **global correction factors** & **per-zone correction factors**.
 - If the node is offline or the weather API is unreachable, the system falls back to default irrigation amounts.
 - For testing purposes, a built-in **WeatherSimulator** can generate synthetic weather data.
-- Current version (v0.9) supports three weather parameters: *temperature*, *solar radiation*, and *rainfall*. Future versions may include additional parameters.
 
 **Weather forecast:**
 - In future releases, forecast data will be integrated to further optimize irrigation scheduling.
 
-**Irrigation calculation model:**
+**Weather Irrigation Model:**
 - The current model calculates the required water volume dynamically based on deviations from *standard weather conditions*. The calculation model uses the following logic:
 1. **Base target water amount**:
     - Each irrigation node calculates `base_target_water_amount` from the configured `target_mm` (even-area-mode) or `liters_per_minimum_dripper` (dripper-mode). This represend the default water volume needed under standard weather conditions.
@@ -49,8 +61,6 @@ The system dynamically adjusts watering based on:
 
 - This model allows for a nuanced and responsive irrigation strategy that adapts to real-time environmental conditions, ensuring optimal water usage.
 
-> The weather-based irrigation logic is modular and can be extended in future versions to include additional parameters.
-
 > The current weather model can be replaced in future releases with more advanced models, including machine learning-based predictions and self-correcting algorithms if feedback data (e.g., soil moisture sensors) is integrated.
 
 
@@ -60,12 +70,32 @@ The system dynamically adjusts watering based on:
 - **Automatic daily irrigation:** runs once per day at configurable time.
 - **Manual irrigation:** per-zone manual start with water amount can be triggered remotely in Web UI or locally via CLI.
 - **Mixed irrigation:** automatic irrigation can run concurrently with manual tasks if conditions allow.
-- **Flow monitoring:** automatically distributes irrigation when simultaneous zones would exceed the max flow rate.
+- **Flow control:** automatically distributes irrigation when simultaneous zones would exceed the max flow rate.
 
 **Irrigation modes:**
 - **Sequential mode:** zones irrigate one after another based on order in configuration.
 - **Concurrent mode:** multiple zones irrigate concurrently.
-- **Hybrid mode:** if *flow monitoring* is enabled, zones irrigate concurrently up to the max flow rate; remaining zones wait in a queue. **This mode ensures that the water pressure won't drop below acceptable levels** which would affect irrigation accuracy.
+- **Hybrid mode:** if *flow control* is enabled, zones irrigate concurrently up to the max flow rate; the zones are batched accordingly by pluggable `BatchStrategy`.
+
+> The flow control feature is not supported since v0.12, as the current batching strategy is single-batch only. Future releases will reintroduce this feature with advanced batching strategies.
+
+> Since v0.12 irrigation is executed using a dedicated modular pipeline:
+
+1. **AutoIrrigationService**
+   - periodically checks the scheduled time,
+   - requests automatic irrigation when conditions are met.
+
+2. **TaskPlanner + BatchStrategy**
+   - selects circuits that need irrigation today,
+   - groups them into batches according to strategy (currently single-batch),
+   - supports future sequential/concurrent/hybrid batching.
+
+3. **IrrigationExecutor**
+   - Starts irrigation based on planned batches,
+   - each circuit is executed in its own IRRIGATION worker thread.
+
+*Automatic and manual irrigation run entirely non-blocking, each in separate executor workers.*
+
 
 **Controller states:**
 | State | Description |
@@ -80,13 +110,13 @@ The system dynamically adjusts watering based on:
 |--------|-------------|
 | `IDLE` | Zone ready, not irrigating |
 | `IRRIGATING` | Zone actively irrigating |
-| `WAITING` | Zone queued for irrigation (concurrent mode) |
-| `ERROR` | Zone failure, valve closed for safety |
+| `WAITING` | Zone queued for irrigation |
+| `DISABLED` | Zone disabled via config |
 ---
 
 ### 4. Safety & Reliability
 - **Fail-safe valves:** all valves are normally closed (`NC` type). On crash or power loss → system defaults to closed valves.
-- **Thread isolation:** each irrigation zone runs in its own thread.
+- **Thread isolation:** each irrigation zone runs inside an IRRIGATION worker thread started by `IrrigationExecutor`.
 - **State persistence:** zone states (`zones_state.json`) are saved and restored after restart.
 - **Unclean shutdown recovery:** interrupted irrigation sessions are logged and marked as “interrupted”.
 - **Error detection:** system monitors for common errors (e.g., weather API failure) and logs them.
@@ -204,24 +234,23 @@ dynamic `interval_days` based on minimum `irrigation_volume_threshold` and recen
 ---
 
 #### `zones_state.json`
-Runtime state file, automatically maintained by the system.
+Persistent state file, automatically maintained by the system.
 
 | Key | Description |
 |-----|--------------|
 | `id` | Unique ID of the zone |
-| `irrigation_state` | Current state of the zone (e.g. `IDLE`, `IRRIGATING`, `SHUTDOWN`) |
+| `circuit_state` | Current state of the zone (`IDLE`, `IRRIGATING`, `WAITING`, `DISABLED`) |
+| `last_decision` | Timestamp of last irrigation decision |
+| `last_outcome` | Outcome of last irrigation (`SUCCESS`, `FAILED`, `STOPPED`, `INTERRUPTED`, `SKIPPED`, `null`) |
 | `last_irrigation` | Timestamp of last watering |
-| `last_result` | Result of last irrigation (`COMPLETED`, `INTERRUPTED`, `FAILED`) |
+| `last_duration` | Duration of last watering (seconds) |
+| `last_volume` | Volume of water applied during last watering (liters) |
 
->*Major refactor planned to allow better state management. Renaming to `node_state.json` and including both per-zone and per-node state.*
+>*Refactor planned to allow better state management. Renaming to `node_state.json` and including both per-zone and per-node state.*
  *Planned future additions:*
- >- `circuit_state`: Current state of the circuit (`SHUTDOWN`, `IDLE`, `IRRIGATING`, `WAITING`, `ERROR`)
- >- `last_decision_time`
- > - `last_decision_result`
  > - `pending_irrigation_volume`: Volume scheduled for next irrigation based on recent weather but not yet irrigated (dynamic scheduling).
  > - `last_irrigation_start_time`: Timestamp of last completed irrigation start.
  > - `last_irrigation_end_time`: Timestamp of last completed irrigation end.
- > - `last_irrigation_volume`: Volume of water applied during last completed irrigation.
 
 
 ---

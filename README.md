@@ -8,7 +8,7 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
   <figcaption>Web Dashboard Prototype (v0.9)</figcaption>
 </figure>
 
-> Project is currently in *Phase 3 (v0.9)* - fundamental node and server functionality is complete, basic web UI prototype is implemented. Demo is available for local testing.
+> Project is currently in *Phase 3 (v0.12)* - fundamental node and server functionality is complete, basic web UI prototype is implemented. Demo is available for local testing.
 
 ---
 
@@ -25,7 +25,7 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px">
   <div>
     <img src="./other/architecture_0.9.0.svg" alt="0.9 version architecture" title="v0.9 architecture" style="height: 300px";/>
-    <p>Fig. 1: Current v0.9 architecture</p>
+    <p>Fig. 1: Current v0.12 architecture</p>
   </div>
   <div>
     <img src="./other/architecture_target.svg" alt="target architecture" title="target architecture" style="height: 300px";/>
@@ -37,21 +37,29 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 
 ## Feature Highlights
 
-### Intelligent Irrigation Control
-- Multi-zone management (parallel or sequential modes)
-- Zone-specific configuration:weather conditions sensivity, dripper/soaker hose/sprinkler modes, custom schedules, ...
-- Weather-adaptive watering using live or simulated weather data
-- Automatic daily scheduling
-- Manual start/stop
-- Precise water calculation per zone (uniform or dripper-based mode)
-- Maximum-flow monitoring to prevent pressure drops & automatic staggering of zones
+### Intelligent Irrigation Control (v0.12+)
+- **Pluggable irrigation computation models**:
+- **Weather-adaptive watering** using live or simulated weather data.
+  - for intelligent per-zone watering volume decision logic based on multiple factors
+  - supported factors include: local weather, intervals, correction factors, min/max boundaries, ....
+  - Models with custom algorithms can be easily added.
+  - *More factors for decision logic planned for future versions (forecast data, soil moisture, evapotranspiration, machine learning, ...).*
+- Automatic irrigation scheduling via **AutoIrrigationService**.
+- **Multi-zone management** using a modular execution pipeline:
+  - **TaskPlanner** for deciding which circuits need irrigation based on configuration and weather data.
+  - **Pluggable BatchStrategy** for grouping circuits into execution batches (max flow control, sequential/parallel modes, custom strategies).
+  - **IrrigationExecutor** running each circuit in isolated worker threads.
+- **Zone-specific configuration**: weather conditions sensivity, dripper/soaker hose/sprinkler modes, custom schedules, ...
+- **Manual start/stop**.
+- **Maximum-flow monitoring** to prevent pressure drops & automatic staggering of zones.
 
 ### Reliability and Safety
-- **Fail-safe design:** valves are *normally closed* and always close on crash or power loss
-- **Thread-safe control:** each circuit runs in an isolated thread with monitored state
-- **State recovery:** nodes store states and logs them in data file to recover after unclean shutdowns
-- **Local fallback:** nodes continue operating without server connectivity
-- **Verbose logging:** detailed local logging at multiple levels for debugging and audit trails + cental collection (planned)
+- **Fail-safe design:** Valves are *normally closed* and always close on crash or power loss
+- **Local fallback:** Nodes continue operating without server connectivity
+- **Thread-safe control:** Each circuit runs in an isolated thread with monitored state
+- **Deterministic controller state:** Controller state is derived exclusively from active `IRRIGATION` workers.
+- **State recovery:** Nodes store states and logs them in data file to recover after unclean shutdowns
+- **Verbose logging:** Detailed local logging at multiple levels for debugging and audit trails + cental collection (planned)
 
 ### Security and Robustness
 - MQTT communication prepared for TLS support (planned v1.1+)
@@ -87,9 +95,10 @@ Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/user_guide/SETUP_AND_R
 |-------|---------|--------|-------|
 | 1     | v0.6    | Completed | **Node MVP**: autonomous irrigation logic, MQTT communication, configuration & logging |
 | 2     | v0.8    | Completed | **Server prototype**: MQTT communication with single demo node, REST API |
-| **3**     | **v0.9**    | **Completed** | **Web UI prototype**: basic dashboard for manual control and monitoring (React), REST integration |
-| 4     | v1.0    | *Planned* | **Full architecture MVP**: multi-node support, server-side configuration, log collection, Web UI enhancements |
-| 5     | v1.1+   | *Planned* | Stability improvements, refactoring node codebase, security enhancements (TLS, OAuth, credential management) |
+| 3     | v0.9    | Completed | Web UI prototype: basic dashboard for manual control and monitoring (React), REST integration |
+| **4**     | **v0.12**    | **Completed** | **Node core redesign**: substantially refactored node controller architecture, stability improvements |
+| 5     | v1.0    | *Planned* | **Full architecture MVP**: multi-node support, server-side configuration, log collection, Web UI enhancements |
+| 6     | v1.1+   | *Planned* | Stability improvements, refactoring node codebase, security enhancements (TLS, OAuth, credential management) |
 
 ---
 
@@ -99,7 +108,7 @@ Full documentation is available in the [docs/](docs/) folder, including:
 - [User Guide](docs/user_guide/) – Installation and setup (local all-in-one demo, server, node)
 - [Developer Reference](docs/developer_reference/) – Architecture, code structure
 - [Architecture Overview](docs/overview/ARCHITECTURE_OVERVIEW.md)
-- [Features & Configuration](docs/overview/FEATURES_AND_CONFIGURATION.md)
+- [Features & Configuration](docs/overview/FEATURES_AND_CONFIG.md)
 - [Roadmap](docs/overview/ROADMAP.md)
 
 ---
