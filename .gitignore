@@ -201,4 +201,4 @@ config_secrets.json
 system_log.log.bak
 
 # web ui
-!web_ui/src/lib/
+!web_ui/src/lib/runtime/node/config/config_global.json
