@@ -61,6 +61,7 @@ class TaskPlanner:
     def mark_running(self, circuit_id: int):
         """
         Mark the task for the given circuit ID as RUNNING.
+
         :throws KeyError: if circuit_id is not found in tasks.
         """
         self.tasks[circuit_id].state = PlannedState.RUNNING
@@ -68,6 +69,7 @@ class TaskPlanner:
     def mark_done(self, circuit_id: int):
         """
         Mark the task for the given circuit ID as DONE.
+        
         :throws KeyError: if circuit_id is not found in tasks.
         """
         self.tasks[circuit_id].state = PlannedState.DONE
