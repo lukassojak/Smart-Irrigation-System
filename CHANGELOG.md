@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- tests for TaskPlanner module
-
+- initial unit tests for: 
+  - `TaskPlanner`
+  - `AutoIrrigationService`
 ### Changed
 
 ### Fixed
