@@ -47,11 +47,11 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 - Automatic irrigation scheduling via **AutoIrrigationService**.
 - **Multi-zone management** using a modular execution pipeline:
   - **TaskPlanner** for deciding which circuits need irrigation based on configuration and weather data.
-  - **Pluggable BatchStrategy** for grouping circuits into execution batches (max flow control, sequential/parallel modes, custom strategies).
+  - **Pluggable BatchStrategy** for grouping circuits into execution batches (flow control, sequential/parallel modes, custom strategies).
   - **IrrigationExecutor** running each circuit in isolated worker threads.
 - **Zone-specific configuration**: weather conditions sensivity, dripper/soaker hose/sprinkler modes, custom schedules, ...
 - **Manual start/stop**.
-- **Maximum-flow monitoring** to prevent pressure drops & automatic staggering of zones.
+- **Flow control** to prevent pressure drops & automatic staggering of zones.
 
 ### Reliability and Safety
 - **Fail-safe design:** Valves are *normally closed* and always close on crash or power loss

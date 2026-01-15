@@ -159,7 +159,7 @@ def test_tick_only_triggers_once_per_day(monkeypatch):
 
     # Monkeypatch time_utils.now to return fake_time
     # Note: this demonstrates why using utils/time_utils is beneficial for testability
-    # otherwise, we would have to mock datetime.now() directly which is more complex
+    # otherwise, I would have to mock datetime.now() directly which is more complex
     monkeypatch.setattr(
         "smart_irrigation_system.node.utils.time_utils.now",
         lambda: fake_time
