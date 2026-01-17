@@ -83,10 +83,11 @@ class RelayValve:
     def set_state(self, new_state: RelayValveState, retry: int = MAX_RETRIES) -> None:
         """
         High-level safe request to change the valve state with retries.
+        
         :raises RelayValveStateError: If the valve fails to reach the desired state after retries.
         """
         if new_state == self._state:
-            self.logger.debug(f"Valve is already in state {new_state}. No action taken.")
+            self.logger.warning(f"Valve is already in state {new_state}. No action taken.")
             return
         
         last_exception: Optional[Exception] = None
@@ -97,7 +98,7 @@ class RelayValve:
                 return  # Successfully changed state
             except GPIOWriteError as e:
                 last_exception = e
-                self.logger.warning(f"Attempt {attempt + 1} to set valve state failed: {e}")
+                self.logger.error(f"Attempt {attempt + 1} to set valve state failed: {e}")
                 time.sleep(RETRY_DELAY)
         
         raise RelayValveStateError("Failed to set valve state", attempted_state=new_state) from last_exception
