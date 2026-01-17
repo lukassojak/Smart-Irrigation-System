@@ -100,7 +100,11 @@ class RelayValve:
                 last_exception = e
                 self.logger.error(f"Attempt {attempt + 1} to set valve state failed: {e}")
                 time.sleep(RETRY_DELAY)
-        
+            except Exception as e:
+                last_exception = e
+                self.logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
+                time.sleep(RETRY_DELAY)
+
         raise RelayValveStateError("Failed to set valve state", attempted_state=new_state) from last_exception
 
 
