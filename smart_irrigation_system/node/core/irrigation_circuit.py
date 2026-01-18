@@ -40,8 +40,8 @@ class IrrigationStoppedException(Exception):
 
 class IrrigationCircuit:
     def __init__(self, name: str, circuit_id: int, relay_pin: int,
-                 enabled: bool, even_area_mode: bool, target_mm: float,
-                 zone_area_m2: float, liters_per_minimum_dripper: float,
+                 enabled: bool, even_area_mode: bool, target_mm: float | None,
+                 zone_area_m2: float | None, liters_per_minimum_dripper: float | None,
                  interval_days: int, drippers: Drippers,
                  correction_factors: CorrectionFactors, calculation_model=None):
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
@@ -50,9 +50,9 @@ class IrrigationCircuit:
         self.valve = RelayValve(relay_pin)
         self.enabled: bool = enabled
         self.even_area_mode: bool = even_area_mode
-        self.target_mm: float = target_mm
-        self.zone_area_m2: float = zone_area_m2
-        self.liters_per_minimum_dripper: float = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
+        self.target_mm: float | None = target_mm
+        self.zone_area_m2: float | None = zone_area_m2
+        self.liters_per_minimum_dripper: float | None = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
         self.interval_days: int = interval_days
         self.drippers: Drippers = drippers
         self.local_correction_factors: CorrectionFactors = correction_factors
