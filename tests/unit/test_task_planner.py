@@ -5,9 +5,9 @@ from smart_irrigation_system.node.core.controller.task_planner import TaskPlanne
 from smart_irrigation_system.node.interfaces import CircuitPlanningLike, BatchStrategyLike
 
 
-# ---------------------- Mocks/Fakes ----------------------
+# ---------------------- Fakes ----------------------
 
-class MockCircuitPlanning(CircuitPlanningLike):
+class FakeCircuitPlanning(CircuitPlanningLike):
     def __init__(self, circuit_id: int, needs: bool):
         self.id = circuit_id
         self._needs = needs
@@ -15,11 +15,11 @@ class MockCircuitPlanning(CircuitPlanningLike):
     def needs_irrigation(self, _) -> bool:
         return self._needs
     
-class MockBatchStrategy(BatchStrategyLike):
+class FakeBatchStrategy(BatchStrategyLike):
     def select_batches(self, circuits: list[CircuitPlanningLike]) -> list[list[int]]:
         return [[c.id for c in circuits]]
 
-class MockBatchStrategySequential(BatchStrategyLike):
+class FakeBatchStrategySequential(BatchStrategyLike):
     def select_batches(self, circuits: list[CircuitPlanningLike]) -> list[list[int]]:
         return [[c.id] for c in circuits]
     
@@ -28,11 +28,11 @@ class MockBatchStrategySequential(BatchStrategyLike):
 
 @pytest.fixture
 def planner() -> TaskPlanner:
-    return TaskPlanner(MockBatchStrategy())
+    return TaskPlanner(FakeBatchStrategy())
 
 @pytest.fixture
 def planner_sequential_strategy() -> TaskPlanner:
-    return TaskPlanner(MockBatchStrategySequential())
+    return TaskPlanner(FakeBatchStrategySequential())
 
 @pytest.fixture
 def state_manager():
@@ -41,11 +41,11 @@ def state_manager():
 @pytest.fixture
 def circuits_mixed() -> dict[int, CircuitPlanningLike]:
     return {
-        1: MockCircuitPlanning(1, True),
-        2: MockCircuitPlanning(2, True),
-        3: MockCircuitPlanning(3, False),
-        4: MockCircuitPlanning(4, True),
-        5: MockCircuitPlanning(5, False)
+        1: FakeCircuitPlanning(1, True),
+        2: FakeCircuitPlanning(2, True),
+        3: FakeCircuitPlanning(3, False),
+        4: FakeCircuitPlanning(4, True),
+        5: FakeCircuitPlanning(5, False)
     }
 
 
@@ -69,10 +69,10 @@ def test_planner_creates_tasks_only_for_circuits_that_need_irrigation(planner, s
 def test_planner_uses_batch_strategy(planner, state_manager):
     # Arrange
     circuits = {
-        1: MockCircuitPlanning(1, True),
-        2: MockCircuitPlanning(2, True),
-        3: MockCircuitPlanning(3, True),
-        4: MockCircuitPlanning(4, True)
+        1: FakeCircuitPlanning(1, True),
+        2: FakeCircuitPlanning(2, True),
+        3: FakeCircuitPlanning(3, True),
+        4: FakeCircuitPlanning(4, True)
     }
 
     # Act
@@ -87,10 +87,10 @@ def test_planner_uses_batch_strategy(planner, state_manager):
 def test_planner_uses_batch_strategy_sequential(planner_sequential_strategy, state_manager):
     # Arrange
     circuits = {
-        1: MockCircuitPlanning(1, True),
-        2: MockCircuitPlanning(2, True),
-        3: MockCircuitPlanning(3, True),
-        4: MockCircuitPlanning(4, True)
+        1: FakeCircuitPlanning(1, True),
+        2: FakeCircuitPlanning(2, True),
+        3: FakeCircuitPlanning(3, True),
+        4: FakeCircuitPlanning(4, True)
     }
 
     # Act
@@ -118,11 +118,11 @@ def test_tasks_remain_pending_before_running_or_done(planner, state_manager, cir
 def test_mark_running_and_done_changes_state(planner, state_manager):
     # Arrange
     circuits = {
-        1: MockCircuitPlanning(1, True),
-        2: MockCircuitPlanning(2, True),
-        3: MockCircuitPlanning(3, False),
-        4: MockCircuitPlanning(4, True),
-        5: MockCircuitPlanning(5, False)
+        1: FakeCircuitPlanning(1, True),
+        2: FakeCircuitPlanning(2, True),
+        3: FakeCircuitPlanning(3, False),
+        4: FakeCircuitPlanning(4, True),
+        5: FakeCircuitPlanning(5, False)
     }
     planner.plan(circuits, state_manager)
     planner.get_next_batch()

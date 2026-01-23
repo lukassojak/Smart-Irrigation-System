@@ -3,9 +3,6 @@ import pytest
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
 from smart_irrigation_system.node.core.enums import IrrigationState
 
-# ---------------------- Mocks/Fakes ----------------------
-
-# ---------------------- Fixtures ----------------------
 
 # ---------------------- Tests ----------------------
 
