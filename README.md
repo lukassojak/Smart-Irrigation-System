@@ -21,6 +21,7 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
 ## Overview 
 
 **Architecture Layers**
+
 0. **Planning & Configuration** – Define nodes and its zones, schedules, weather sensitivity, and other parameters via separate app **Node Manager**.
 1. **User Layer** – Web Dashboard for monitoring and manual control of the system. Communicates with the central server via REST API.
 2. **Central Server** – Main coordinator handling multiple irrigation nodes via MQTT, configuration & data hub, REST API provider. Runs on Raspberry Pi 4/5 or PC.
