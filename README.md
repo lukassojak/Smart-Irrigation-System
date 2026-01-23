@@ -1,6 +1,6 @@
 # Smart Irrigation System
 
-**A distributed IoT platform for automated irrigation**, designed for Raspberry Pi–based edge nodes coordinated by a central server and web dashboard.  
+**A distributed IoT system for automated irrigation**, designed for Raspberry Pi–based edge nodes coordinated by a central server and web dashboard.  
 The project demonstrates a fully functional **prototype** of a irrigation network with weather-based logic, MQTT communication, and modular architecture.
 
 <figure style="text-align: center;">
@@ -86,6 +86,8 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 You can test the full **Node ↔ Server ↔ Web UI** chain on a single computer using a local Mosquitto MQTT broker.
 
 Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/user_guide/SETUP_AND_RUN_DEMO.md) file.
+
+*Dockerization and deployment setup is planned for the next iterations.*
 
 ---
 

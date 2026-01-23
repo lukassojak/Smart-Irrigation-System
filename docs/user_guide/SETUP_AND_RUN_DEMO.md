@@ -6,6 +6,8 @@ including all three layers – **Node**, **Server**, and **Web UI** – without 
 
 The demo allows you to test the complete architecture and observe MQTT communication and REST API integration in action.
 
+*Dockerization and deployment setup is planned for the next iterations.*
+
 ---
 
 ## Overview
