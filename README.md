@@ -3,19 +3,26 @@
 **A distributed IoT system for automated irrigation**, designed for Raspberry Pi–based edge nodes coordinated by a central server and web dashboard.  
 The project demonstrates a fully functional **prototype** of a irrigation network with weather-based logic, MQTT communication, and modular architecture.
 
-<figure style="text-align: center;">
-  <img src="./other/dashboard_v0.9.0_screenshot.png" alt="Web Dashboard Prototype" style="max-width: 100%; height: auto;">
-  <figcaption>Web Dashboard Prototype (v0.9)</figcaption>
-</figure>
+<table width="100%">
+  <tr>
+    <td align="center">
+      <p>
+        <img src="./other/dashboard_v0.9.0_screenshot.png" width="40%" />
+        <img src="./other/wizard-1.png" width="40%" />
+      </p>
+    </td>
+  </tr>
+</table>
 
-> Project is currently in *Phase 3 (v0.12)* - fundamental node and server functionality is complete, basic web UI prototype is implemented. Demo is available for local testing.
+> Project is currently in *Phase 3 (v0.12)* - fundamental node and server functionality is complete, web UI prototype is implemented. Demo is available for local testing.
 
 ---
 
 ## Overview 
 
 **Architecture Layers**
-1. **User Layer** – Web Dashboard (implemented in React), Home Assistant integration (planned), or CLI.
+0. **Planning & Configuration** – Define nodes and its zones, schedules, weather sensitivity, and other parameters via separate app **Node Manager**.
+1. **User Layer** – Web Dashboard for monitoring and manual control of the system. Communicates with the central server via REST API.
 2. **Central Server** – Main coordinator handling multiple irrigation nodes via MQTT, configuration & data hub, REST API provider. Runs on Raspberry Pi 4/5 or PC.
 3. **Irrigation Nodes** – autonomous controllers managing valves and sensors, fail-safe operation. Runs on Raspberry Pi Zero 2 W.
 
@@ -68,6 +75,17 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 - Modular, testable Python codebase with separation of concerns
 
 ---
+
+## Configuration & Planning - Node Manager
+Configuration of irrigation nodes is handled by a separate application **Node Manager**.
+Node Manager allows users to:
+- visually configure irrigation nodes and zones via an intuitive UI,
+- define irrigation strategies, limits, and fallback behavior,
+- validate domain rules before deployment,
+- export a deterministic, compatible JSON configuration files.
+
+🔗 **Node Manager repository:**  
+https://github.com/lukassojak/node-manager
 
 ## Components & Technologies used
 
