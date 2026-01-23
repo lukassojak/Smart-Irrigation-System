@@ -10,7 +10,6 @@ from smart_irrigation_system.node.exceptions import (
 )
 
 
-
 # ---------------------- Tests ----------------------
 
 # NOTE: RelayValve._gpio_initialized is a class variable, so it retains its value across tests.
@@ -52,19 +51,6 @@ def test_close_valve_changes_state_to_closed():
         # Assert
         assert relay_valve.state == RelayValveState.CLOSED
         mock_gpio.output.assert_called_with(17, mock_gpio.HIGH)
-
-
-def test_open_valve_state_and_gpio_are_consistent():
-    # Arrange
-    with patch("smart_irrigation_system.node.core.relay_valve.GPIO") as mock_gpio:
-        relay_valve = RelayValve(17)
-
-        # Act
-        relay_valve.set_state(RelayValveState.OPEN)
-
-        # Assert
-        assert relay_valve.state == RelayValveState.OPEN
-        mock_gpio.output.assert_called_with(17, mock_gpio.LOW)
 
 
 def test_open_valve_twice_does_not_change_state():
@@ -132,6 +118,9 @@ def test_raises_exception_on_gpio_failure_during_open():
         # Act & Assert
         with pytest.raises(RelayValveStateError):
             relay_valve.set_state(RelayValveState.OPEN, retry=1)
+
+        # Assert state remains CLOSED
+        assert relay_valve.state == RelayValveState.CLOSED
         
 
 def test_raises_exception_on_gpio_failure_during_close():
@@ -145,4 +134,70 @@ def test_raises_exception_on_gpio_failure_during_close():
         # Act & Assert
         with pytest.raises(RelayValveStateError):
             relay_valve.set_state(RelayValveState.CLOSED, retry=1)
-    
+        
+        # Assert state remains OPEN
+        assert relay_valve.state == RelayValveState.OPEN
+
+
+def test_raises_exception_on_unexpected_error_during_open():
+    # Arrange
+    with patch("smart_irrigation_system.node.core.relay_valve.GPIO") as mock_gpio:
+        relay_valve = RelayValve(17)
+
+        mock_gpio.output.side_effect = Exception("Unexpected error")
+
+        # Act & Assert
+        with pytest.raises(RelayValveStateError):
+            relay_valve.set_state(RelayValveState.OPEN, retry=1)
+        
+        # Assert state remains CLOSED
+        assert relay_valve.state == RelayValveState.CLOSED
+
+
+def test_raises_exception_on_unexpected_error_during_close():
+    # Arrange   
+    with patch("smart_irrigation_system.node.core.relay_valve.GPIO") as mock_gpio:
+        relay_valve = RelayValve(pin=17)
+        relay_valve.set_state(RelayValveState.OPEN)
+
+        mock_gpio.output.side_effect = Exception("Unexpected error")
+
+        with pytest.raises(RelayValveStateError):
+            relay_valve.set_state(RelayValveState.CLOSED, retry=1)
+
+        # Assert state remains OPEN
+        assert relay_valve.state == RelayValveState.OPEN
+
+
+def test_does_not_raise_exception_if_gpio_fails_twice_then_succeeds_open():
+    # Arrange
+    with patch("smart_irrigation_system.node.core.relay_valve.GPIO") as mock_gpio:
+        relay_valve = RelayValve(pin=17)
+        mock_gpio.output.reset_mock()
+        mock_gpio.output.side_effect = [Exception("Unexpected error"), GPIOWriteError("GPIO write failed"), None]
+
+        # Act
+        relay_valve.set_state(RelayValveState.OPEN, retry=3)
+
+        # Assert
+        assert relay_valve.state == RelayValveState.OPEN
+        assert mock_gpio.output.call_count == 3
+        mock_gpio.output.assert_called_with(17, mock_gpio.LOW)
+
+
+def test_does_not_raise_exception_if_gpio_fails_twice_then_succeeds_close():
+    # Arrange
+    with patch("smart_irrigation_system.node.core.relay_valve.GPIO") as mock_gpio:
+        relay_valve = RelayValve(pin=17)
+        relay_valve.set_state(RelayValveState.OPEN)
+        mock_gpio.output.reset_mock()
+        mock_gpio.output.side_effect = [Exception("Unexpected error"), GPIOWriteError("GPIO write failed"), None]
+
+        # Act
+        relay_valve.set_state(RelayValveState.CLOSED, retry=3)
+        
+        # Assert
+        assert relay_valve.state == RelayValveState.CLOSED
+        assert mock_gpio.output.call_count == 3
+        mock_gpio.output.assert_called_with(17, mock_gpio.HIGH)
+

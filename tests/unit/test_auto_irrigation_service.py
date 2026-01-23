@@ -6,19 +6,15 @@ from datetime import datetime
 from smart_irrigation_system.node.core.controller.auto_irrigation_service import AutoIrrigationService
 
 
-# ---------------------- Mocks/Fakes ----------------------
+# ---------------------- Fakes ----------------------
 
 @dataclass
-class MockAutomationSettings:
+class FakeAutomationSettings:
     enabled: bool
 
 @dataclass
-class MockGlobalConfig:
-    automation: MockAutomationSettings
-
-
-# ---------------------- Fixtures ----------------------
-
+class FakeGlobalConfig:
+    automation: FakeAutomationSettings
 
 
 # ---------------------- Tests ----------------------
@@ -31,7 +27,7 @@ def test_tick_does_not_trigger_when_global_automation_disabled(monkeypatch):
         triggered["count"] += 1
     
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=MockAutomationSettings(enabled=False)),
+        global_config=FakeGlobalConfig(automation=FakeAutomationSettings(enabled=False)),
         on_auto_irrigation_demand=_cb
     )
     ais.enable_runtime()
@@ -53,7 +49,7 @@ def test_tick_does_not_trigger_when_runtime_disabled(monkeypatch):
         triggered["count"] += 1
 
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=MockAutomationSettings(enabled=True)),
+        global_config=FakeGlobalConfig(automation=FakeAutomationSettings(enabled=True)),
         on_auto_irrigation_demand=_cb
     )
     ais.disable_runtime()
@@ -74,7 +70,7 @@ def test_enable_and_disable_runtime_affects_triggering(monkeypatch):
         triggered["count"] += 1
 
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=MockAutomationSettings(enabled=True)),
+        global_config=FakeGlobalConfig(automation=FakeAutomationSettings(enabled=True)),
         on_auto_irrigation_demand=_cb
     )
     # runtime should be initially enabled
@@ -102,7 +98,7 @@ def test_tick_does_trigger_once(monkeypatch):
         triggered["count"] += 1
 
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=MockAutomationSettings(enabled=True)),
+        global_config=FakeGlobalConfig(automation=FakeAutomationSettings(enabled=True)),
         on_auto_irrigation_demand=_cb
     )
     ais.enable_runtime()
@@ -123,7 +119,7 @@ def test_tick_does_trigger_multiple_times(monkeypatch):
         triggered["count"] += 1
 
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=MockAutomationSettings(enabled=True)),
+        global_config=FakeGlobalConfig(automation=FakeAutomationSettings(enabled=True)),
         on_auto_irrigation_demand=_cb
     )
     ais.enable_runtime()
@@ -145,21 +141,18 @@ def test_tick_only_triggers_once_per_day(monkeypatch):
     def _cb():
         triggered["count"] += 1
 
-    automation = MockAutomationSettings(enabled=True)
+    automation = FakeAutomationSettings(enabled=True)
     automation.scheduled_hour = 12
     automation.scheduled_minute = 0
 
     ais = AutoIrrigationService(
-        global_config=MockGlobalConfig(automation=automation),
+        global_config=FakeGlobalConfig(automation=automation),
         on_auto_irrigation_demand=_cb
     )
     
     # Fake the current time to 12:00 (exact trigger time)
     fake_time = datetime(2025, 1, 1, 12, 0, 0)
 
-    # Monkeypatch time_utils.now to return fake_time
-    # Note: this demonstrates why using utils/time_utils is beneficial for testability
-    # otherwise, I would have to mock datetime.now() directly which is more complex
     monkeypatch.setattr(
         "smart_irrigation_system.node.utils.time_utils.now",
         lambda: fake_time
@@ -169,6 +162,6 @@ def test_tick_only_triggers_once_per_day(monkeypatch):
     ais.tick()
     assert triggered["count"] == 1
 
-    # Act - second tick on same day should not trigger
+    # second tick on same day should not trigger
     ais.tick()
     assert triggered["count"] == 1
