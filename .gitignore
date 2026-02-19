@@ -184,7 +184,7 @@ zones_config.json
 runtime/node/data/irrigation_log.json
 runtime/node/data/zones_state.json
 runtime/node/logs/*.log*
-runtime/server/data/nodes_state.json
+runtime/server/data/*
 runtime/server/logs/*.log*
 
 

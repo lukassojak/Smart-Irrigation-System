@@ -1,0 +1,118 @@
+body::before {
+    content: "";
+    position: fixed;
+    inset: -10%;
+    /* důležité – rezerva pro rotaci */
+    z-index: -1;
+
+    background: linear-gradient(120deg,
+            #eff1f3 35%,
+            #f2f6f5 45%,
+            #f0fffc 50%,
+            /* change back to #f0fffc */
+            #eff1f3 80%);
+    background-size: 200% 200%;
+
+    animation: bg-waves 30s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-position, filter, transform;
+    transform-origin: center;
+}
+
+@keyframes pulseBg {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
+}
+
+
+@keyframes bg-waves {
+
+    /* levý horní – klid */
+    0% {
+        background-position: 100% 100%;
+        filter: blur(1px) saturate(70%);
+        transform: scale(1.02) rotate(0deg);
+    }
+
+    /* ponoření dolů – lehký náklon */
+    10% {
+        background-position: 70% 20%;
+        filter: blur(2px) saturate(90%);
+        transform: scale(1.03) rotate(-3deg);
+    }
+
+    /* návrat nahoru */
+    18% {
+        background-position: 90% 85%;
+        filter: blur(1px) saturate(150%);
+        transform: scale(1) rotate(-1deg);
+    }
+
+    /* horní střed – nejostřejší fáze */
+    25% {
+        background-position: 55% 95%;
+        filter: blur(3px) saturate(95%);
+        transform: scale(1) rotate(2deg);
+    }
+
+    30% {
+        background-position: 40% 40%;
+        filter: blur(2px) saturate(70%);
+        transform: scale(1.02) rotate(6deg);
+    }
+
+    44% {
+        background-position: 80% 60%;
+        filter: blur(8px) saturate(40%);
+        transform: scale(1.02) rotate(8deg);
+    }
+
+    52% {
+        background-position: 60% 10%;
+        filter: blur(3px) saturate(70%);
+        transform: scale(1.02) rotate(8deg);
+    }
+
+    /* hluboký levý dolní – „ponoření“ */
+    55% {
+        background-position: 95% 5%;
+        filter: blur(2px) saturate(120%);
+        transform: scale(1.03) rotate(12deg);
+    }
+
+    /* krátké nadechnutí */
+    59% {
+        background-position: 60% 70%;
+        filter: blur(3px) saturate(75%);
+        transform: scale(1.02) rotate(6deg);
+    }
+
+    /* zlom směru */
+    74% {
+        background-position: 35% 30%;
+        filter: blur(7px) saturate(40%);
+        transform: scale(1.02) rotate(-1deg);
+    }
+
+    /* návrat do horní dominance */
+    80% {
+        background-position: 80% 90%;
+        filter: blur(4px) saturate(60%);
+        transform: scale(1.015) rotate(-2deg);
+    }
+
+    /* uzavření cyklu */
+    100% {
+        background-position: 100% 100%;
+        filter: blur(1px) saturate(70%);
+        transform: scale(1.02) rotate(0deg);
+    }
+}

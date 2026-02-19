@@ -5,12 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+# [0.13.0] - 2025-02-19
+*Integration of Node Manager configuration module into the Smart Irrigation System backend and frontend consolidation.*
 
 ### Added
-- initial unit tests for: 
+- Integrated former Node Manager backend as a new `configuration` module inside `server/`.
+- Registered configuration API under `/api/v1` within the main SIS FastAPI application.
+- Introduced centralized database layer under `server/db/` with a shared SQLModel engine.
+- Added unified SQLite database (`sis.db`) stored under `runtime/server/data/`.
+- Enabled automatic table creation for all configuration models during SIS startup.
+- Integrated Node Manager frontend into the main SIS repository.
+- Enabled CORS configuration in main server to support local frontend development.
+- Added `frontend/` directory containing the Node Manager React application, intended to be the unified frontend for the entire system in the future.
+
+### Changed
+- Unified backend architecture into a single FastAPI application (runtime + configuration).
+- Removed standalone Node Manager FastAPI entry point in favor of centralized `server.main`.
+- Updated all configuration module imports to use relative or fully-qualified SIS paths.
+- Replaced configuration-local database session with centralized engine.
+- Configuration database location moved from project root to `runtime/server/data/`.
+
+### Fixed
+
+### Removed
+- Standalone Node Manager backend execution context.
+
+### Known Issues
+- Runtime REST API remains experimental and will be redesigned in the next iteration.
+- Configuration and runtime now share a unified backend but still operate as logically separate modules.
+- This release marks the architectural unification milestone of the system (server part).
+- Legacy frontend `web_ui/` remains in the repository but is no longer maintained or updated. The new `frontend/` module will be the focus of all future frontend development. The old `web_ui/` will be removed in the future.
+
+---
+
+## [0.12.1] - 2025-02-19
+
+### Added
+- Added unit tests for core components:
   - `TaskPlanner`
   - `AutoIrrigationService`
+  - `CircuitStateMachine`
+  - `Drippers`
+  - `IrrigationCircuit`
+  - `RelayValve`
+
 ### Changed
 
 ### Fixed

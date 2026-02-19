@@ -22,7 +22,6 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
 
 **Architecture Layers**
 
-0. **Planning & Configuration** – Define nodes and its zones, schedules, weather sensitivity, and other parameters via separate app **Node Manager**.
 1. **User Layer** – Web Dashboard for monitoring and manual control of the system. Communicates with the central server via REST API.
 2. **Central Server** – Main coordinator handling multiple irrigation nodes via MQTT, configuration & data hub, REST API provider. Runs on Raspberry Pi 4/5 or PC.
 3. **Irrigation Nodes** – autonomous controllers managing valves and sensors, fail-safe operation. Runs on Raspberry Pi Zero 2 W.
@@ -77,28 +76,13 @@ Each **node** controls multiple irrigation circuits, while a **central server** 
 
 ---
 
-## Configuration & Planning - Node Manager
-Configuration of irrigation nodes is handled by a separate application **Node Manager**.
+## Configuration & Planning
+Configuration of irrigation nodes is managed via the central server and web UI, which store settings in a central database and distribute them to nodes via MQTT.
 Node Manager allows users to:
 - visually configure irrigation nodes and zones via an intuitive UI,
 - define irrigation strategies, limits, and fallback behavior,
-- validate domain rules before deployment,
-- export a deterministic, compatible JSON configuration files.
+- validate domain rules.
 
-🔗 **Node Manager repository:**  
-https://github.com/lukassojak/node-manager
-
-## Components & Technologies used
-
-| Layer | Technology | Description |
-|-------|-------------|-------------|
-| **Edge Node** | Python 3.10, threading, RPi.GPIO, Paho-MQTT | Local control of irrigation zones |
-| **Server** | FastAPI, Paho-MQTT, JSON, threading | Central coordination & API backend |
-| **Web UI** | React (Vite), Axios, REST API | Dashboard for control & monitoring |
-| **Communication** | MQTT (Paho-MQTT) over TCP (TLS planned) | Node ↔ Server messaging and command handling |
-| **Deployment** | Raspberry Pi Zero 2 W (Node), Raspberry Pi 4/5 (Server) | Hardware platform |
-
----
 
 ## Quick Start (Local Demo)
 
