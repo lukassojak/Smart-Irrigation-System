@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `HomePage.jsx` component with basic navigation to other modules.
+- `server/runtime/` directory for server-side runtime data management (e.g., node states, configuration):
+  - `api/` with `routes.py` for FastAPI endpoint definitions:
+    - `GET /live` - returns current live status of all nodes; used for high-frequency dashboard updates.
+    - `GET /today` - returns summary of today's irrigation activities; used for medium-frequency dashboard updates
+    - `GET /analytics` - returns dashboard analytics data (e.g., water usage, weather trends & forecasts); used for low-frequency dashboard updates.
+  - `schemas/` subdirectory for Pydantic models used in API communication
+  - `services/` subdirectory for server-side business logic related to configuration management, data aggregation, analytics, etc. with initial `live_service.py` implementation for live status aggregation.
 
 ### Changed
 - Updated requirements for server to reflect new dependencies (SQLModel, etc.).

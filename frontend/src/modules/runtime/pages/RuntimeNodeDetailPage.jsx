@@ -55,7 +55,7 @@ export default function RuntimeNodeDetailPage() {
         { name: "general-flow-monitor", type: "general", alive: true, startedAt: "07:15:30", runtime: "12h 0m" },
         { name: "general-mqtt-publisher", type: "general", alive: true, startedAt: "18:00:00", runtime: "26h 0m" },
         { name: "general-ota-updater", type: "general", alive: false, startedAt: "18:00:00", runtime: "26h 0m" },
-        { name: "executor-main", type: "executor", alive: false, startedAt: "18:00:00", runtime: "26h 0m" },
+        { name: "executor-auto_irrigation_cycle", type: "executor", alive: false, startedAt: "18:00:00", runtime: "26h 0m" },
     ]
 
     const groupedThreads = threads.reduce((acc, t) => {

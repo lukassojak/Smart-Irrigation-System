@@ -33,6 +33,7 @@ export default function MainDashboardPage() {
 
     // ---- Fake Data ----
 
+    // High-frequency, updated every 3 seconds
     const overview = {
         zonesOnline: 12,
         totalZones: 15,
@@ -45,6 +46,7 @@ export default function MainDashboardPage() {
         weatherAdjustment: "-15%"
     }
 
+    // High-frequency, updated every 3 seconds
     const currentTasks = [
         {
             id: "1",
@@ -64,6 +66,7 @@ export default function MainDashboardPage() {
         }
     ]
 
+    // High-frequency, updated every 3 seconds
     const alerts = [
         {
             id: "a1",
@@ -81,46 +84,7 @@ export default function MainDashboardPage() {
         }
     ]
 
-    const todaysActivity = [
-        {
-            id: "t1",
-            zoneName: "Orchard",
-            time: "20:00",
-            volume: 14,
-            status: "planned"
-        },
-        {
-            id: "t2",
-            zoneName: "South Lawn",
-            time: "18:30",
-            volume: 12,
-            status: "planned"
-        },
-        {
-            id: "t3",
-            zoneName: "Greenhouse",
-            time: "12:30",
-            volume: 10,
-            status: "completed"
-        }
-
-    ]
-
-    const weatherWaterData = {
-        windowDays: 7,
-        data: [
-            { date: "Mon", water: 120, weather: -12 },
-            { date: "Tue", water: 140, weather: 8 },
-            { date: "Wed", water: 110, weather: -5 },
-            { date: "Thu", water: 160, weather: 15 },
-            { date: "Fri", water: 130, weather: 2 },
-            { date: "Sat", water: 125, weather: -3 },
-            { date: "Sun", water: 150, weather: 10 }
-        ],
-        avgWater: 133,
-        avgWeather: 2
-    }
-
+    // High-frequency, updated every 3 seconds
     const zones = [
         {
             id: "1",
@@ -181,6 +145,49 @@ export default function MainDashboardPage() {
         }
     ]
 
+    // Medium-frequency, updated every 3 minutes
+    const todaysActivity = [
+        {
+            id: "t1",
+            zoneName: "Orchard",
+            time: "20:00",
+            volume: 14,
+            status: "planned"
+        },
+        {
+            id: "t2",
+            zoneName: "South Lawn",
+            time: "18:30",
+            volume: 12,
+            status: "planned"
+        },
+        {
+            id: "t3",
+            zoneName: "Greenhouse",
+            time: "12:30",
+            volume: 10,
+            status: "completed"
+        }
+
+    ]
+
+    // Low-frequency, updated every 30 minutes
+    const weatherWaterData = {
+        windowDays: 7,
+        data: [
+            { date: "Mon", water: 120, weather: -12 },
+            { date: "Tue", water: 140, weather: 8 },
+            { date: "Wed", water: 110, weather: -5 },
+            { date: "Thu", water: 160, weather: 15 },
+            { date: "Fri", water: 130, weather: 2 },
+            { date: "Sat", water: 125, weather: -3 },
+            { date: "Sun", water: 150, weather: 10 }
+        ],
+        avgWater: 133,
+        avgWeather: 2
+    }
+
+    // Low-frequency, updated every 30 minutes
     const weatherForecastData = {
         forecastDays: 5,
         data: [
