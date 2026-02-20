@@ -3,6 +3,8 @@
 import { Box, VStack, HStack, Text, Image } from "@chakra-ui/react"
 import SidebarSection from "./SidebarSection"
 import SidebarItem from "./SidebarItem"
+import { useNavigate } from "react-router-dom"
+
 
 import {
     LayoutDashboard,
@@ -17,6 +19,8 @@ import {
 } from "lucide-react"
 
 export default function Sidebar() {
+    const navigate = useNavigate()
+
     return (
         <Box
             w="260px"
@@ -33,8 +37,8 @@ export default function Sidebar() {
             px={5}
             py={6}
         >
-            {/* Branding */}
-            <HStack mb={8} align="center" gap={3}>
+            {/* Branding with link to homepage */}
+            <HStack mb={8} align="center" gap={3} cursor="pointer" onClick={() => navigate("/")}>
                 <Image
                     src="/logo.png"
                     alt="Smart Irrigation System"

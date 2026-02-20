@@ -12,6 +12,7 @@ import AppLayout from "./components/layout/AppLayout"
 
 import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
 import RuntimeNodeDetailPage from "./modules/runtime/pages/RuntimeNodeDetailPage"
+import HomePage from "./HomePage"
 
 const router = createBrowserRouter([
     {
@@ -21,15 +22,7 @@ const router = createBrowserRouter([
 
             {
                 index: true,
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Welcome to the Node Management App
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        Use the navigation menu to access different sections of the app.
-                    </Box>
-                </Box>
+                element: <HomePage />
             },
 
             {
