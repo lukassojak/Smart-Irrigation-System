@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate, useOutletContext } from "react-router-dom"
 import { For, SegmentGroup, Switch, Field, Text, Box, Heading, Input, Button, Stack, SimpleGrid, HStack } from "@chakra-ui/react"
 import { createNode } from "../../../api/nodes.api"
 
@@ -81,6 +81,8 @@ export default function CreateNodePage() {
             })
     }
 
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
     return (
         <>
             <GlassPageHeader
@@ -93,6 +95,8 @@ export default function CreateNodePage() {
                         </HeaderAction>
                     </HeaderActions>
                 }
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
             <Box p={6}>
                 <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>

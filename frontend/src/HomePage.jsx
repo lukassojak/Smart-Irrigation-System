@@ -95,7 +95,11 @@ export default function HomePage() {
                 </Text>
             </GlassPageHeader>
 
-            <Stack gap={8} p={8}>
+            <Stack
+                gap={8}
+                px={{ base: 2, md: 6 }}
+                py={{ base: 4, md: 8 }}
+            >
 
                 <GlassPanelSection
                     title="Modules"

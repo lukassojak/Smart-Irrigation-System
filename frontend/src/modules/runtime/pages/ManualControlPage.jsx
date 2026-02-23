@@ -11,7 +11,8 @@ import {
     HStack,
     Badge
 } from "@chakra-ui/react"
-import { Droplets } from "lucide-react"
+
+import { useOutletContext } from "react-router-dom"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
@@ -103,15 +104,23 @@ export default function ManualControlPage() {
 
     const [selectedZone, setSelectedZone] = useState(null)
 
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
     return (
         <Box>
 
             <GlassPageHeader
                 title="Manual Control"
                 subtitle="Override automatic irrigation"
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack gap={8} p={8}>
+            <Stack
+                gap={8}
+                px={{ base: 4, md: 8 }}
+                py={8}
+            >
 
                 {/* SECTION 1 – Start Manual */}
                 <GlassPanelSection
@@ -120,7 +129,7 @@ export default function ManualControlPage() {
                 >
                     <Grid
                         templateColumns={{ base: "1fr", xl: "2fr 1fr" }}
-                        gap={8}
+                        gap={{ base: 4, md: 8 }}
                     >
 
                         {/* Zone Selection */}

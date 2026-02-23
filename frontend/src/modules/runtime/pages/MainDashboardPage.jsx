@@ -1,3 +1,7 @@
+import { useState, useEffect } from "react"
+import { getLiveSnapshot } from "../../../api/runtime.api"
+import { useOutletContext } from "react-router-dom"
+
 import {
     Box,
     Grid,
@@ -203,7 +207,7 @@ export default function MainDashboardPage() {
         }
     }
 
-
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
 
     return (
@@ -212,9 +216,15 @@ export default function MainDashboardPage() {
             <GlassPageHeader
                 title="Dashboard"
                 subtitle="Live system overview"
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack gap={8} p={8}>
+            <Stack
+                gap={8}
+                px={{ base: 2, md: 6 }}
+                py={{ base: 4, md: 8 }}
+            >
 
                 {/* SECTION 1 - SYSTEM OVERVIEW */}
                 <GlassPanelSection
@@ -311,6 +321,6 @@ export default function MainDashboardPage() {
 
 
             </Stack>
-        </Box>
+        </Box >
     )
 }

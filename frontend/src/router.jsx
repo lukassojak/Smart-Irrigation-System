@@ -12,6 +12,7 @@ import AppLayout from "./components/layout/AppLayout"
 
 import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
 import RuntimeNodeDetailPage from "./modules/runtime/pages/RuntimeNodeDetailPage"
+import StatisticsPage from "./modules/runtime/pages/StatisticsPage"
 import HomePage from "./HomePage"
 
 const router = createBrowserRouter([
@@ -91,14 +92,7 @@ const router = createBrowserRouter([
             {
                 path: "statistics",
                 // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Statistics
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the statistics page placeholder.
-                    </Box>
-                </Box>
+                element: <StatisticsPage />
             },
 
             {

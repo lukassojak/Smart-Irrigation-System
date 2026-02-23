@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `GET /analytics` - returns dashboard analytics data (e.g., water usage, weather trends & forecasts); used for low-frequency dashboard updates.
   - `schemas/` subdirectory for Pydantic models used in API communication
   - `services/` subdirectory for server-side business logic related to configuration management, data aggregation, analytics, etc. with initial `live_service.py` implementation for live status aggregation.
+- Frontend responsive layout optimizations for mobile and tablet viewports.
+- Collapsible desktop sidebar (icon-only mode).
+- Mobile drawer-based navigation.
+- Adaptive header layout.
 
 ### Changed
 - Updated requirements for server to reflect new dependencies (SQLModel, etc.).
@@ -25,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Known Issues
+- Breakpoint handlings and paddings should be unified across the app for better consistency.
 
 ---
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate, useOutletContext } from 'react-router-dom'
 import { SimpleGrid, DataList, Badge, HStack, Button, Stack, Box, Heading, Text } from '@chakra-ui/react'
 import { fetchZoneById, deleteZone } from '../../../api/nodes.api'
 
@@ -19,6 +19,7 @@ export default function ZoneDetailPage() {
     const { nodeId, zoneId } = useParams();
     const navigate = useNavigate();
     const [zone, setZone] = useState(null);
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     useEffect(() => {
         fetchZoneById(nodeId, zoneId)
@@ -63,6 +64,8 @@ export default function ZoneDetailPage() {
                         </HeaderAction>
                     </HeaderActions>
                 }
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             >
                 <HStack>
                     <Link to={`/nodes/${nodeId}`}>

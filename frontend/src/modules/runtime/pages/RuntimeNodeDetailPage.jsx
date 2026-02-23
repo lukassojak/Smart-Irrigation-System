@@ -20,6 +20,7 @@ import {
 
 } from "lucide-react"
 import { useParams } from "react-router-dom"
+import { useOutletContext } from "react-router-dom"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
@@ -64,12 +65,16 @@ export default function RuntimeNodeDetailPage() {
         return acc
     }, {})
 
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
     return (
         <Box>
 
             <GlassPageHeader
                 title={node.name}
                 subtitle="Node runtime detail"
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
 
             <Stack gap={8} p={8}>

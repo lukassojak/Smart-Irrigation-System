@@ -34,7 +34,7 @@ app = FastAPI(title="Smart Irrigation Server API",
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -42,9 +42,9 @@ app.add_middleware(
 )
 
 
-app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="/api/v1")
 app.include_router(configuration_router, prefix="/api/v1")
-app.include_router(runtime_router, prefix="/api/runtime")
+app.include_router(runtime_router, prefix="/api/v1/runtime")
 
 SQLModel.metadata.create_all(bind=engine)
 

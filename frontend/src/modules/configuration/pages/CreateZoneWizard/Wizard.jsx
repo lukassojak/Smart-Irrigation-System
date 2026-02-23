@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo, useEffect } from "react"
-import { Link, useParams, useNavigate } from "react-router-dom"
+import { Link, useParams, useNavigate, useOutletContext } from "react-router-dom"
 import {
     SimpleGrid,
     HStack,
@@ -36,6 +36,8 @@ export default function Wizard() {
 
     const [currentStep, setCurrentStep] = useState(0)
     const [submitError, setSubmitError] = useState(null)
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
 
     /* --------------------------------------------
        Zone draft state
@@ -335,6 +337,8 @@ export default function Wizard() {
                         </HeaderAction>
                     </HeaderActions>
                 }
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             >
             </GlassPageHeader>
 

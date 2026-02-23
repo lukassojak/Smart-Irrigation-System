@@ -16,7 +16,7 @@ export default function GlassPanelSection({
                 inset 0 1px 0 rgba(255,255,255,0.8),
                 0 12px 30px rgba(15,23,42,0.04)
             "
-            p={6}
+            p={{ base: 2, md: 6 }}
         >
             {(title || description || actions) && (
                 <HStack justify="space-between" align="flex-start" mb={5}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useParams, useNavigate } from "react-router-dom"
+import { Link, useParams, useNavigate, useOutletContext } from "react-router-dom"
 import {
     Button,
     Stack,
@@ -26,6 +26,7 @@ export default function NodeDetailPage() {
     const { nodeId } = useParams()
     const navigate = useNavigate()
     const [node, setNode] = useState(null)
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     useEffect(() => {
         fetchNodeById(nodeId)
@@ -52,7 +53,7 @@ export default function NodeDetailPage() {
                             onClick={() => {
                                 if (!confirm("Are you sure you want to delete this node and all its zones?")) return
                                 deleteNode(node.id)
-                                    .then(() => navigate("/configuration/"))
+                                    .then(() => navigate("/configuration/nodes"))
                                     .catch(() => alert("Failed to delete node"))
                             }}
                         >
@@ -72,6 +73,8 @@ export default function NodeDetailPage() {
                         </HeaderAction>
                     </HeaderActions>
                 }
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
             <Box p={6}>
                 <Stack gap={10} mb={6}>

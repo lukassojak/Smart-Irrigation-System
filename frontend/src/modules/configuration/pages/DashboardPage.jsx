@@ -8,7 +8,7 @@ import {
     HStack,
     SimpleGrid,
 } from "@chakra-ui/react"
-import { Link } from "react-router-dom"
+import { Link, useOutletContext } from "react-router-dom"
 import { fetchNodes } from "../../../api/nodes.api"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
 import { HeaderAction } from '../../../components/ui/ActionButtons'
@@ -17,6 +17,7 @@ import NodeCard from "../../../components/ui/cards/NodeCard"
 
 export default function NodesDashboardPage() {
     const [nodes, setNodes] = useState([])
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     useEffect(() => {
         fetchNodes()
@@ -39,6 +40,8 @@ export default function NodesDashboardPage() {
                         </HeaderAction>
                     </HeaderActions>
                 }
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
             />
             <Box p={6}>
                 {/* Info text */}

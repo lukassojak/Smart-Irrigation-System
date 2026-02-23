@@ -8,7 +8,6 @@ from smart_irrigation_system.server.configuration.schemas.optimization import (
 )
 
 router = APIRouter()
-print("Optimization router initialized")
 
 
 # ----- Optimization Endpoints -----
