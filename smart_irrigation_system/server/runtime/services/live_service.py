@@ -13,20 +13,21 @@ from smart_irrigation_system.server.runtime.schemas.live import (
 def get_live_snapshot() -> LiveResponse:
     """Simulate retrieval of live status snapshot for all zones, alerts, and current tasks."""
     # In a real implementation, this would query the database or in-memory state to get real data.
-    
+    now = datetime.now(timezone.utc)
+
     # Simulated zone statuses
     zones = [
-        ZoneLive(id=1, name="Zone 1", status=ZoneStatus.IRRIGATING, enabled=True, online=True, last_run=datetime.now(timezone.utc), progress_percent=42.0),
-        ZoneLive(id=2, name="Zone 2", status=ZoneStatus.IDLE, enabled=True, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=3, name="Zone 3", status=ZoneStatus.IDLE, enabled=False, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=4, name="Zone 4", status=ZoneStatus.ERROR, enabled=True, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=5, name="Zone 5", status=ZoneStatus.OFFLINE, enabled=True, online=False, last_run=None, progress_percent=None)
+        ZoneLive(id=1, name="Orchard", status=ZoneStatus.IRRIGATING, enabled=True, online=True, last_run=now.replace(hour=18, minute=30, second=0), progress_percent=42),
+        ZoneLive(id=2, name="South Lawn", status=ZoneStatus.IDLE, enabled=True, online=True, last_run=None, progress_percent=None),
+        ZoneLive(id=3, name="Greenhouse", status=ZoneStatus.IDLE, enabled=False, online=True, last_run=None, progress_percent=None),
+        ZoneLive(id=4, name="Vegetable Patch", status=ZoneStatus.ERROR, enabled=True, online=True, last_run=None, progress_percent=None),
+        ZoneLive(id=5, name="Poolside pots", status=ZoneStatus.OFFLINE, enabled=True, online=False, last_run=None, progress_percent=None)
     ]
     
     # Simulated alerts
     alerts = [
-        Alert(id=1, type=AlertType.WARNING, title="Low Water Pressure", message="Water pressure is below threshold in Zone 5.", timestamp=datetime.now(timezone.utc)),
-        Alert(id=2, type=AlertType.ERROR, title="Sensor Failure", message="Soil moisture sensor failed in Zone 4.", timestamp=datetime.now(timezone.utc))
+        Alert(id=1, type=AlertType.WARNING, title="Low Water Pressure", message="Water pressure is below threshold in Zone 5.", timestamp=now.replace(hour=12, minute=15, second=0)),
+        Alert(id=2, type=AlertType.ERROR, title="Sensor Failure", message="Soil moisture sensor failed in Zone 4.", timestamp=now.replace(hour=11, minute=45, second=35))
     ]
     
     # Simulated current tasks

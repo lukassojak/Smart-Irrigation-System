@@ -7,6 +7,9 @@ import TimelineItem from "./TimelineItem"
 
 export default function TodaysActivityCard({ items }) {
 
+    // Sort items by scheduled time from latest to earliest
+    const sortedItems = [...items].sort((a, b) => b.scheduledTime - a.scheduledTime)
+
     return (
         <GlassPanelSection
             title="Today's Activity"
@@ -25,7 +28,7 @@ export default function TodaysActivityCard({ items }) {
                 />
 
                 <Stack gap={6}>
-                    {items.map(item => (
+                    {sortedItems.map(item => (
                         <TimelineItem key={item.id} item={item} />
                     ))}
                 </Stack>

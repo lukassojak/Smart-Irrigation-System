@@ -64,7 +64,8 @@ export default function AlertItem({ alert }) {
                                 </Text>
                             </HStack>
                             <Text fontSize="xs" color="gray.400">
-                                {alert.timestamp}
+                                {/* Convert timestamp to human-readable format */}
+                                {alert.timestamp.toLocaleString()}
                             </Text>
                         </HStack>
 

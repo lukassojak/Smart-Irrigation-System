@@ -152,7 +152,7 @@ export default function ZoneRuntimeCard({ zone }) {
                         {zone.online ? "Online" : "Offline"}
                     </Text>
                     <Text fontSize="xs" color="gray.500">
-                        Last run: {zone.lastRun || "-"}
+                        {zone.lastRun ? `Last run: ${zone.lastRun.toLocaleTimeString()}` : "Last run: -"}
                     </Text>
                 </HStack>
 

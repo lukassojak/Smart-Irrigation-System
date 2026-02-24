@@ -42,7 +42,7 @@ export default function TimelineItem({ item }) {
                         <HStack gap={1}>
                             <Clock size={14} />
                             <Text fontSize="sm" color="gray.600">
-                                {item.time}
+                                {item.scheduledTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Text>
                         </HStack>
                         <Text fontWeight="600">

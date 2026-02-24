@@ -2,6 +2,9 @@ import { useState, useEffect } from "react"
 import { getLiveSnapshot } from "../../../api/runtime.api"
 import { useOutletContext } from "react-router-dom"
 
+import useLiveRuntime from "../../../hooks/useLiveRuntime"
+import useTodayRuntime from "../../../hooks/useTodayRuntime"
+
 import {
     Box,
     Grid,
@@ -11,7 +14,8 @@ import {
     VStack,
     Progress,
     Badge,
-    Button
+    Button,
+    Spinner,
 } from "@chakra-ui/react"
 import {
     Activity,
@@ -36,118 +40,6 @@ import WeatherForecastSection from "../components/WeatherForecastSection"
 export default function MainDashboardPage() {
 
     // ---- Fake Data ----
-
-    // High-frequency, updated every 3 seconds
-    const overview = {
-        zonesOnline: 12,
-        totalZones: 15,
-        warnings: 1,
-        errors: 0,
-        irrigationPlanned: 5,
-        completedToday: 2,
-        waterUsedToday: 124,
-        waterDelta: "+8%",
-        weatherAdjustment: "-15%"
-    }
-
-    // High-frequency, updated every 3 seconds
-    const currentTasks = [
-        {
-            id: "1",
-            zoneName: "South Lawn",
-            progress: 45,
-            currentVolume: 6.2,
-            targetVolume: 12,
-            remainingMinutes: 5
-        },
-        {
-            id: "2",
-            zoneName: "Greenhouse",
-            progress: 70,
-            currentVolume: 9.8,
-            targetVolume: 14,
-            remainingMinutes: 3
-        }
-    ]
-
-    // High-frequency, updated every 3 seconds
-    const alerts = [
-        {
-            id: "a1",
-            type: "warning",
-            title: "Low flow detected",
-            message: "Zone South Lawn reported lower than expected flow.",
-            timestamp: "12:42 today"
-        },
-        {
-            id: "a2",
-            type: "error",
-            title: "Water leak detected",
-            message: "Zone Greenhouse reported a possible leak. Immediate inspection recommended.",
-            timestamp: "08:15 today"
-        }
-    ]
-
-    // High-frequency, updated every 3 seconds
-    const zones = [
-        {
-            id: "1",
-            name: "South Lawn",
-            status: "irrigating", // irrigating | idle | error | stopping
-            enabled: true,
-            online: true,
-            lastRun: "today 12:30",
-            progress: 45
-        },
-        {
-            id: "2",
-            name: "Greenhouse",
-            status: "irrigating",
-            enabled: true,
-            online: true,
-            lastRun: "today 12:30"
-        },
-        {
-            id: "3",
-            name: "South Flowerbed",
-            status: "idle",
-            enabled: true,
-            online: true,
-            lastRun: "today 07:00"
-        },
-        {
-            id: "4",
-            name: "North Lawn",
-            status: "idle",
-            enabled: true,
-            online: true,
-            lastRun: "yesterday"
-        },
-        {
-            id: "5",
-            name: "Orchard",
-            status: "offline",
-            enabled: false,
-            online: false,
-            lastRun: "yesterday"
-        },
-        {
-            id: "6",
-            name: "North Garden",
-            status: "offline",
-            enabled: true,
-            online: false,
-            lastRun: "2 days ago"
-        },
-        {
-            id: "7",
-            name: "East Flowerbed",
-            status: "error",
-            enabled: true,
-            online: true,
-            lastRun: "N/A"
-        }
-    ]
 
     // Medium-frequency, updated every 3 minutes
     const todaysActivity = [
@@ -209,10 +101,56 @@ export default function MainDashboardPage() {
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
+    const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(3000)
+    const {
+        data: todayData,
+        loading: todayLoading,
+        error: todayError,
+        refresh: refreshToday
+    } = useTodayRuntime(180000)
+
+
+    if (loading && !liveData) {
+        return (
+            <Box>
+                <GlassPageHeader
+                    title="Dashboard"
+                    subtitle="Live system overview"
+                    showMobileMenuButton={isMobile}
+                    onMobileMenuClick={openMobileSidebar}
+                />
+                <Stack align="center" gap={4} py={20}>
+                    <Spinner color="teal.500" size="lg" />
+
+                    <Text
+                        fontSize="md"
+                        fontWeight="medium"
+                        color="teal.700"
+                    >
+                        Loading live data...
+                    </Text>
+
+                </Stack>
+            </Box>
+        )
+    }
+
+    if (error) {
+        return (
+            <Box>
+                <GlassPageHeader
+                    title="Dashboard"
+                    subtitle="Live system overview"
+                    showMobileMenuButton={isMobile}
+                    onMobileMenuClick={openMobileSidebar}
+                />
+                <Text p={8} color="red.500">Failed to load live data</Text>
+            </Box>
+        )
+    }
 
     return (
         <Box>
-
             <GlassPageHeader
                 title="Dashboard"
                 subtitle="Live system overview"
@@ -239,15 +177,15 @@ export default function MainDashboardPage() {
                         <SystemOverviewCard
                             icon={ShieldCheck}
                             title="System Health"
-                            value={`${overview.zonesOnline} / ${overview.totalZones}`}
+                            value={`${liveData.overview.zonesOnline} / ${liveData.overview.totalZones}`}
                             description="Zones online"
                             footer={
                                 <>
                                     <Badge colorPalette="orange" variant="subtle">
-                                        {overview.warnings} warnings
+                                        {liveData.overview.warnings} warnings
                                     </Badge>
                                     <Badge colorPalette="red" variant="subtle">
-                                        {overview.errors} errors
+                                        {liveData.overview.errors} errors
                                     </Badge>
                                 </>
                             }
@@ -256,21 +194,21 @@ export default function MainDashboardPage() {
                         <SystemOverviewCard
                             icon={Activity}
                             title="Today Summary"
-                            value={`${overview.irrigationPlanned} planned`}
-                            description={`${overview.completedToday} completed`}
+                            value={`${todayData ? todayData.overview.tasksPlanned : "N/A"} planned`}
+                            description={`${todayData ? todayData.overview.tasksCompleted : "N/A"} completed`}
                         />
 
                         <SystemOverviewCard
                             icon={Droplets}
                             title="Water Usage"
-                            value={`${overview.waterUsedToday} L`}
-                            description={`vs average ${overview.waterDelta}`}
+                            value="43 L"
+                            description="vs average +8%"
                         />
 
                         <SystemOverviewCard
                             icon={CloudRain}
                             title="Weather Impact"
-                            value={overview.weatherAdjustment}
+                            value="+6%"
                             description="Adjustment applied today"
                         />
 
@@ -285,7 +223,7 @@ export default function MainDashboardPage() {
                     collapsible
                 >
                     <Stack gap={2}>
-                        {currentTasks.map(task => (
+                        {liveData.currentTasks.map(task => (
                             <CurrentTaskCard key={task.id} task={task} />
                         ))}
                     </Stack>
@@ -298,7 +236,7 @@ export default function MainDashboardPage() {
                     collapsible
                 >
                     <Stack gap={2}>
-                        {alerts.map(alert => (
+                        {liveData.alerts.map(alert => (
                             <AlertItem key={alert.id} alert={alert} />
                         ))}
                     </Stack>
@@ -309,12 +247,20 @@ export default function MainDashboardPage() {
                     templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
                     gap={8}
                 >
-                    <TodaysActivityCard items={todaysActivity} />
+                    {/* Guard against missing todayData due to loading or error */}
+                    {todayData ? (
+                        <TodaysActivityCard items={todayData.tasks} />
+                    ) : (
+                        <Box p={4} borderWidth={1} borderRadius="md" textAlign="center">
+                            <Text color="red.500">Failed to load today's activities</Text>
+                        </Box>
+                    )}
+
                     <WeatherWaterSummaryCard data={weatherWaterData} />
                 </Grid>
 
                 {/* SECTION 5 - ZONES STATUS */}
-                <ZonesGridSection zones={zones} />
+                <ZonesGridSection zones={liveData.zones} />
 
                 {/* SECTION 6 - WEATHER FORECAST */}
                 <WeatherForecastSection data={weatherForecastData} />
