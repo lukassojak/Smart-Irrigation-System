@@ -7,14 +7,14 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
   <tr>
     <td align="center">
       <p>
-        <img src="./other/dashboard_v0.9.0_screenshot.png" width="40%" />
-        <img src="./other/wizard-1.png" width="40%" />
+        <img src="./other/user-interface-01.png" width="40%" />
+        <img src="./other/user-interface-03.png" width="40%" />
       </p>
     </td>
   </tr>
 </table>
 
-> Project is currently in *Phase 3 (v0.12)* - fundamental node and server functionality is complete, web UI prototype is implemented. Demo is available for local testing.
+> Project is currently in *Phase 3 (v0.13)* - fundamental node and server functionality is complete, UI is in prototype stage. Focus is on server-side configuration management and multi-node support.
 
 ---
 
@@ -30,10 +30,6 @@ The Smart Irrigation System uses **edge computing** to manage watering zones aut
 Each **node** controls multiple irrigation circuits, while a **central server** coordinates and monitors the network through MQTT and a REST API.
 
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px">
-  <div>
-    <img src="./other/architecture_0.9.0.svg" alt="0.9 version architecture" title="v0.9 architecture" style="height: 300px";/>
-    <p>Fig. 1: Current v0.12 architecture</p>
-  </div>
   <div>
     <img src="./other/architecture_target.svg" alt="target architecture" title="target architecture" style="height: 300px";/>
     <p>Fig. 2: Target architecture (v1.0+)</p>
@@ -84,13 +80,26 @@ Node Manager allows users to:
 - validate domain rules.
 
 
-## Quick Start (Local Demo)
-
-You can test the full **Node ↔ Server ↔ Web UI** chain on a single computer using a local Mosquitto MQTT broker.
-
-Full instructions are in the [SETUP_AND_RUN_DEMO.md](docs/user_guide/SETUP_AND_RUN_DEMO.md) file.
+## Setup & Deployment
 
 *Dockerization and deployment setup is planned for the next iterations.*
+
+---
+
+<table width="100%">
+  <tr>
+    <td align="center">
+      <p>
+        <img src="./other/user-interface-02.png" width="40%" />
+        <img src="./other/user-interface-04.png" width="40%" />
+      </p>
+      <p>
+        <img src="./other/user-interface-10.png" width="40%" />
+        <img src="./other/user-interface-13.png" width="40%" />
+      </p>
+    </td>
+  </tr>
+</table>
 
 ---
 
