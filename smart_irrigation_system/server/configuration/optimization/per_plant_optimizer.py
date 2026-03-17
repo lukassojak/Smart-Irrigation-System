@@ -1,6 +1,6 @@
 from time import time
  
-from app.schemas.optimization import (
+from smart_irrigation_system.server.configuration.schemas.optimization import (
     PerPlantOptimizationRequest,
     PerPlantOptimizationResponse,
     DripperAllocation,
