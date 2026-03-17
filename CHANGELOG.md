@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [Unreleased]
+# [0.14.0] - 2026-03-17
+*Initial implementation of the unified frontend and server architecture with Docker-based deployment.*
 
 ### Added
 - `HomePage.jsx` component with basic navigation to other modules.
@@ -20,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Collapsible desktop sidebar (icon-only mode).
 - Mobile drawer-based navigation.
 - Adaptive header layout.
+- Added Dockerfile for server component
+- Added Dockerfile for node component
+- Added Dockerfile for frontend component
+- Added `docker-compose.yml` for orchestrating multi-container deployment of server, node, and frontend.
+- Added documentation for Docker-based deployment in README.
 
 ### Changed
 - Updated requirements for server to reflect new dependencies (SQLModel, etc.).
@@ -27,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Removed
+- Removed `demo/` directory and all associated scripts and documentation. Local demo can now be set up using the new Docker-based deployment.
+- Removed `docs/user_guide/` directory as the user guide will be consolidated into the main README.
 
 ### Known Issues
 - Breakpoint handlings and paddings should be unified across the app for better consistency.

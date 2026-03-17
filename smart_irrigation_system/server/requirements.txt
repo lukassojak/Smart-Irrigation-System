@@ -6,3 +6,4 @@ sqlmodel
 python-dotenv
 pytest
 httpx
+paho-mqtt

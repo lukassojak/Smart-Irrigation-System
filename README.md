@@ -82,7 +82,19 @@ Node Manager allows users to:
 
 ## Setup & Deployment
 
-*Dockerization and deployment setup is planned for the next iterations.*
+The system can be deployed in a local all-in-one mode for testing purposes on a single machine.
+
+```bash
+# Clone the repository
+git clone https://github.com/lukassojak/Smart-Irrigation-System.git
+cd Smart-Irrigation-System
+
+# Build and run the system using Docker Compose
+docker-compose up --build
+
+# Open dashboard in your browser
+http://localhost:5173
+```
 
 ---
 

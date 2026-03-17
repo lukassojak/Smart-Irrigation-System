@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+
+  mqtt:
+    image: eclipse-mosquitto
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/runtime/server/data/sis.db
+      MQTT_HOST: mqtt
+    depends_on:
+      - mqtt
+    volumes:
+      - ./runtime:/app/runtime
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node.Dockerfile
+    environment:
+      MQTT_HOST: mqtt
+    depends_on:
+      - mqtt
+    volumes:
+      - ./runtime:/app/runtime
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
