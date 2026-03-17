@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from smart_irrigation_system.server.configuration.optimization.per_plant_optimizer import PerPlantOptimizer, NoSolutionException, InfeasibleSolutionException
+from smart_irrigation_system.server.configuration.optimization.per_plant_optimizer import PerPlantOptimizer, NoSolutionException
 from smart_irrigation_system.server.configuration.schemas.optimization import (
     PerPlantOptimizationRequest,
     PerPlantOptimizationResponse,
