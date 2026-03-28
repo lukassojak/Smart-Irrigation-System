@@ -17,11 +17,11 @@ def get_live_snapshot() -> LiveResponse:
 
     # Simulated zone statuses
     zones = [
-        ZoneLive(id=1, name="Orchard", status=ZoneStatus.IRRIGATING, enabled=True, online=True, last_run=now.replace(hour=18, minute=30, second=0), progress_percent=42),
-        ZoneLive(id=2, name="South Lawn", status=ZoneStatus.IDLE, enabled=True, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=3, name="Greenhouse", status=ZoneStatus.IDLE, enabled=False, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=4, name="Vegetable Patch", status=ZoneStatus.ERROR, enabled=True, online=True, last_run=None, progress_percent=None),
-        ZoneLive(id=5, name="Poolside pots", status=ZoneStatus.OFFLINE, enabled=True, online=False, last_run=None, progress_percent=None)
+        ZoneLive(id=1, name="Orchard", status=ZoneStatus.IRRIGATING, enabled=True, online=True, last_run=now.replace(hour=18, minute=30, second=0), progress_percent=42, stale=False),
+        ZoneLive(id=2, name="South Lawn", status=ZoneStatus.IDLE, enabled=True, online=True, last_run=None, progress_percent=None, stale=False),
+        ZoneLive(id=3, name="Greenhouse", status=ZoneStatus.IDLE, enabled=False, online=True, last_run=None, progress_percent=None, stale=False),
+        ZoneLive(id=4, name="Vegetable Patch", status=ZoneStatus.ERROR, enabled=True, online=True, last_run=None, progress_percent=None, stale=True),
+        ZoneLive(id=5, name="Poolside pots", status=ZoneStatus.OFFLINE, enabled=True, online=False, last_run=None, progress_percent=None, stale=True)
     ]
     
     # Simulated alerts
@@ -32,7 +32,7 @@ def get_live_snapshot() -> LiveResponse:
     
     # Simulated current tasks
     current_tasks = [
-        CurrentTask(id=1, zone_name="Zone 1", progress_percent=42, current_volume=23.85, target_volume=56.79, remaining_minutes=17)
+        CurrentTask(id=1, zone_name="Zone 1", progress_percent=42, current_volume=23.85, target_volume=56.79, remaining_minutes=17, stale=False)
     ]
 
     overview = Overview(
