@@ -24,8 +24,16 @@ class NodeRepository:
     
 
     def update(self, node_id: int, node_data: dict) -> Node | None:
-        # TODO: implement update logic
-        pass
+        # Validation should be done by service layer
+        node = self.get(node_id)
+        if not node:
+            return None
+
+        for key, value in node_data.items():
+            setattr(node, key, value)
+
+        self.session.flush()
+        return node
     
 
     def delete(self, node_id: int) -> bool:

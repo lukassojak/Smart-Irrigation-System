@@ -14,9 +14,11 @@ from smart_irrigation_system.server.core.server_core import IrrigationServer
 from smart_irrigation_system.server.api.routes import router as api_router
 from smart_irrigation_system.server.configuration.api.v1.routers import router as configuration_router
 from smart_irrigation_system.server.runtime.api.routes import router as runtime_router
+from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
 
 from smart_irrigation_system.server.db.session import engine
 from sqlmodel import SQLModel
+from sqlmodel import Session
 
 
 
@@ -57,6 +59,9 @@ server = IrrigationServer(broker_host="localhost", broker_port=1883)
 def on_startup():
     """Starts the orchestrator during FastAPI server startup."""
     app.logger = getattr(app, "logger", None)
+    with Session(engine) as session:
+        initialize_live_store_from_config(session)
+
     print("[Startup] Launching IrrigationServer orchestrator...")
     server.start()
     print("[Startup] IrrigationServer is running.")

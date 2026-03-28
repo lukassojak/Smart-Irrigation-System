@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [0.15.0] - 2026-03-28
+*Runtime live projection stabilization and config/runtime synchronization improvements.*
+
+### Added
+- Added in-memory runtime state layer under `server/runtime/state/live_store.py`:
+  - `RuntimeLiveStore` with thread-safe snapshot management (`RLock`).
+  - Runtime dataclasses for node, zone, task, and alert state.
+  - Topology preload support from configuration DB (`register_expected_topology`).
+  - Upsert-based runtime mutation methods for heartbeats, zone states, tasks, and alerts.
+- Added startup initialization of runtime topology from configuration DB in `server/main.py`.
+- Added stale/connecting flags to runtime response schema:
+  - `ZoneLive.stale`
+  - `ZoneLive.connecting_to_node`
+  - `CurrentTask.stale`
+- Added runtime topology refresh after configuration mutations (create/delete/update node/zone) in configuration API.
+- Added missing PATCH endpoints in configuration API:
+  - `PATCH /api/v1/nodes/{node_id}`
+  - `PATCH /api/v1/nodes/{node_id}/zones/{zone_id}`
+- Added legacy runtime configuration exporter for node compatibility:
+  - New export helper `export_node_legacy_runtime_config(...)`.
+  - New endpoint `GET /api/v1/nodes/{node_id}/export/legacy-runtime`.
+  - Output includes `config_global` and `zones_config` payloads compatible with the current node runtime format.
+
+### Changed
+- Refactored `server/runtime/services/live_service.py`:
+  - Removed simulated hardcoded snapshot data.
+  - Introduced `LiveService` class using `RuntimeLiveStore` snapshot projection.
+  - Added timeout-based state resolution for `connecting`, `stale`, and `offline` behavior.
+  - Kept API response contract backward-compatible while extending models with additional status metadata.
+- Updated configuration stack to support runtime sync after DB edits:
+  - `NodeRepository.update(...)` is now implemented.
+  - `NodeService.update_node(...)` is now implemented.
+  - `NodeService.update_zone(...)` is now implemented.
+- Extended node export capabilities to support both:
+  - structured server-native export (`/export`)
+  - node-legacy runtime export (`/export/legacy-runtime`).
+
+### Fixed
+- Fixed runtime/config drift where newly created or edited nodes/zones were visible only after server restart.
+- Fixed missing update flow in configuration module that blocked end-to-end topology synchronization to runtime.
+
+### Removed
+- Removed mocked live snapshot generation path from runtime live service.
+
+### Known Issues
+- MQTT layer is still in transition from prototype manager/client to a production-ready contract-driven implementation.
+- Runtime live store is prepared for MQTT ingest, but full bridge from new MQTT message contract to store upserts is not finalized yet.
+
 # [0.14.0] - 2026-03-17
 *Initial implementation of the unified frontend and server architecture with Docker-based deployment.*
 

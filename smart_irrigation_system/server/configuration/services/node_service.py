@@ -5,7 +5,7 @@ from smart_irrigation_system.server.configuration.repositories.zone_repository i
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeUpdate
-from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate
+from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneUpdate
 
 
 class NodeService:
@@ -68,7 +68,51 @@ class NodeService:
 
 
     def update_node(self, node_id: int, data: NodeUpdate) -> Node | None:
-        pass
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "hardware" in update_data and update_data["hardware"] is not None:
+            update_data["hardware"] = update_data["hardware"].model_dump()
+        if "irrigation_limits" in update_data and update_data["irrigation_limits"] is not None:
+            update_data["irrigation_limits"] = update_data["irrigation_limits"].model_dump()
+        if "automation" in update_data and update_data["automation"] is not None:
+            update_data["automation"] = update_data["automation"].model_dump()
+        if "batch_strategy" in update_data and update_data["batch_strategy"] is not None:
+            update_data["batch_strategy"] = update_data["batch_strategy"].model_dump()
+        if "logging" in update_data and update_data["logging"] is not None:
+            update_data["logging"] = update_data["logging"].model_dump()
+
+        node = self.node_repo.update(node_id, update_data)
+        if not node:
+            return None
+
+        self.session.commit()
+        return node
+
+
+    def update_zone(self, node_id: int, zone_id: int, data: ZoneUpdate) -> Zone | None:
+        zone = self.zone_repo.get(zone_id)
+        if not zone or zone.node_id != node_id:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "local_correction_factors" in update_data and update_data["local_correction_factors"] is not None:
+            update_data["local_correction_factors"] = update_data["local_correction_factors"].model_dump()
+        if "frequency_settings" in update_data and update_data["frequency_settings"] is not None:
+            update_data["frequency_settings"] = update_data["frequency_settings"].model_dump()
+        if "fallback_strategy" in update_data and update_data["fallback_strategy"] is not None:
+            update_data["fallback_strategy"] = update_data["fallback_strategy"].model_dump()
+        if "irrigation_configuration" in update_data and update_data["irrigation_configuration"] is not None:
+            update_data["irrigation_configuration"] = update_data["irrigation_configuration"].model_dump()
+        if "emitters_configuration" in update_data and update_data["emitters_configuration"] is not None:
+            update_data["emitters_configuration"] = update_data["emitters_configuration"].model_dump()
+
+        updated_zone = self.zone_repo.update(zone_id, update_data)
+        if not updated_zone:
+            return None
+
+        self.session.commit()
+        return updated_zone
 
 
     def delete_node(self, node_id: int) -> bool:

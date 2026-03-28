@@ -1,15 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeRead, NodeListRead
-from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneRead, ZoneListRead
+from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeRead, NodeListRead, NodeUpdate
+from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneRead, ZoneListRead, ZoneUpdate
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.services.node_service import NodeService
 from smart_irrigation_system.server.db.session import get_session
-from smart_irrigation_system.server.configuration.exporters.node_config_exporter import export_node_config
+from smart_irrigation_system.server.configuration.exporters.node_config_exporter import (
+    export_node_config,
+    export_node_legacy_runtime_config,
+)
+from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
 
 router = APIRouter()
+
+
+def _sync_runtime_topology(session: Session) -> None:
+    """Refresh in-memory runtime topology after config DB mutations."""
+    initialize_live_store_from_config(session)
 
 
 # ----- CRUD Operations for Node -----
@@ -23,6 +32,7 @@ router = APIRouter()
 def create_node(data: NodeCreate, session: Session = Depends(get_session)):
     service = NodeService(session)
     node = service.create_node(data)
+    _sync_runtime_topology(session)
     return NodeRead.model_validate(node)
 
 
@@ -53,6 +63,21 @@ def get_node(node_id: int, session: Session = Depends(get_session)):
     return NodeRead.model_validate(node)
 
 
+@router.patch(
+    "/{node_id}",
+    summary="Update node by ID",
+    response_model=NodeRead,
+    status_code=200,
+)
+def update_node(node_id: int, data: NodeUpdate, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    node = service.update_node(node_id, data)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+    _sync_runtime_topology(session)
+    return NodeRead.model_validate(node)
+
+
 @router.delete(
     "/{node_id}",
     summary="Delete node by ID",
@@ -63,6 +88,7 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
     success = service.delete_node(node_id)
     if not success:
         raise HTTPException(status_code=404, detail="Node not found")
+    _sync_runtime_topology(session)
 
 
 # ----- CRUD Operations for Zone -----
@@ -79,6 +105,7 @@ def create_zone(node_id: int, data: ZoneCreate, session: Session = Depends(get_s
         zone: Zone = service.add_zone_to_node(node_id, data)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    _sync_runtime_topology(session)
     return ZoneRead.model_validate(zone)
 
 
@@ -109,6 +136,21 @@ def get_zone(node_id: int, zone_id: int, session: Session = Depends(get_session)
     return ZoneRead.model_validate(zone)
 
 
+@router.patch(
+    "/{node_id}/zones/{zone_id}",
+    summary="Update zone by ID for a node",
+    response_model=ZoneRead,
+    status_code=200,
+)
+def update_zone(node_id: int, zone_id: int, data: ZoneUpdate, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    zone = service.update_zone(node_id, zone_id, data)
+    if not zone:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    _sync_runtime_topology(session)
+    return ZoneRead.model_validate(zone)
+
+
 @router.delete(
     "/{node_id}/zones/{zone_id}",
     summary="Delete zone by ID for a node",
@@ -119,6 +161,7 @@ def delete_zone(node_id: int, zone_id: int, session: Session = Depends(get_sessi
     success = service.delete_zone(node_id, zone_id)
     if not success:
         raise HTTPException(status_code=404, detail="Zone not found")
+    _sync_runtime_topology(session)
     
 
 @router.get(
@@ -134,3 +177,18 @@ def export_node(node_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Node not found")
     config = export_node_config(node)
     return config
+
+
+@router.get(
+    "/{node_id}/export/legacy-runtime",
+    summary="Export node configuration in current node runtime file format",
+    response_model=dict,
+    status_code=200,
+)
+def export_node_legacy_runtime(node_id: int, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    return export_node_legacy_runtime_config(node)
