@@ -10,7 +10,6 @@ from smart_irrigation_system.node.interface.display_controller import DisplayCon
 from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
-from smart_irrigation_system.node.network.server_command_handler import ServerCommandHandler
 
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
 
@@ -56,9 +55,7 @@ def main():
 
     # Initialize network components
     try:
-        server_command_handler = ServerCommandHandler(controller, None) # MQTTClient will be set after its creation
-        mqtt_client = MQTTClient(server_command_handler, node_id="node1", broker_host="localhost", broker_port=1883)
-        server_command_handler.mqtt_client = mqtt_client  # Set the mqtt_client in the handler
+        mqtt_client = MQTTClient(controller, node_id="node1")
         mqtt_client.start()
         time.sleep(0.5)
         print(".", end="", flush=True)

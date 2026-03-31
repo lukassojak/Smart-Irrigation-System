@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
 from sqlmodel import Session
 
 from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeRead, NodeListRead, NodeUpdate
@@ -12,6 +13,8 @@ from smart_irrigation_system.server.configuration.exporters.node_config_exporter
     export_node_legacy_runtime_config,
 )
 from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
+from smart_irrigation_system.server.core.server_core import IrrigationServer
+from smart_irrigation_system.common.mqtt_contract import ApplyMode
 
 router = APIRouter()
 
@@ -192,3 +195,32 @@ def export_node_legacy_runtime(node_id: int, session: Session = Depends(get_sess
         raise HTTPException(status_code=404, detail="Node not found")
 
     return export_node_legacy_runtime_config(node)
+
+
+@router.post(
+    "/{node_id}/push-config",
+    summary="Push node configuration over MQTT using v1 contract",
+    response_model=dict,
+    status_code=200,
+)
+def push_node_config(node_id: int, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    legacy_runtime_config = export_node_legacy_runtime_config(node)
+    server = IrrigationServer()
+    message_id = server.mqtt_manager.publish_apply_config(
+        node_id=f"node{node_id}",
+        config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        legacy_runtime_config=legacy_runtime_config,
+        apply_mode=ApplyMode.APPLY_NOW,
+        requested_by="configuration-api",
+    )
+
+    return {
+        "message": "Configuration push command sent.",
+        "mqtt_message_id": message_id,
+        "target_node_id": f"node{node_id}",
+    }

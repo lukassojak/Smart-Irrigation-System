@@ -53,7 +53,7 @@ SQLModel.metadata.create_all(bind=engine)
 
 # ------------------- Server Orchestrator ------------------- #
 
-server = IrrigationServer(broker_host="localhost", broker_port=1883)
+server = IrrigationServer()
 
 @app.on_event("startup")    # replace with lifespan in future
 def on_startup():

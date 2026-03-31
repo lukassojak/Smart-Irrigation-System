@@ -23,8 +23,8 @@ class LiveService:
         # Server fallback status request around 10-15s
         # UI REST refresh (dashboard) around 2-3s
         connecting_timeout_seconds: int = 30,
-        stale_timeout_seconds: int = 20,
-        offline_timeout_seconds: int = 60,
+        stale_timeout_seconds: int = 15,
+        offline_timeout_seconds: int = 30,
     ):
         self.store = store
         self.connecting_timeout = timedelta(seconds=connecting_timeout_seconds)
