@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 
 export default function ZoneRuntimeCard({ zone }) {
+    const isStale = zone.stale === true
 
     // ---- Accent color logic ----
     let accentColor = "green.400"
@@ -50,6 +51,8 @@ export default function ZoneRuntimeCard({ zone }) {
                 boxShadow: "0 6px 22px rgba(15,23,42,0.06)",
                 transform: "translateY(-2px)"
             }}
+            opacity={zone.stale ? 0.6 : 1}
+            filter={zone.stale ? "grayscale(0.3)" : "grayscale(0)"}
         >
             {/* Left Accent */}
             <Box
@@ -106,6 +109,7 @@ export default function ZoneRuntimeCard({ zone }) {
                                 colorPalette="red"
                                 aria-label="Stop irrigation"
                                 p={1}
+                                isDisabled={isStale}
                             >
                                 <Square size={14} />
                             </Button>
@@ -116,6 +120,7 @@ export default function ZoneRuntimeCard({ zone }) {
                                 colorPalette="green"
                                 aria-label="Start irrigation"
                                 p={1}
+                                isDisabled={isStale}
                             >
                                 <Play size={14} />
                             </Button>
@@ -129,6 +134,7 @@ export default function ZoneRuntimeCard({ zone }) {
                             colorPalette="gray"
                             aria-label="View error details"
                             p={1}
+                            isDisabled={isStale}
                         >
                             <Info size={14} />
                         </Button>
@@ -141,6 +147,7 @@ export default function ZoneRuntimeCard({ zone }) {
                             colorPalette="gray"
                             aria-label="View reconnection options"
                             p={1}
+                            isDisabled={isStale}
                         >
                             <Info size={14} />
                         </Button>
@@ -150,7 +157,7 @@ export default function ZoneRuntimeCard({ zone }) {
                 {/* Meta Info */}
                 <HStack justify="space-between">
                     <Text fontSize="xs" color="gray.500">
-                        {zone.online ? "Online" : "Offline"}
+                        {zone.online ? (zone.stale ? "Disconnected" : "Online") : "Offline"}
                     </Text>
                     {/* Display zone.lastRun */}
                     <Text fontSize="xs" color="gray.500">

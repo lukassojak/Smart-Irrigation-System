@@ -17,6 +17,8 @@ export const getLiveSnapshot = async () => {
             status: z.status,
             enabled: z.enabled,
             online: z.online,
+            stale: z.stale,
+            connectingToNode: z.connecting_to_node,
             lastRun: new Date(z.last_run),
             progress: z.progress_percent
         })),
@@ -33,7 +35,8 @@ export const getLiveSnapshot = async () => {
             progress: t.progress_percent,
             currentVolume: t.current_volume,
             targetVolume: t.target_volume,
-            remainingMinutes: t.remaining_minutes
+            remainingMinutes: t.remaining_minutes,
+            stale: t.stale
         })),
         lastUpdate: new Date(data.last_update)
     }

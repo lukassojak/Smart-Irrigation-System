@@ -12,6 +12,8 @@ import { Progress } from "@chakra-ui/react"
 import { PanelButtonDanger } from "../../../components/ui/ActionButtons"
 
 export default function CurrentTaskCard({ task }) {
+    const progressValue = Math.max(0, Math.min(100, task.displayProgress ?? task.progress ?? 0))
+    const progressLabel = Number.isInteger(progressValue) ? progressValue.toString() : progressValue.toFixed(1)
 
     return (
         <Box
@@ -21,6 +23,8 @@ export default function CurrentTaskCard({ task }) {
             borderRadius="lg"
             p={5}
             boxShadow="0 4px 18px rgba(15, 23, 42, 0.06)"
+            opacity={task.stale ? 0.6 : 1}
+            filter={task.stale ? "grayscale(0.3)" : "grayscale(0)"}
         >
             <VStack align="stretch" gap={3}>
 
@@ -35,27 +39,37 @@ export default function CurrentTaskCard({ task }) {
                             <Text fontWeight="600">
                                 {task.zoneName}
                             </Text>
-
-                            <Badge
-                                size="sm"
-                                colorPalette="blue"
-                                variant="subtle"
-                            >
-                                Irrigating
-                            </Badge>
+                            {!task.stale ? (
+                                <Badge
+                                    size="sm"
+                                    colorPalette="blue"
+                                    variant="subtle"
+                                >
+                                    Irrigating
+                                </Badge>
+                            ) : (
+                                <Badge
+                                    size="sm"
+                                    colorPalette="gray"
+                                    variant="subtle"
+                                >
+                                    Finished
+                                </Badge>
+                            )}
                         </HStack>
                     </HStack>
-
-                    <PanelButtonDanger
-                        size="sm"
-                        variant="subtle"
-                    >
-                        Stop
-                    </PanelButtonDanger>
+                    {!task.stale && (
+                        <PanelButtonDanger
+                            size="sm"
+                            variant="subtle"
+                        >
+                            Stop
+                        </PanelButtonDanger>
+                    )}
                 </HStack>
 
                 <Progress.Root
-                    value={task.progress}
+                    value={progressValue}
                     borderRadius="md"
                     height="8px"
                 >
@@ -80,7 +94,7 @@ export default function CurrentTaskCard({ task }) {
                         fontSize="sm"
                         fontWeight="600"
                     >
-                        {task.progress}%
+                        {progressLabel}%
                     </Text>
                 </HStack>
 

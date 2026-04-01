@@ -19,12 +19,11 @@ class LiveService:
     def __init__(
         self,
         store: RuntimeLiveStore,
-        # Node mqtt heartbeat publish around 5s
         # Server fallback status request around 10-15s
-        # UI REST refresh (dashboard) around 2-3s
+        # UI REST refresh (dashboard) around 2500 ms
         connecting_timeout_seconds: int = 30,
         stale_timeout_seconds: int = 10,
-        offline_timeout_seconds: int = 30,
+        offline_timeout_seconds: int = 60,
         task_retention_seconds: int = 30,
     ):
         self.store = store

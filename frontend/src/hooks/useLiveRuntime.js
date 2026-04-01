@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react"
 import { getLiveSnapshot } from "../api/runtime.api"
 
-export default function useLiveRuntime(pollInterval = 3000) {
+export default function useLiveRuntime(pollInterval = 2500) {
 
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)

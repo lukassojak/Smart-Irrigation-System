@@ -4,6 +4,7 @@ import { useOutletContext } from "react-router-dom"
 
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useTodayRuntime from "../../../hooks/useTodayRuntime"
+import useSmoothedCurrentTasks from "../../../hooks/useSmoothedCurrentTasks"
 
 import {
     Box,
@@ -101,13 +102,20 @@ export default function MainDashboardPage() {
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
-    const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(3000)
+    const livePollIntervalMs = 3000
+    const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
     const {
         data: todayData,
         loading: todayLoading,
         error: todayError,
         refresh: refreshToday
     } = useTodayRuntime(180000)
+
+    const smoothedCurrentTasks = useSmoothedCurrentTasks(
+        liveData?.currentTasks ?? [],
+        liveData?.zones ?? [],
+        livePollIntervalMs,
+    )
 
 
     if (loading && !liveData) {
@@ -223,7 +231,7 @@ export default function MainDashboardPage() {
                     collapsible
                 >
                     <Stack gap={2}>
-                        {liveData.currentTasks.map(task => (
+                        {smoothedCurrentTasks.map(task => (
                             <CurrentTaskCard key={task.id} task={task} />
                         ))}
                     </Stack>
