@@ -67,32 +67,37 @@ def _to_legacy_global_config(node: Node) -> dict:
     irrigation_limits = node.irrigation_limits or {}
     automation = node.automation or {}
     logging = node.logging or {}
+    batch_strategy = node.batch_strategy or {}
+
+    # TODO: Make node ip and port configurable in the UI, and include them in the export. For now we keep them hardcoded in the node runtime
 
     # Keep defaults explicit for backward compatibility with current node loader.
     return {
+        # TODO: Make these configurable in the UI
         "standard_conditions": {
-            "solar_total": 0.0,
+            "solar_total": 5.5,
             "rain_mm": 0.0,
-            "temperature_celsius": 20.0,
+            "temperature_celsius": 15.0,
         },
+        # TODO: Make these configurable in the UI
         "correction_factors": {
             "solar": 0.0,
             "rain": 0.0,
             "temperature": 0.0,
         },
         "irrigation_limits": {
-            "min_percent": int(irrigation_limits.get("min_percent", 30)),
+            "min_percent": int(irrigation_limits.get("min_percent", 0)),
             "max_percent": int(irrigation_limits.get("max_percent", 200)),
-            "main_valve_max_flow": float(irrigation_limits.get("main_valve_max_flow", 850)),
+            "main_valve_max_flow": None if irrigation_limits.get("main_valve_max_flow", 850) is None else int(irrigation_limits.get("main_valve_max_flow", 850)),
         },
         "automation": {
             "enabled": bool(automation.get("enabled", True)),
-            "sequential": bool(automation.get("sequential", False)),
+            "sequential": bool(batch_strategy.get("concurrent_irrigation", False)),
             "scheduled_hour": int(automation.get("scheduled_hour", 6)),
             "scheduled_minute": int(automation.get("scheduled_minute", 0)),
-            "max_flow_monitoring": bool(automation.get("max_flow_monitoring", True)),
-            "environment": str(automation.get("environment", "development")),
-            "use_weathersimulator": bool(automation.get("use_weathersimulator", True)),
+            "max_flow_monitoring": bool(automation.get("max_flow_monitoring", False)),
+            "environment": "development",  # This is not currently supported in the UI, so we set it to "development" for all exports
+            "use_weathersimulator": False,  # This is not currently supported in the UI, so we set it to False for all exports
         },
         "logging": {
             "enabled": bool(logging.get("enabled", True)),

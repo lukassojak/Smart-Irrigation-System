@@ -37,7 +37,7 @@ Když je o 2 mm více srážek než standardní, výpočet výtoku bude upraven 
 ### irrigation_limits:
 - `min_percent`: Dolní hranice výpočtu (např. 0 = žádné zavlažování).
 - `max_percent`: Horní hranice (např. 500 = maximálně 5× běžné doby).
-- `main_valve_max_flow`: Maximální odběr v l/h pro celý zavlažovací uzel.
+- `main_valve_max_flow`: Maximální odběr v l/h pro celý zavlažovací uzel. (None = bez omezení). 
 
 Např.:
 Když je min_percent = 20, i kdyby pršelo celý den, bude se zavlažovat 20% běžného objemu.

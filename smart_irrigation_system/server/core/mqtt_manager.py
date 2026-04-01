@@ -1,6 +1,8 @@
 import json
 import os
 import threading
+import time
+from queue import Queue
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -33,6 +35,10 @@ class MQTTManager(threading.Thread):
         self._stop_event = threading.Event()
         self._seen_alert_keys: set[tuple[str, str, str, str]] = set()
         self.live_store = get_live_store()
+        
+        # Response tracking for request-reply pattern (publish_apply_config_and_wait)
+        self._response_queues: dict[str, Queue] = {}  # message_id -> Queue[response]
+        self._response_lock = threading.Lock()
 
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
@@ -69,9 +75,9 @@ class MQTTManager(threading.Thread):
         elif msg_type == MessageType.NODE_STATUS_SNAPSHOT.value:
             self._handle_node_status_snapshot(envelope)
         elif msg_type == MessageType.NODE_ACK.value:
-            self.logger.debug("Node ACK received: %s", envelope)
+            self._handle_node_ack(envelope)
         elif msg_type == MessageType.NODE_ERROR.value:
-            self.logger.warning("Node ERROR received: %s", envelope)
+            self._handle_node_error(envelope)
         else:
             self.logger.warning("Unhandled message_type %s on topic %s", msg_type, topic)
 
@@ -141,6 +147,9 @@ class MQTTManager(threading.Thread):
                 zone_id=task.get("zone_id"),
                 seen_at=parse_iso_datetime(task.get("updated_at")) or sent_at,
             )
+        
+        # Cleanup old tasks
+        self.live_store.current_tasks_cleanup(retention_seconds=30)
 
     def _append_new_alerts(self, payload: dict[str, Any]) -> None:
         for alert in payload.get("alerts", []):
@@ -160,6 +169,24 @@ class MQTTManager(threading.Thread):
                 message=message,
                 timestamp=parse_iso_datetime(timestamp_raw),
             )
+
+    def _handle_node_ack(self, envelope: dict[str, Any]) -> None:
+        """Handle NODE_ACK response (used in request-reply pattern)."""
+        self.logger.debug("Node ACK received: %s", envelope)
+        correlation_id = envelope.get("correlation_id")
+        if correlation_id:
+            with self._response_lock:
+                if correlation_id in self._response_queues:
+                    self._response_queues[correlation_id].put(envelope)
+
+    def _handle_node_error(self, envelope: dict[str, Any]) -> None:
+        """Handle NODE_ERROR response (used in request-reply pattern)."""
+        self.logger.warning("Node ERROR received: %s", envelope)
+        correlation_id = envelope.get("correlation_id")
+        if correlation_id:
+            with self._response_lock:
+                if correlation_id in self._response_queues:
+                    self._response_queues[correlation_id].put(envelope)
 
     def _handle_legacy_status(self, topic: str, payload_raw: str) -> None:
         # Legacy topic format: irrigation/{node_id}/status
@@ -256,6 +283,60 @@ class MQTTManager(threading.Thread):
         )
         self.client.publish(topic_config(node_id), json.dumps(envelope), qos=1)
         return str(envelope["message_id"])
+
+    def publish_apply_config_and_wait(
+        self,
+        node_id: str,
+        config_revision: str,
+        legacy_runtime_config: dict[str, Any],
+        apply_mode: ApplyMode = ApplyMode.APPLY_NOW,
+        requested_by: str | None = None,
+        timeout: int = 5,
+    ) -> dict[str, Any]:
+        """Publish config apply command and wait for NODE_ACK or NODE_ERROR response.
+        
+        Args:
+            node_id: Target node ID (e.g., 'node1')
+            config_revision: Config revision identifier
+            legacy_runtime_config: Config payload
+            apply_mode: Apply mode (APPLY_NOW or VALIDATE_ONLY)
+            requested_by: Who requested the apply
+            timeout: Response timeout in seconds (default: 5s)
+            
+        Returns:
+            Response envelope (NODE_ACK or NODE_ERROR)
+            
+        Raises:
+            TimeoutError: If no response within timeout
+            ValueError: If response parsing fails
+        """
+        # Create queue for response
+        response_queue: Queue = Queue()
+        
+        # Publish config
+        message_id = self.publish_apply_config(
+            node_id=node_id,
+            config_revision=config_revision,
+            legacy_runtime_config=legacy_runtime_config,
+            apply_mode=apply_mode,
+            requested_by=requested_by,
+        )
+        
+        # Register queue for this message_id
+        with self._response_lock:
+            self._response_queues[message_id] = response_queue
+        
+        try:
+            # Wait for response with timeout
+            response = response_queue.get(timeout=timeout)
+            self.logger.info("Config apply response received for message_id %s: %s", message_id, response.get("message_type"))
+            return response
+        except Exception:
+            raise TimeoutError(f"Node did not respond within {timeout}s to config apply request (message_id={message_id})")
+        finally:
+            # Clean up the queue
+            with self._response_lock:
+                self._response_queues.pop(message_id, None)
 
     def publish_command(self, node_id: str, command: dict):
         """Legacy adapter used by existing API routes and server_core."""

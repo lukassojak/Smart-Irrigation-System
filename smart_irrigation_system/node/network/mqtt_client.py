@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 import threading
 import time
 from datetime import datetime, timezone
@@ -19,15 +20,18 @@ from smart_irrigation_system.common.mqtt_contract import (
     topic_error,
     topic_status,
 )
+from smart_irrigation_system.node.config import config_loader
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
+from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.utils.logger import get_logger
 
 
 BASE_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../../../..")
+    os.path.join(os.path.dirname(__file__), "../../..")
 )
 CONFIG_GLOBAL_PATH = os.path.join(BASE_DIR, "runtime/node/config/config_global.json")
 CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "runtime/node/config/zones_config.json")
+CONFIG_SECRETS_PATH = os.path.join(BASE_DIR, "runtime/node/config/config_secrets.json")
 
 
 class MQTTClient(threading.Thread):
@@ -149,17 +153,49 @@ class MQTTClient(threading.Thread):
             )
             return
 
+        # Strict preflight validation of config before acknowledging acceptance
+        try:
+            config_loader.validate_legacy_runtime_config(legacy_runtime_config, CONFIG_SECRETS_PATH)
+        except ValueError as exc:
+            self._error(
+                envelope,
+                code="CONFIG_INVALID",
+                message=str(exc),
+                retryable=False,
+            )
+            return
+
+        # Check if irrigation is currently running; cannot apply config during active irrigation
+        if self.controller.controller_state != ControllerState.IDLE:
+            self._error(
+                envelope,
+                code="CONFIG_APPLY_BLOCKED",
+                message=f"Cannot apply config while controller is {self.controller.controller_state.value}. "
+                        f"Wait for ongoing irrigation tasks to complete.",
+                retryable=True,
+            )
+            return
+
         self._ack(envelope, AckType.ACCEPTED)
+        self.logger.info("Config apply accepted. Mode: %s. Validating and applying config...", apply_mode)
 
         try:
             if apply_mode == ApplyMode.VALIDATE_ONLY.value:
                 json.dumps(config_global)
                 json.dumps(zones_config)
+                self._ack(envelope, AckType.APPLIED)
             else:
                 self._write_json(CONFIG_GLOBAL_PATH, config_global)
                 self._write_json(CONFIG_ZONES_PATH, zones_config)
-                # Runtime in-place reload is not implemented in ControllerCore yet.
-            self._ack(envelope, AckType.APPLIED)
+                self.logger.info("Config apply completed. Written config to disk. Mode: %s", apply_mode)
+                self._ack(envelope, AckType.APPLIED)
+                
+                # Give MQTT a moment to publish the ACK, then gracefully shutdown and restart
+                self.logger.info("Config applied and ACK sent. Gracefully shutting down node process for restart...")
+                time.sleep(0.5)  # Allow MQTT message to be sent
+                self.controller.shutdown(force=False)
+                self._terminate_process_for_restart()
+                
         except Exception as exc:
             self._error(
                 envelope,
@@ -172,6 +208,12 @@ class MQTTClient(threading.Thread):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
+
+    def _terminate_process_for_restart(self) -> None:
+        """Terminate the entire node process so container restart policy can relaunch it."""
+        pid = os.getpid()
+        self.logger.info("Sending SIGTERM to process pid=%s for node restart.", pid)
+        os.kill(pid, signal.SIGTERM)
 
     def _handle_legacy_command(self, payload_raw: str) -> None:
         try:

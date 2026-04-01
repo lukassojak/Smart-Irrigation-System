@@ -3,6 +3,8 @@
 # Not reactive to run-time changes during irrigation.
 # Create interface for different batching strategies.
 
+# NOTE: GlobalConfig.irrigation_limits.main_valve_max_flow can be None if not set by user
+
 from smart_irrigation_system.node.interfaces import BatchStrategyLike, CircuitPlanningLike
 
 class SimpleBatchStrategy(BatchStrategyLike):

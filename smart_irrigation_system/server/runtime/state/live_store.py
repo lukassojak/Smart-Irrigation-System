@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import threading
 
 from smart_irrigation_system.server.runtime.schemas.live import AlertType, ZoneStatus
@@ -183,6 +183,16 @@ class RuntimeLiveStore:
         with self._lock:
             self._current_tasks.pop(task_id, None)
             self._last_update_at = utcnow()
+    
+    def current_tasks_cleanup(self, retention_seconds: int) -> None:
+        """Remove tasks that are older than retention_seconds."""
+        now = utcnow()
+        with self._lock:
+            for task_id, task in list(self._current_tasks.items()):
+                task_age = now - task.last_update_at
+                if task_age > timedelta(seconds=retention_seconds):
+                    self._current_tasks.pop(task_id)
+
 
     def add_alert(
         self,

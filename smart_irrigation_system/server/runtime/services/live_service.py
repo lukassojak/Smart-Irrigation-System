@@ -23,13 +23,15 @@ class LiveService:
         # Server fallback status request around 10-15s
         # UI REST refresh (dashboard) around 2-3s
         connecting_timeout_seconds: int = 30,
-        stale_timeout_seconds: int = 15,
+        stale_timeout_seconds: int = 10,
         offline_timeout_seconds: int = 30,
+        task_retention_seconds: int = 30,
     ):
         self.store = store
         self.connecting_timeout = timedelta(seconds=connecting_timeout_seconds)
         self.stale_timeout = timedelta(seconds=stale_timeout_seconds)
         self.offline_timeout = timedelta(seconds=offline_timeout_seconds)
+        self.task_retention = timedelta(seconds=task_retention_seconds)
 
     def _is_connecting(self, started_at: datetime, now: datetime, node_ever_seen: bool) -> bool:
         if node_ever_seen:
@@ -61,7 +63,10 @@ class LiveService:
                 now=now,
                 node_ever_seen=node_ever_seen,
             )
-            offline = self._is_offline(now=now, node_last_seen=node_last_seen)
+            node_offline = self._is_offline(now=now, node_last_seen=node_last_seen)
+            never_reported = zone_state.last_update_at is None
+            zone_marked_offline = zone_state.status == ZoneStatus.OFFLINE
+            offline = node_offline or never_reported or zone_marked_offline
             stale = self._is_stale(now=now, updated_at=zone_state.last_update_at)
 
             if offline:

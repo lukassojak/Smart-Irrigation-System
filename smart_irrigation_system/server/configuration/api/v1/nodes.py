@@ -211,16 +211,49 @@ def push_node_config(node_id: int, session: Session = Depends(get_session)):
 
     legacy_runtime_config = export_node_legacy_runtime_config(node)
     server = IrrigationServer()
-    message_id = server.mqtt_manager.publish_apply_config(
-        node_id=f"node{node_id}",
-        config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        legacy_runtime_config=legacy_runtime_config,
-        apply_mode=ApplyMode.APPLY_NOW,
-        requested_by="configuration-api",
-    )
-
-    return {
-        "message": "Configuration push command sent.",
-        "mqtt_message_id": message_id,
-        "target_node_id": f"node{node_id}",
-    }
+    
+    try:
+        response = server.mqtt_manager.publish_apply_config_and_wait(
+            node_id=f"node{node_id}",
+            config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            legacy_runtime_config=legacy_runtime_config,
+            apply_mode=ApplyMode.APPLY_NOW,
+            requested_by="configuration-api",
+            timeout=5,  # 5 second timeout for node response
+        )
+        
+        # Check response type
+        if response["message_type"] == "NODE_ACK":
+            # Sync runtime topology to ensure any changes from the new config are reflected in-memory
+            _sync_runtime_topology(session)
+            return {
+                "status": "APPLIED",
+                "message": "Configuration applied successfully.",
+                "ack_type": response["payload"].get("ack_type"),
+            }
+        elif response["message_type"] == "NODE_ERROR":
+            error_code = response["payload"].get("code")
+            error_message = response["payload"].get("message")
+            error_retryable = response["payload"].get("retryable", False)
+            
+            # Return 400 for non-retryable errors, 409 for retryable (conflict)
+            status_code = 409 if error_retryable else 400
+            raise HTTPException(
+                status_code=status_code,
+                detail={
+                    "error_code": error_code,
+                    "message": error_message,
+                    "retryable": error_retryable,
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected response type: {response['message_type']}"
+            )
+            
+    except TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Node did not respond within 5 seconds. The node may be offline or busy."
+        )

@@ -5,7 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [0.15.0] - 2026-03-28
+## [Unreleased]
+*Introduction of versioned MQTT contract and end-to-end runtime live data pipeline.*
+
+### Added
+- Introduced versioned MQTT communication contract (`sis/v1`):
+  - Common message envelope with `message_id`, `correlation_id`, and typed payloads.
+  - Centralized contract definitions in `common/mqtt_contract.py` (message types, topics, validation).
+- Implemented MQTT v1 client on node side:
+  - Periodic `NODE_STATUS_SNAPSHOT` publishing (default 5s interval).
+  - Support for command handling:
+    - `CMD_GET_STATUS`
+    - `CMD_START_IRRIGATION`
+    - `CMD_STOP_IRRIGATION`
+    - `CMD_APPLY_CONFIG`
+  - ACK / ERROR response flow for mutating commands.
+- Implemented MQTT v1 manager on server side:
+  - Subscription to v1 topics (`status`, `ack`, `error`, `event`).
+  - Envelope decoding and validation.
+  - Integration with `RuntimeLiveStore`:
+    - zone state updates
+    - current task updates
+    - node heartbeat tracking
+    - alert ingestion with deduplication
+- Added configuration push over MQTT:
+  - New endpoint `POST /api/v1/nodes/{node_id}/push-config`
+  - Sends `CMD_APPLY_CONFIG` with exported runtime configuration.
+  - Shuts down node runtime on successful ACK response.
+  - Docker-compose updated to restart node container on exit for seamless config application during development.
+- Added environment-based MQTT configuration:
+  - `MQTT_HOST`, `MQTT_PORT`
+  - optional status polling controls (`MQTT_ENABLE_STATUS_POLLING`, `MQTT_STATUS_POLL_INTERVAL_SECONDS`)
+- Added detailed MQTT documentation:
+  - `MQTT_REFERENCE.md` (full contract specification)
+  - `MQTT_MVP_STATUS.md` (implementation status and roadmap)
+- Added runtime live projection from MQTT snapshots
+
+### Changed
+- Refactored node MQTT layer:
+  - Removed legacy `ServerCommandHandler` coupling in favor of contract-driven dispatch.
+  - Introduced controller-driven command execution.
+- Refactored server MQTT manager:
+  - Replaced ad-hoc message handling with contract-based processing.
+  - Integrated runtime live projection directly from MQTT telemetry.
+- Updated runtime live behavior:
+  - Improved `stale` and `offline` thresholds (15s / 30s).
+  - Runtime state is now primarily driven by MQTT snapshots instead of polling.
+- Updated frontend runtime integration:
+  - Adjusted field mapping (`last_run` handling).
+
+### Deprecated
+- Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
+
+### Fixed
+- Improved stability of runtime live projection under continuous updates from node snapshots.
+- Reduced dependency on periodic polling for runtime updates.
+
+### Known Issues
+- Legacy runtime config exporter is not fully reliable in all edge cases.
+- `CMD_APPLY_CONFIG` does not yet support in-process runtime reload on node (`ControllerCore.reload_config` missing).
+- ACK / ERROR responses are not persisted or queryable on server side.
+- Runtime task lifecycle handling is still simplified (no explicit removal semantics).
+- MQTT reconnect/backoff and delivery guarantees are not fully hardened.
+
+---
+
+## [0.15.0] - 2026-03-28
 *Runtime live projection stabilization and config/runtime synchronization improvements.*
 
 ### Added
@@ -53,7 +118,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MQTT layer is still in transition from prototype manager/client to a production-ready contract-driven implementation.
 - Runtime live store is prepared for MQTT ingest, but full bridge from new MQTT message contract to store upserts is not finalized yet.
 
-# [0.14.0] - 2026-03-17
+---
+
+## [0.14.0] - 2026-03-17
 *Initial implementation of the unified frontend and server architecture with Docker-based deployment.*
 
 ### Added
@@ -89,7 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-# [0.13.0] - 2025-02-19
+## [0.13.0] - 2025-02-19
 *Integration of Node Manager configuration module into the Smart Irrigation System backend and frontend consolidation.*
 
 ### Added

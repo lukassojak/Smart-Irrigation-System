@@ -27,9 +27,10 @@ export default function ZoneRuntimeCard({ zone }) {
     // ---- Badge config ----
     const badgeConfig = {
         idle: { label: "Idle", color: "gray" },
-        irrigating: { label: "Irrigating", color: "green" },
+        irrigating: { label: "Irrigating", color: "blue" },
         stopping: { label: "Stopping", color: "orange" },
         error: { label: "Error", color: "red" },
+        offline: { label: "Offline", color: "gray" } // Do not show badge if offline, but keep config for consistency
     }[zone.status]
 
     const isIrrigating = zone.status === "irrigating"

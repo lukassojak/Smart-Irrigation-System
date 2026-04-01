@@ -1,34 +1,38 @@
 {
     "standard_conditions": {
-        "solar_total": 2.5,
+        "solar_total": 5.5,
         "rain_mm": 0.0,
-        "temperature_celsius": 10.5
+        "temperature_celsius": 15.0
     },
     "correction_factors": {
-        "solar": 0.05,
-        "rain": -0.15,
-        "temperature": 0.07
+        "solar": 0.0,
+        "rain": 0.0,
+        "temperature": 0.0
     },
     "irrigation_limits": {
-        "min_percent": 30,
+        "min_percent": 20,
         "max_percent": 200,
-        "main_valve_max_flow": 850
+        "main_valve_max_flow": null
     },
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 14,
-        "scheduled_minute": 14,
-        "max_flow_monitoring": true,
+        "scheduled_hour": 22,
+        "scheduled_minute": 3,
+        "max_flow_monitoring": false,
         "environment": "development",
         "use_weathersimulator": false
     },
     "logging": {
         "enabled": true,
-        "log_level": "INFO"
+        "log_level": "DEBUG"
     },
     "weather_api": {
+        "api_enabled": true,
         "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
-        "history_url": "https://api.ecowitt.net/api/v3/device/history"
+        "history_url": "https://api.ecowitt.net/api/v3/device/history",
+        "api_key": "6f7266a5-3a7c-4383-a78a-53c27cdd7f91",
+        "application_key": "EB3B3829AA860E2DB6CA1471C9149D01",
+        "device_mac": "BC:FF:4D:F8:3B:5B"
     }
 }

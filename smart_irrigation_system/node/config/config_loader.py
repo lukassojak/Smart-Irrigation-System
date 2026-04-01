@@ -5,7 +5,7 @@ from smart_irrigation_system.node.core.correction_factors import CorrectionFacto
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.config.secrets import get_secret
-from typing import Tuple, List
+from typing import Any, Tuple, List
 
 # Initialize logger
 logger = get_logger("config_loader")
@@ -16,7 +16,38 @@ def load_global_config(filepath: str, secrets_path: str) -> GlobalConfig:
     with open(filepath, "r") as f:
         data = json.load(f)
 
-    _is_valid_global_config(data)       # if invalid, raises ValueError
+    return _global_config_from_dict(data, secrets_path)
+
+
+def validate_legacy_runtime_config(
+    legacy_runtime_config: dict[str, Any],
+    secrets_path: str,
+) -> tuple[GlobalConfig, list[IrrigationCircuit]]:
+    """
+    Strictly validates legacy runtime config payload and builds runtime objects.
+
+    :param legacy_runtime_config: Expected object with keys "config_global" and "zones_config".
+    :param secrets_path: Path to node secrets file used to enrich weather API keys.
+    :return: Tuple (GlobalConfig, list[IrrigationCircuit]) ready for runtime use.
+    :raises ValueError: if payload structure or content is invalid.
+    """
+    if not isinstance(legacy_runtime_config, dict):
+        raise ValueError("legacy_runtime_config must be an object")
+
+    config_global = legacy_runtime_config.get("config_global")
+    zones_config = legacy_runtime_config.get("zones_config")
+    if not isinstance(config_global, dict) or not isinstance(zones_config, dict):
+        raise ValueError("legacy_runtime_config must contain config_global and zones_config objects")
+
+    global_config = _global_config_from_dict(config_global, secrets_path)
+    circuits = _circuits_from_zones_dict(zones_config, strict=True)
+    return global_config, circuits
+
+
+def _global_config_from_dict(data: dict[str, Any], secrets_path: str) -> GlobalConfig:
+    """Validates and builds GlobalConfig from dictionary data."""
+
+    _is_valid_global_config(data)  # if invalid, raises ValueError
     api_enabled = True
     try:
         api_key, application_key, device_mac = get_secret("api_key", secrets_path), get_secret("application_key", secrets_path), get_secret("device_mac", secrets_path)
@@ -49,13 +80,26 @@ def load_zones_config(filepath: str) -> list[IrrigationCircuit]:
     with open(filepath, "r") as f:
         config_data = json.load(f)
 
+    return _circuits_from_zones_dict(config_data, strict=False)
+
+
+def _circuits_from_zones_dict(config_data: dict[str, Any], strict: bool) -> list[IrrigationCircuit]:
+    """Builds IrrigationCircuit objects from zones config data."""
+    zones = config_data.get("zones") if isinstance(config_data, dict) else None
+    if not isinstance(zones, list):
+        raise ValueError("zones_config must contain a 'zones' list")
+
     circuits = []
-    for zone in config_data["zones"]:
+    for zone in zones:
         # Validate the zone configuration
         valid, errors = _is_valid_zone(zone)
         if not valid:
-            # log the error and skip the invalid zone
-            print(f"Invalid zone configuration for {zone['name']}: {', '.join(errors)}")
+            zone_name = zone.get("name", "<unknown>") if isinstance(zone, dict) else "<unknown>"
+            error_message = f"Invalid zone configuration for {zone_name}: {', '.join(errors)}"
+            if strict:
+                raise ValueError(error_message)
+            # Legacy behavior: skip invalid zones while loading from file.
+            logger.error(error_message)
             continue
 
         circuit = circuit_from_config(zone)
@@ -209,7 +253,7 @@ def _is_valid_global_config(data: dict):
         raise ValueError("irrigation_limits.min_percent must be an int")
     if not isinstance(il.get("max_percent"), int):
         raise ValueError("irrigation_limits.max_percent must be an int")
-    if not isinstance(il.get("main_valve_max_flow"), (float, int)):
+    if not isinstance(il.get("main_valve_max_flow"), (float, int, type(None))):
         raise ValueError("irrigation_limits.main_valve_max_flow must be a number")
 
     # Validate automation

@@ -38,7 +38,7 @@ export default function CurrentTaskCard({ task }) {
 
                             <Badge
                                 size="sm"
-                                colorPalette="green"
+                                colorPalette="blue"
                                 variant="subtle"
                             >
                                 Irrigating
@@ -60,7 +60,7 @@ export default function CurrentTaskCard({ task }) {
                     height="8px"
                 >
                     <Progress.Track bg="gray.100">
-                        <Progress.Range bg="teal.500" />
+                        <Progress.Range bg="teal.400" />
                     </Progress.Track>
                 </Progress.Root>
 
