@@ -41,7 +41,7 @@ class MQTTClient(threading.Thread):
         node_id: str = "node1",
         broker_host: str | None = None,
         broker_port: int | None = None,
-        snapshot_interval_seconds: int = 5,
+        snapshot_interval_seconds: int = 2,
     ):
         super().__init__(daemon=True)
         self.controller = controller
@@ -98,9 +98,11 @@ class MQTTClient(threading.Thread):
             return
 
         if message_type == MessageType.CMD_STOP_IRRIGATION.value:
-            self._ack(envelope, AckType.ACCEPTED)
-            self.controller.stop_all_irrigation()
-            self._ack(envelope, AckType.COMPLETED)
+            self._handle_stop_irrigation(envelope)
+            return
+
+        if message_type == MessageType.CMD_STOP_CIRCUIT.value:
+            self._handle_stop_circuit(envelope)
             return
 
         if message_type == MessageType.CMD_APPLY_CONFIG.value:
@@ -124,8 +126,58 @@ class MQTTClient(threading.Thread):
             return
 
         self._ack(envelope, AckType.ACCEPTED)
-        self.controller.start_manual_irrigation(zone_id, liter_amount)
-        self._ack(envelope, AckType.COMPLETED)
+        try:
+            self.controller.start_manual_irrigation(zone_id, liter_amount)
+            self._ack(envelope, AckType.COMPLETED)
+        except Exception as exc:
+            self.logger.error("Failed to start irrigation for zone %s: %s", zone_id, exc)
+            self._error(
+                envelope,
+                code="IRRIGATION_START_FAILED",
+                message=f"Failed to start irrigation for zone {zone_id}: {str(exc)}",
+                retryable=True,
+            )
+            return
+        
+    def _handle_stop_irrigation(self, envelope: dict[str, Any]) -> None:
+        self._ack(envelope, AckType.ACCEPTED)
+        try:
+            self.controller.stop_all_irrigation()
+            self._ack(envelope, AckType.COMPLETED)
+        except Exception as exc:
+            self.logger.error("Failed to stop irrigation: %s", exc)
+            self._error(
+                envelope,
+                code="IRRIGATION_STOP_FAILED",
+                message=f"Failed to stop irrigation: {str(exc)}",
+                retryable=True,
+            )
+
+    def _handle_stop_circuit(self, envelope: dict[str, Any]) -> None:
+        payload = envelope["payload"]
+        try:
+            circuit_id = int(payload["circuit_id"])
+        except (KeyError, ValueError, TypeError):
+            self._error(
+                envelope,
+                code="INVALID_PAYLOAD",
+                message="circuit_id is required for CMD_STOP_CIRCUIT",
+                retryable=False,
+            )
+            return
+
+        self._ack(envelope, AckType.ACCEPTED)
+        try:
+            self.controller.stop_circuit_irrigation(circuit_id)
+            self._ack(envelope, AckType.COMPLETED)
+        except Exception as exc:
+            self.logger.error("Failed to stop circuit %s: %s", circuit_id, exc)
+            self._error(
+                envelope,
+                code="CIRCUIT_STOP_FAILED",
+                message=f"Failed to stop circuit {circuit_id}: {str(exc)}",
+                retryable=True,
+            )
 
     def _handle_apply_config(self, envelope: dict[str, Any]) -> None:
         payload = envelope["payload"]

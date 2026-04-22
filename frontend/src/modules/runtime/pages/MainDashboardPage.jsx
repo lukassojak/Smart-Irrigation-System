@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react"
-import { getLiveSnapshot } from "../../../api/runtime.api"
+import { useCallback } from "react"
 import { useOutletContext } from "react-router-dom"
 
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useTodayRuntime from "../../../hooks/useTodayRuntime"
-import useSmoothedCurrentTasks from "../../../hooks/useSmoothedCurrentTasks"
+import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 
 import {
     Box,
@@ -23,7 +22,6 @@ import {
     Droplets,
     CloudRain,
     ShieldCheck,
-    AlertTriangle
 } from "lucide-react"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
@@ -37,36 +35,13 @@ import TodaysActivityCard from "../components/TodaysActivityCard"
 import WeatherWaterSummaryCard from "../components/WeatherWaterSummaryCard"
 import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
+import {
+    controlActionDialog,
+    ControlActionDialogViewport,
+} from "../components/ControlActionDialogOverlay"
 
 export default function MainDashboardPage() {
-
     // ---- Fake Data ----
-
-    // Medium-frequency, updated every 3 minutes
-    const todaysActivity = [
-        {
-            id: "t1",
-            zoneName: "Orchard",
-            time: "20:00",
-            volume: 14,
-            status: "planned"
-        },
-        {
-            id: "t2",
-            zoneName: "South Lawn",
-            time: "18:30",
-            volume: 12,
-            status: "planned"
-        },
-        {
-            id: "t3",
-            zoneName: "Greenhouse",
-            time: "12:30",
-            volume: 10,
-            status: "completed"
-        }
-
-    ]
 
     // Low-frequency, updated every 30 minutes
     const weatherWaterData = {
@@ -102,7 +77,7 @@ export default function MainDashboardPage() {
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
-    const livePollIntervalMs = 3000
+    const livePollIntervalMs = 2000
     const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
     const {
         data: todayData,
@@ -111,12 +86,67 @@ export default function MainDashboardPage() {
         refresh: refreshToday
     } = useTodayRuntime(180000)
 
-    const smoothedCurrentTasks = useSmoothedCurrentTasks(
-        liveData?.currentTasks ?? [],
-        liveData?.zones ?? [],
-        livePollIntervalMs,
-    )
+    const {
+        stoppingZoneIds,
+        isStoppingAll,
+        hasActiveTasks,
+        handleStopZone,
+        handleStopAll,
+    } = useRuntimeControlState({
+        tasks: liveData?.currentTasks ?? [],
+    })
 
+    const openStopActionDialog = useCallback((result) => {
+        if (!result) {
+            return
+        }
+
+        if (result.ok) {
+            if (result.action === "stop-zone") {
+                controlActionDialog.open("stop-action-result", {
+                    title: "Zone stop completed",
+                    description: "Irrigation stop command was completed successfully.",
+                    status: "success",
+                    zoneId: result.zoneId,
+                    nodeId: result.response?.node_id,
+                    mode: result.response?.mode,
+                    correlationId: result.response?.response?.correlation_id,
+                })
+                return
+            }
+
+            const nodeCount = Array.isArray(result.response?.nodes) ? result.response.nodes.length : 0
+            controlActionDialog.open("stop-action-result", {
+                title: "Stop all completed",
+                description: "Irrigation stop command was delivered to all target nodes.",
+                status: "success",
+                mode: result.response?.mode,
+                nodeCount,
+            })
+            return
+        }
+
+        controlActionDialog.open("stop-action-result", {
+            title: "Stop action failed",
+            description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
+            status: "error",
+            zoneId: result.zoneId,
+            nodeId: result.error?.node_id,
+            code: result.error?.code,
+            retryable: result.error?.retryable,
+            correlationId: result.error?.correlation_id,
+        })
+    }, [])
+
+    const handleStopZoneWithNotification = useCallback(async (zoneId) => {
+        const result = await handleStopZone(zoneId)
+        openStopActionDialog(result)
+    }, [handleStopZone, openStopActionDialog])
+
+    const handleStopAllWithNotification = useCallback(async () => {
+        const result = await handleStopAll()
+        openStopActionDialog(result)
+    }, [handleStopAll, openStopActionDialog])
 
     if (loading && !liveData) {
         return (
@@ -159,6 +189,8 @@ export default function MainDashboardPage() {
 
     return (
         <Box>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Dashboard"
                 subtitle="Live system overview"
@@ -224,15 +256,31 @@ export default function MainDashboardPage() {
                 </GlassPanelSection>
 
 
-                {/* SECTION 2 - CURRENT IRRIGATION */}
+                {/* SECTION 2 - CURRENT IRRIGATION with STOP ALL action */}
                 <GlassPanelSection
                     title="Current Irrigation"
                     description="Active irrigation tasks"
-                    collapsible
+                    actions={
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={handleStopAllWithNotification}
+                            isDisabled={!hasActiveTasks || isStoppingAll}
+                            loading={isStoppingAll}
+                        >
+                            Stop All
+                        </Button>
+                    }
                 >
                     <Stack gap={2}>
-                        {smoothedCurrentTasks.map(task => (
-                            <CurrentTaskCard key={task.id} task={task} />
+                        {(liveData?.currentTasks ?? []).map(task => (
+                            <CurrentTaskCard
+                                key={task.id}
+                                task={task}
+                                isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
+                                onStop={() => handleStopZoneWithNotification(task.id)}
+                            />
                         ))}
                     </Stack>
                 </GlassPanelSection>
@@ -268,7 +316,11 @@ export default function MainDashboardPage() {
                 </Grid>
 
                 {/* SECTION 5 - ZONES STATUS */}
-                <ZonesGridSection zones={liveData.zones} />
+                <ZonesGridSection
+                    zones={liveData.zones}
+                    stoppingZoneIds={stoppingZoneIds}
+                    onStopZone={handleStopZoneWithNotification}
+                />
 
                 {/* SECTION 6 - WEATHER FORECAST */}
                 <WeatherForecastSection data={weatherForecastData} />

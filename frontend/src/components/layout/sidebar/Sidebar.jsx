@@ -1,9 +1,11 @@
 // components/layout/sidebar/Sidebar.jsx
 
+import { useEffect, useState } from "react"
 import { Box, VStack, HStack, Text, Image } from "@chakra-ui/react"
 import SidebarSection from "./SidebarSection"
 import SidebarItem from "./SidebarItem"
 import { useNavigate } from "react-router-dom"
+import { fetchNodes } from "../../../api/nodes.api"
 
 
 import {
@@ -15,6 +17,7 @@ import {
     Cloud,
     Settings,
     SlidersHorizontal,
+    RefreshCcw,
     History,
     ChevronLeft,
     ChevronRight
@@ -22,6 +25,31 @@ import {
 
 export default function Sidebar({ isCollapsed, onToggle }) {
     const navigate = useNavigate()
+    const [hasPendingSyncNodes, setHasPendingSyncNodes] = useState(false)
+
+    useEffect(() => {
+        let isMounted = true
+
+        const loadSyncStatus = async () => {
+            try {
+                const response = await fetchNodes()
+                if (!isMounted) return
+                const hasPending = response.data.some((node) => node.config_sync_status === "PENDING")
+                setHasPendingSyncNodes(hasPending)
+            } catch (error) {
+                if (!isMounted) return
+                setHasPendingSyncNodes(false)
+            }
+        }
+
+        loadSyncStatus()
+
+        const intervalId = setInterval(loadSyncStatus, 15000)
+        return () => {
+            isMounted = false
+            clearInterval(intervalId)
+        }
+    }, [])
 
     return (
         <Box
@@ -97,7 +125,12 @@ export default function Sidebar({ isCollapsed, onToggle }) {
                 <SidebarSection
                     title={!isCollapsed ? "Configuration" : null}
                 >
-                    <SidebarItem to="/configuration/nodes" icon={SlidersHorizontal} isCollapsed={isCollapsed}>
+                    <SidebarItem
+                        to="/configuration/nodes"
+                        icon={SlidersHorizontal}
+                        indicatorIcon={hasPendingSyncNodes ? RefreshCcw : undefined}
+                        isCollapsed={isCollapsed}
+                    >
                         {!isCollapsed ? "Nodes" : null}
                     </SidebarItem>
                     <SidebarItem to="/configuration/nodes/new" icon={SlidersHorizontal} isCollapsed={isCollapsed}>

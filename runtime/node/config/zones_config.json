@@ -78,17 +78,37 @@
         },
         {
             "id": 5,
-            "name": "Lukee",
-            "relay_pin": 12,
+            "name": "Lesopark",
+            "relay_pin": 2,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 23.0,
-            "zone_area_m2": 324.0,
+            "target_mm": 32.0,
+            "zone_area_m2": 22.0,
             "liters_per_minimum_dripper": null,
+            "interval_days": 8,
+            "drippers_summary": {
+                "460": 1
+            },
+            "local_correction_factors": {
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            }
+        },
+        {
+            "id": 6,
+            "name": "Test",
+            "relay_pin": 3,
+            "enabled": true,
+            "even_area_mode": false,
+            "target_mm": null,
+            "zone_area_m2": null,
+            "liters_per_minimum_dripper": 0.99,
             "interval_days": 1,
             "drippers_summary": {
-                "10": 2,
-                "2": 1
+                "4": 1,
+                "8": 1,
+                "1": 1
             },
             "local_correction_factors": {
                 "solar": 0.0,

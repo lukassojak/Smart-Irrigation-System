@@ -1,7 +1,7 @@
 import http from "./http"
 
 export const getLiveSnapshot = async () => {
-    const response = await http.get("/runtime/live")
+    const response = await http.get("/runtime/statuses/live")
     const data = response.data
 
     return {
@@ -43,7 +43,7 @@ export const getLiveSnapshot = async () => {
 }
 
 export const getTodaySnapshot = async () => {
-    const response = await http.get("/runtime/today")
+    const response = await http.get("/runtime/statuses/today")
     const data = response.data
 
     return {
@@ -65,4 +65,66 @@ export const getTodaySnapshot = async () => {
         })),
         lastUpdate: new Date(data.last_update)
     }
+}
+
+export const startIrrigation = async ({
+    zoneId,
+    targetVolume,
+    waitForResponse = true,
+    timeoutSeconds = 5,
+}) => {
+    const response = await http.post(
+        "/runtime/control/start-irrigation",
+        {
+            zone_id: Number(zoneId),
+            liter_amount: Number(targetVolume),
+        },
+        {
+            params: {
+                wait_for_response: waitForResponse,
+                timeout_seconds: timeoutSeconds,
+            },
+        },
+    )
+
+    return response.data
+}
+
+export const stopZone = async ({
+    zoneId,
+    waitForResponse = true,
+    timeoutSeconds = 5,
+}) => {
+    const response = await http.post(
+        "/runtime/control/stop-zone",
+        {
+            zone_id: Number(zoneId),
+        },
+        {
+            params: {
+                wait_for_response: waitForResponse,
+                timeout_seconds: timeoutSeconds,
+            },
+        },
+    )
+
+    return response.data
+}
+
+export const stopIrrigation = async ({
+    waitForResponse = true,
+    timeoutSeconds = 5,
+} = {}) => {
+    const response = await http.post(
+        "/runtime/control/stop-irrigation",
+        null,
+        {
+            params: {
+                wait_for_response: waitForResponse,
+                timeout_seconds: timeoutSeconds,
+            },
+        },
+    )
+
+    return response.data
 }

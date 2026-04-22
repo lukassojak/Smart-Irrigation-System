@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlmodel import Session
 
 from smart_irrigation_system.server.configuration.repositories.node_repository import NodeRepository
@@ -6,6 +8,10 @@ from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeUpdate
 from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneUpdate
+from smart_irrigation_system.server.configuration.models.node import (
+    CONFIG_SYNC_PENDING,
+    CONFIG_SYNC_PUSHED,
+)
 
 
 class NodeService:
@@ -54,6 +60,7 @@ class NodeService:
         new_node = Node(
             name=data.name,
             location=data.location,
+            config_sync_status=CONFIG_SYNC_PENDING,
             hardware=data.hardware.model_dump(),
             irrigation_limits=data.irrigation_limits.model_dump(),
             automation=data.automation.model_dump(),
@@ -69,6 +76,7 @@ class NodeService:
 
     def update_node(self, node_id: int, data: NodeUpdate) -> Node | None:
         update_data = data.model_dump(exclude_unset=True)
+        config_fields = {"hardware", "irrigation_limits", "automation", "batch_strategy", "logging"}
 
         if "hardware" in update_data and update_data["hardware"] is not None:
             update_data["hardware"] = update_data["hardware"].model_dump()
@@ -80,6 +88,12 @@ class NodeService:
             update_data["batch_strategy"] = update_data["batch_strategy"].model_dump()
         if "logging" in update_data and update_data["logging"] is not None:
             update_data["logging"] = update_data["logging"].model_dump()
+
+        if config_fields.intersection(update_data.keys()):
+            update_data["config_sync_status"] = CONFIG_SYNC_PENDING
+
+        if update_data:
+            update_data["last_updated"] = datetime.now(timezone.utc)
 
         node = self.node_repo.update(node_id, update_data)
         if not node:
@@ -111,6 +125,8 @@ class NodeService:
         if not updated_zone:
             return None
 
+        self._mark_node_config_pending(node_id)
+
         self.session.commit()
         return updated_zone
 
@@ -131,6 +147,8 @@ class NodeService:
         deleted = self.zone_repo.delete(zone_id)
         if not deleted:
             return False
+
+        self._mark_node_config_pending(node_id)
         
         self.session.commit()
         return True
@@ -163,7 +181,27 @@ class NodeService:
         )
 
         self.zone_repo.create(new_zone)
+        self._mark_node_config_pending(node_id)
         self.session.commit()
         
 
         return new_zone
+
+    def mark_config_pushed(self, node_id: int) -> Node | None:
+        node = self.node_repo.get(node_id)
+        if not node:
+            return None
+
+        node.config_sync_status = CONFIG_SYNC_PUSHED
+        node.last_updated = datetime.now(timezone.utc)
+        self.session.flush()
+        self.session.commit()
+        return node
+
+    def _mark_node_config_pending(self, node_id: int) -> None:
+        node = self.node_repo.get(node_id)
+        if not node:
+            return
+        node.config_sync_status = CONFIG_SYNC_PENDING
+        node.last_updated = datetime.now(timezone.utc)
+        self.session.flush()

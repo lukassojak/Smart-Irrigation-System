@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `MQTT_REFERENCE.md` (full contract specification)
   - `MQTT_MVP_STATUS.md` (implementation status and roadmap)
 - Added runtime live projection from MQTT snapshots
+- Added runtime control API endpoints under `/api/v1/runtime/control`:
+  - `POST /start-irrigation`
+  - `POST /stop-zone`
+  - `POST /stop-irrigation`
+  - synchronous mode with ACK / ERROR mapping and timeout handling
+- Added support for per-zone stop command in MQTT contract (`CMD_STOP_CIRCUIT`).
+- Added node configuration sync tracking (`PENDING` / `PUSHED`) across configuration model and API schemas.
+- Added frontend runtime control state hook and result overlay for start/stop actions.
 
 ### Changed
 - Refactored node MQTT layer:
@@ -53,6 +61,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Runtime state is now primarily driven by MQTT snapshots instead of polling.
 - Updated frontend runtime integration:
   - Adjusted field mapping (`last_run` handling).
+- Refactored runtime API routing to split status endpoints and control endpoints:
+  - status endpoints moved under `/api/v1/runtime/statuses`.
+- Updated frontend API base URL behavior:
+  - uses relative `/api/v1` fallback when `VITE_API_URL` is empty.
+  - Vite dev server proxy now configurable via `VITE_API_PROXY_TARGET` (including Docker setup).
+- Updated configuration frontend with config sync UX:
+  - pending sync indicators in node list/sidebar
+  - push-config action in node detail
+  - optional "Create Zone & Push" flow in zone wizard.
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.

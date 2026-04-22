@@ -9,6 +9,7 @@ uvicorn smart_irrigation_system.server.main:app --reload
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from smart_irrigation_system.__version__ import __version__
 from smart_irrigation_system.server.core.server_core import IrrigationServer
 from smart_irrigation_system.server.api.routes import router as api_router
@@ -51,6 +52,19 @@ app.include_router(runtime_router, prefix="/api/v1/runtime")
 SQLModel.metadata.create_all(bind=engine)
 
 
+def _ensure_node_config_sync_status_column() -> None:
+    """MVP compatibility migration for existing SQLite databases."""
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(node)"))
+        columns = {row[1] for row in rows}
+        if "config_sync_status" not in columns:
+            conn.execute(
+                text(
+                    "ALTER TABLE node ADD COLUMN config_sync_status TEXT NOT NULL DEFAULT 'PENDING'"
+                )
+            )
+
+
 # ------------------- Server Orchestrator ------------------- #
 
 server = IrrigationServer()
@@ -59,6 +73,7 @@ server = IrrigationServer()
 def on_startup():
     """Starts the orchestrator during FastAPI server startup."""
     app.logger = getattr(app, "logger", None)
+    _ensure_node_config_sync_status_column()
     with Session(engine) as session:
         initialize_live_store_from_config(session)
 

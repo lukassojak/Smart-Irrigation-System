@@ -22,7 +22,7 @@ class LiveService:
         # Server fallback status request around 10-15s
         # UI REST refresh (dashboard) around 2500 ms
         connecting_timeout_seconds: int = 30,
-        stale_timeout_seconds: int = 10,
+        stale_timeout_seconds: int = 4,
         offline_timeout_seconds: int = 60,
         task_retention_seconds: int = 30,
     ):

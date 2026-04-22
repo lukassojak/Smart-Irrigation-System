@@ -224,12 +224,20 @@ def push_node_config(node_id: int, session: Session = Depends(get_session)):
         
         # Check response type
         if response["message_type"] == "NODE_ACK":
+            ack_type = response["payload"].get("ack_type")
+            if ack_type != "applied":
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Unexpected ACK type for config apply: {ack_type}",
+                )
+
+            service.mark_config_pushed(node_id)
             # Sync runtime topology to ensure any changes from the new config are reflected in-memory
             _sync_runtime_topology(session)
             return {
                 "status": "APPLIED",
                 "message": "Configuration applied successfully.",
-                "ack_type": response["payload"].get("ack_type"),
+                "ack_type": ack_type,
             }
         elif response["message_type"] == "NODE_ERROR":
             error_code = response["payload"].get("code")

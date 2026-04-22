@@ -18,7 +18,10 @@ const buildZoneStatusMap = (zones) => {
     const statusMap = new Map()
 
     for (const zone of zones ?? []) {
-        statusMap.set(zone.id, zone.status)
+        statusMap.set(zone.id, {
+            status: zone.status,
+            online: zone.online,
+        })
     }
 
     return statusMap
@@ -59,6 +62,7 @@ const buildDisplayTasks = (entries) => {
             targetVolume: entry.targetVolume,
             remainingMinutes: entry.remainingMinutes,
             stale: entry.stale,
+            isDisconnected: entry.isDisconnected,
             isFinishing: entry.phase === "finishing",
         }))
 }
@@ -75,6 +79,7 @@ const createEntry = (task, now, order) => {
         targetVolume: task.targetVolume,
         remainingMinutes: task.remainingMinutes,
         stale: task.stale ?? false,
+        isDisconnected: false,
         lastRawProgress: progress,
         lastRawChangeAt: now,
         lastSnapshotAt: now,
@@ -106,6 +111,7 @@ export default function useSmoothedCurrentTasks(rawTasks = [], zones = [], pollI
         incomingTasks.forEach((task, order) => {
             const existingEntry = entries.get(task.id)
             const nextProgress = toNumber(task.progress)
+            const zoneInfo = incomingZoneStatus.get(task.id)
             seenIds.add(task.id)
 
             if (!existingEntry) {
@@ -131,6 +137,7 @@ export default function useSmoothedCurrentTasks(rawTasks = [], zones = [], pollI
             existingEntry.targetVolume = task.targetVolume
             existingEntry.remainingMinutes = task.remainingMinutes
             existingEntry.stale = task.stale ?? false
+            existingEntry.isDisconnected = existingEntry.stale && zoneInfo?.online === false
             existingEntry.phase = "active"
             existingEntry.missingSince = null
             existingEntry.finishStartAt = null
@@ -154,8 +161,8 @@ export default function useSmoothedCurrentTasks(rawTasks = [], zones = [], pollI
                 entry.missingSince = now
             }
 
-            const zoneStatus = zoneStatusRef.current.get(taskId)
-            const zoneIsIrrigating = zoneStatus === "irrigating"
+            const zoneInfo = zoneStatusRef.current.get(taskId)
+            const zoneIsIrrigating = zoneInfo?.status === "irrigating"
             const missingForMs = now - entry.missingSince
 
             if (!zoneIsIrrigating && entry.phase === "active" && missingForMs >= DEFAULT_FINISH_GRACE_MS) {
@@ -188,8 +195,8 @@ export default function useSmoothedCurrentTasks(rawTasks = [], zones = [], pollI
                         changed = true
                     }
 
-                    const zoneStatus = zoneStatusRef.current.get(taskId)
-                    if (entry.missingSince != null && zoneStatus !== "irrigating") {
+                    const zoneInfo = zoneStatusRef.current.get(taskId)
+                    if (entry.missingSince != null && zoneInfo?.status !== "irrigating") {
                         const missingForMs = now - entry.missingSince
                         if (missingForMs >= DEFAULT_FINISH_GRACE_MS) {
                             entry.phase = "finishing"

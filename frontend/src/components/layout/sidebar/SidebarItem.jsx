@@ -1,7 +1,7 @@
 import { Box, HStack, Text } from "@chakra-ui/react"
 import { NavLink } from "react-router-dom"
 
-export default function SidebarItem({ to, icon: Icon, children, isCollapsed }) {
+export default function SidebarItem({ to, icon: Icon, indicatorIcon: IndicatorIcon, children, isCollapsed }) {
     return (
         <NavLink to={to} style={{ textDecoration: "none" }}>
             {({ isActive }) => (
@@ -17,23 +17,29 @@ export default function SidebarItem({ to, icon: Icon, children, isCollapsed }) {
                         bg: "rgba(56,178,172,0.06)"
                     }}
                 >
-                    <HStack spacing={isCollapsed ? 0 : 3}>
-                        {Icon && (
-                            <Icon
-                                size={18}
-                                strokeWidth={2}
-                                color={isActive ? "#0F766E" : "#4A5568"}
-                            />
-                        )}
+                    <HStack spacing={isCollapsed ? 0 : 3} w="full" justify={isCollapsed ? "center" : "space-between"}>
+                        <HStack spacing={isCollapsed ? 0 : 3}>
+                            {Icon && (
+                                <Icon
+                                    size={18}
+                                    strokeWidth={2}
+                                    color={isActive ? "#0F766E" : "#4A5568"}
+                                />
+                            )}
 
-                        {!isCollapsed && (
-                            <Text
-                                fontSize="sm"
-                                fontWeight={isActive ? "600" : "500"}
-                                color={isActive ? "teal.700" : "gray.700"}
-                            >
-                                {children}
-                            </Text>
+                            {!isCollapsed && (
+                                <Text
+                                    fontSize="sm"
+                                    fontWeight={isActive ? "600" : "500"}
+                                    color={isActive ? "teal.700" : "gray.700"}
+                                >
+                                    {children}
+                                </Text>
+                            )}
+                        </HStack>
+
+                        {!isCollapsed && IndicatorIcon && (
+                            <IndicatorIcon size={15} strokeWidth={2} color="#D69E2E" />
                         )}
                     </HStack>
                 </Box>

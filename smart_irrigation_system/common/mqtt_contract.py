@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from enum import StrEnum
+from enum import Enum
 import json
 from typing import Any
 from uuid import uuid4
+
+try:
+    from enum import StrEnum
+except ImportError:
+    class StrEnum(str, Enum):
+        pass
 
 
 MQTT_CONTRACT_VERSION = 1
@@ -18,6 +24,7 @@ class MessageType(StrEnum):
     CMD_GET_STATUS = "CMD_GET_STATUS"
     CMD_START_IRRIGATION = "CMD_START_IRRIGATION"
     CMD_STOP_IRRIGATION = "CMD_STOP_IRRIGATION"
+    CMD_STOP_CIRCUIT = "CMD_STOP_CIRCUIT"
     CMD_APPLY_CONFIG = "CMD_APPLY_CONFIG"
 
 

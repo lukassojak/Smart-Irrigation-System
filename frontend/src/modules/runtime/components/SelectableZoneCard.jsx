@@ -5,23 +5,23 @@ import {
     Text,
     Badge
 } from "@chakra-ui/react"
-import { Droplets } from "lucide-react"
 
 export default function SelectableZoneCard({
     zone,
     selected,
     onClick
 }) {
+    const isStale = zone.stale === true
+    const lastRunValue = zone.last_run ?? zone.lastRun
 
-    // ---- Badge config ----
     const badgeConfig = {
         idle: { label: "Idle", color: "gray" },
-        irrigating: { label: "Irrigating", color: "green" },
+        irrigating: { label: "Irrigating", color: "blue" },
         stopping: { label: "Stopping", color: "orange" },
         error: { label: "Error", color: "red" },
+        offline: { label: "Offline", color: "gray" }
     }[zone.status]
 
-    // ---- Accent color logic ----
     let accentColor = "green.400"
 
     if (zone.status === "error") {
@@ -30,37 +30,28 @@ export default function SelectableZoneCard({
         accentColor = "gray.400"
     }
 
+    const isSelectable = zone.online && zone.status !== "error"
+
     return (
         <Box
             position="relative"
             onClick={onClick}
-            cursor={zone.online && zone.status !== "error" ? "pointer" : "default"}
+            cursor={isSelectable ? "pointer" : "default"}
             bg="rgba(255,255,255,0.95)"
             borderWidth="1px"
-            borderColor={
-                selected
-                    ? "teal.400"
-                    : "rgba(56,178,172,0.06)"
-            }
+            borderColor={selected ? "teal.400" : "rgba(56,178,172,0.06)"}
             borderRadius="lg"
-            p={4}
-            boxShadow={
-                selected
-                    ? "0 0 0 2px rgba(56,178,172,0.25)"
-                    : "0 4px 14px rgba(15,23,42,0.05)"
-            }
+            p={5}
+            boxShadow={selected ? "0 0 0 2px rgba(56,178,172,0.25)" : "0 4px 16px rgba(15,23,42,0.05)"}
             transition="all 0.15s ease"
             _hover={{
-                borderColor: (zone.online && zone.status !== "error")
-                    ? "rgba(56,178,172,0.18)"
-                    : "rgba(56,178,172,0.06)",
-                transform: (zone.online && zone.status !== "error")
-                    ? "translateY(-2px)"
-                    : "none"
+                borderColor: isSelectable ? "rgba(56,178,172,0.18)" : "rgba(56,178,172,0.06)",
+                boxShadow: isSelectable ? "0 6px 22px rgba(15,23,42,0.06)" : "0 4px 16px rgba(15,23,42,0.05)",
+                transform: isSelectable ? "translateY(-2px)" : "none"
             }}
-            opacity={!zone.online ? 0.6 : 1}
+            opacity={isStale ? 0.6 : 1}
+            filter={isStale ? "grayscale(0.3)" : "grayscale(0)"}
         >
-            {/* Left Accent */}
             <Box
                 position="absolute"
                 left="0"
@@ -72,25 +63,49 @@ export default function SelectableZoneCard({
                 borderBottomLeftRadius="lg"
             />
 
-            <HStack spacing={3}>
-                <Box bg="teal.50" p={2} borderRadius="md">
-                    <Droplets size={14} color="#319795" />
-                </Box>
+            <VStack align="stretch" spacing={4}>
+                <HStack justify="space-between">
+                    <HStack gap={2} align="center">
+                        <Box
+                            bg="teal.50"
+                            borderRadius="md"
+                            px={2}
+                            py={1}
+                        >
+                            <Text fontSize="sm" color="teal.700" fontWeight="bold">
+                                {zone.id}
+                            </Text>
+                        </Box>
 
-                <VStack align="start" spacing={0}>
-                    <Text fontWeight="600" fontSize="sm">
-                        {zone.name}
+                        <HStack gap={4}>
+                            <Text fontWeight="600">
+                                {zone.name}
+                            </Text>
+                            {zone.online && (
+                                <Badge
+                                    size="sm"
+                                    colorPalette={badgeConfig.color}
+                                    variant="subtle"
+                                >
+                                    {badgeConfig.label}
+                                </Badge>
+                            )}
+                        </HStack>
+                    </HStack>
+
+                    <Box width="28px" height="28px" />
+                </HStack>
+
+                <HStack justify="space-between">
+                    <Text fontSize="xs" color="gray.500">
+                        {zone.online ? (zone.stale ? "Disconnected" : "Online") : "Offline"}
                     </Text>
-                    {zone.online && (<Badge
-                        size="sm"
-                        colorPalette={badgeConfig.color}
-                        variant="subtle"
-                    >
-                        {badgeConfig.label}
-                    </Badge>
-                    )}
-                </VStack>
-            </HStack>
+
+                    <Text fontSize="xs" color="gray.500">
+                        Last run: {lastRunValue ? new Date(lastRunValue).toLocaleTimeString() : "-"}
+                    </Text>
+                </HStack>
+            </VStack>
         </Box>
     )
 }

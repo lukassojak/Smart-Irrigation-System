@@ -19,6 +19,7 @@ class NodeRead(BaseModel):
     id: int
     name: str
     location: str | None = None
+    config_sync_status: str
     last_updated: datetime
     version: str | None = None
     hardware: HardwareConfiguration
@@ -55,3 +56,4 @@ class NodeListRead(BaseModel):
     id: int
     name: str
     location: str | None = None
+    config_sync_status: str

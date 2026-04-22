@@ -1,15 +1,19 @@
 import {
     Box,
     HStack,
-    VStack,
-    Text,
-    Badge
+    Text
 } from "@chakra-ui/react"
 import { Clock } from "lucide-react"
 
 export default function TimelineItem({ item }) {
 
     const isCompleted = item.status === "completed"
+    const scheduledTimeUtc = item.scheduledTime.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "UTC"
+    })
 
     return (
         <HStack align="flex-start" gap={4} position="relative">
@@ -18,7 +22,8 @@ export default function TimelineItem({ item }) {
             <Box
                 position="absolute"
                 left="-22px"
-                top="10px"
+                top="50%"
+                transform="translateY(-50%)"
                 w="10px"
                 h="10px"
                 borderRadius="full"
@@ -30,6 +35,7 @@ export default function TimelineItem({ item }) {
 
             <Box
                 flex="1"
+                minH="40px"
                 bg="rgba(255,255,255,0.95)"
                 borderWidth="1px"
                 borderColor="rgba(56,178,172,0.06)"
@@ -42,21 +48,26 @@ export default function TimelineItem({ item }) {
                         <HStack gap={1}>
                             <Clock size={14} />
                             <Text fontSize="sm" color="gray.600">
-                                {item.scheduledTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {scheduledTimeUtc}
                             </Text>
                         </HStack>
-                        <Text fontWeight="600">
-                            {item.zoneName}
-                        </Text>
+                        <HStack gap={2} align="center">
+                            {/* Zone ID Icon */}
+                            <Box
+                                bg="teal.50"
+                                borderRadius="md"
+                                px={2}
+                                py={1}
+                            >
+                                <Text fontSize="sm" color="teal.700" fontWeight="bold">
+                                    {item.id}
+                                </Text>
+                            </Box>
+                            <Text fontWeight="600">
+                                {item.zoneName}
+                            </Text>
+                        </HStack>
                     </HStack>
-
-                    <Badge
-                        size="sm"
-                        colorPalette={isCompleted ? "green" : "teal"}
-                        variant="subtle"
-                    >
-                        {item.status}
-                    </Badge>
 
                 </HStack>
             </Box>

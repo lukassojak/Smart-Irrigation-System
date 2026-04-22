@@ -2,7 +2,7 @@ import json
 import os
 import threading
 import time
-from queue import Queue
+from queue import Empty, Queue
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -228,6 +228,91 @@ class MQTTManager(threading.Thread):
         )
         self.node_registry.update_node_status(node_id, status)
 
+    def _publish_envelope(self, topic: str, envelope: dict[str, Any]) -> str:
+        self.client.publish(topic, json.dumps(envelope), qos=1)
+        return str(envelope["message_id"])
+
+    def _wait_for_terminal_response(
+        self,
+        message_id: str,
+        response_queue: Queue,
+        timeout: int | float,
+        terminal_ack_types: set[str],
+        operation_name: str,
+    ) -> dict[str, Any]:
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Node did not finish {operation_name} within {timeout}s (message_id={message_id})"
+                )
+
+            try:
+                response = response_queue.get(timeout=remaining)
+            except Empty:
+                raise TimeoutError(
+                    f"Node did not finish {operation_name} within {timeout}s (message_id={message_id})"
+                )
+
+            message_type = response.get("message_type")
+            self.logger.info(
+                "%s response received for message_id %s: %s",
+                operation_name,
+                message_id,
+                message_type,
+            )
+
+            if message_type == MessageType.NODE_ERROR.value:
+                return response
+
+            if message_type == MessageType.NODE_ACK.value:
+                ack_type = response.get("payload", {}).get("ack_type")
+                if ack_type in terminal_ack_types:
+                    return response
+
+                self.logger.debug(
+                    "Ignoring intermediate ACK for %s message_id %s: ack_type=%s",
+                    operation_name,
+                    message_id,
+                    ack_type,
+                )
+                continue
+
+            self.logger.debug(
+                "Ignoring unexpected response for %s message_id %s: message_type=%s",
+                operation_name,
+                message_id,
+                message_type,
+            )
+
+    def _publish_and_wait_for_terminal_response(
+        self,
+        topic: str,
+        envelope: dict[str, Any],
+        terminal_ack_types: set[str],
+        timeout: int | float,
+        operation_name: str,
+    ) -> dict[str, Any]:
+        message_id = str(envelope["message_id"])
+        response_queue: Queue = Queue()
+
+        with self._response_lock:
+            self._response_queues[message_id] = response_queue
+
+        try:
+            self.client.publish(topic, json.dumps(envelope), qos=1)
+            return self._wait_for_terminal_response(
+                message_id=message_id,
+                response_queue=response_queue,
+                timeout=timeout,
+                terminal_ack_types=terminal_ack_types,
+                operation_name=operation_name,
+            )
+        finally:
+            with self._response_lock:
+                self._response_queues.pop(message_id, None)
+
     # ------------------- Public methods ------------------- #
 
     def publish_get_status(self, node_id: str, include_alerts: bool = True, include_tasks: bool = True) -> str:
@@ -239,8 +324,7 @@ class MQTTManager(threading.Thread):
                 "include_tasks": include_tasks,
             },
         )
-        self.client.publish(topic_command(node_id), json.dumps(envelope), qos=1)
-        return str(envelope["message_id"])
+        return self._publish_envelope(topic_command(node_id), envelope)
 
     def publish_start_irrigation(self, node_id: str, zone_id: int, liter_amount: float) -> str:
         envelope = make_envelope(
@@ -251,8 +335,30 @@ class MQTTManager(threading.Thread):
                 "liter_amount": float(liter_amount),
             },
         )
-        self.client.publish(topic_command(node_id), json.dumps(envelope), qos=1)
-        return str(envelope["message_id"])
+        return self._publish_envelope(topic_command(node_id), envelope)
+
+    def publish_start_irrigation_and_wait(
+        self,
+        node_id: str,
+        zone_id: int,
+        liter_amount: float,
+        timeout: int | float = 5,
+    ) -> dict[str, Any]:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_START_IRRIGATION,
+            node_id=node_id,
+            payload={
+                "zone_id": int(zone_id),
+                "liter_amount": float(liter_amount),
+            },
+        )
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_command(node_id),
+            envelope=envelope,
+            terminal_ack_types={AckType.COMPLETED.value},
+            timeout=timeout,
+            operation_name="start irrigation",
+        )
 
     def publish_stop_irrigation(self, node_id: str) -> str:
         envelope = make_envelope(
@@ -260,8 +366,65 @@ class MQTTManager(threading.Thread):
             node_id=node_id,
             payload={},
         )
-        self.client.publish(topic_command(node_id), json.dumps(envelope), qos=1)
-        return str(envelope["message_id"])
+        return self._publish_envelope(topic_command(node_id), envelope)
+
+    def publish_stop_irrigation_and_wait(
+        self,
+        node_id: str,
+        timeout: int | float = 5,
+    ) -> dict[str, Any]:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_STOP_IRRIGATION,
+            node_id=node_id,
+            payload={},
+        )
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_command(node_id),
+            envelope=envelope,
+            terminal_ack_types={AckType.COMPLETED.value},
+            timeout=timeout,
+            operation_name="stop irrigation",
+        )
+
+    def publish_stop_circuit(self, node_id: str, circuit_id: int) -> str:
+        """Stop irrigation for a specific circuit/zone.
+        
+        Args:
+            node_id: Target node ID (e.g., 'node1')
+            circuit_id: Circuit ID to stop
+            
+        Returns:
+            Message ID for tracking response
+        """
+        envelope = make_envelope(
+            message_type=MessageType.CMD_STOP_CIRCUIT,
+            node_id=node_id,
+            payload={
+                "circuit_id": int(circuit_id),
+            },
+        )
+        return self._publish_envelope(topic_command(node_id), envelope)
+
+    def publish_stop_circuit_and_wait(
+        self,
+        node_id: str,
+        circuit_id: int,
+        timeout: int | float = 5,
+    ) -> dict[str, Any]:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_STOP_CIRCUIT,
+            node_id=node_id,
+            payload={
+                "circuit_id": int(circuit_id),
+            },
+        )
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_command(node_id),
+            envelope=envelope,
+            terminal_ack_types={AckType.COMPLETED.value},
+            timeout=timeout,
+            operation_name="stop circuit",
+        )
 
     def publish_apply_config(
         self,
@@ -281,8 +444,7 @@ class MQTTManager(threading.Thread):
                 "requested_by": requested_by,
             },
         )
-        self.client.publish(topic_config(node_id), json.dumps(envelope), qos=1)
-        return str(envelope["message_id"])
+        return self._publish_envelope(topic_config(node_id), envelope)
 
     def publish_apply_config_and_wait(
         self,
@@ -293,7 +455,7 @@ class MQTTManager(threading.Thread):
         requested_by: str | None = None,
         timeout: int = 5,
     ) -> dict[str, Any]:
-        """Publish config apply command and wait for NODE_ACK or NODE_ERROR response.
+        """Publish config apply command and wait for terminal response.
         
         Args:
             node_id: Target node ID (e.g., 'node1')
@@ -304,39 +466,29 @@ class MQTTManager(threading.Thread):
             timeout: Response timeout in seconds (default: 5s)
             
         Returns:
-            Response envelope (NODE_ACK or NODE_ERROR)
+            Response envelope (NODE_ACK with ack_type=applied or NODE_ERROR)
             
         Raises:
             TimeoutError: If no response within timeout
             ValueError: If response parsing fails
         """
-        # Create queue for response
-        response_queue: Queue = Queue()
-        
-        # Publish config
-        message_id = self.publish_apply_config(
+        envelope = make_envelope(
+            message_type=MessageType.CMD_APPLY_CONFIG,
             node_id=node_id,
-            config_revision=config_revision,
-            legacy_runtime_config=legacy_runtime_config,
-            apply_mode=apply_mode,
-            requested_by=requested_by,
+            payload={
+                "config_revision": config_revision,
+                "apply_mode": apply_mode.value,
+                "legacy_runtime_config": legacy_runtime_config,
+                "requested_by": requested_by,
+            },
         )
-        
-        # Register queue for this message_id
-        with self._response_lock:
-            self._response_queues[message_id] = response_queue
-        
-        try:
-            # Wait for response with timeout
-            response = response_queue.get(timeout=timeout)
-            self.logger.info("Config apply response received for message_id %s: %s", message_id, response.get("message_type"))
-            return response
-        except Exception:
-            raise TimeoutError(f"Node did not respond within {timeout}s to config apply request (message_id={message_id})")
-        finally:
-            # Clean up the queue
-            with self._response_lock:
-                self._response_queues.pop(message_id, None)
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_config(node_id),
+            envelope=envelope,
+            terminal_ack_types={AckType.APPLIED.value},
+            timeout=timeout,
+            operation_name="config apply",
+        )
 
     def publish_command(self, node_id: str, command: dict):
         """Legacy adapter used by existing API routes and server_core."""
