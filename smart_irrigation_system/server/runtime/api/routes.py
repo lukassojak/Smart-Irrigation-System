@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from .control import router as control_router
+from .discovery import router as discovery_router
 from .statuses import router as statuses_router
 
 
@@ -13,5 +14,10 @@ router.include_router(
     control_router,
     prefix="/control",
     tags=["control"]
+)
+router.include_router(
+    discovery_router,
+    prefix="/discovery",
+    tags=["discovery"]
 )
 

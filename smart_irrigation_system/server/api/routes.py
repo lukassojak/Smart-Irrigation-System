@@ -61,9 +61,13 @@ def start_irrigation(req: StartIrrigationRequest) -> dict:
             "zone_id": req.zone_id,
             "liter_amount": req.liter_amount
         }
-        node_id = server.zone_node_mapper.get_node_for_zone(req.zone_id)
+        node_id = server.node_topology_service.get_node_for_zone(req.zone_id)
+        if node_id is None:
+            raise HTTPException(status_code=404, detail=f"No node is assigned to zone {req.zone_id}")
         server.mqtt_manager.publish_command(node_id, command)
         return {"message": f"Irrigation command sent for zone {req.zone_id}."}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send irrigation command: {str(e)}")
 

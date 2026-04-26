@@ -96,7 +96,9 @@ def start_irrigation(
 	wait_for_response: bool = Query(True, description="Wait for node ACK/ERROR before returning"),
 	timeout_seconds: int = Query(5, ge=1, le=60, description="Timeout for synchronous mode"),
 ) -> dict[str, Any]:
-	node_id = server.zone_node_mapper.get_node_for_zone(req.zone_id)
+	node_id = server.node_topology_service.get_node_for_zone(req.zone_id)
+	if node_id is None:
+		raise HTTPException(status_code=404, detail={"message": f"No node is assigned to zone {req.zone_id}"})
 
 	if wait_for_response:
 		try:
@@ -144,7 +146,9 @@ def stop_zone(
 	wait_for_response: bool = Query(True, description="Wait for node ACK/ERROR before returning"),
 	timeout_seconds: int = Query(5, ge=1, le=60, description="Timeout for synchronous mode"),
 ) -> dict[str, Any]:
-	node_id = server.zone_node_mapper.get_node_for_zone(req.zone_id)
+	node_id = server.node_topology_service.get_node_for_zone(req.zone_id)
+	if node_id is None:
+		raise HTTPException(status_code=404, detail={"message": f"No node is assigned to zone {req.zone_id}"})
 
 	if wait_for_response:
 		try:
@@ -189,7 +193,7 @@ def stop_irrigation(
 	wait_for_response: bool = Query(True, description="Wait for node ACK/ERROR before returning"),
 	timeout_seconds: int = Query(5, ge=1, le=60, description="Timeout for synchronous mode"),
 ) -> dict[str, Any]:
-	node_ids = list(server.zone_node_mapper.get_all_node_ids())
+	node_ids = list(server.node_topology_service.get_all_node_ids())
 
 	if wait_for_response:
 		results: list[dict[str, Any]] = []
