@@ -19,6 +19,7 @@ MQTT_CONTRACT_VERSION = 1
 class MessageType(StrEnum):
     NODE_STATUS_SNAPSHOT = "NODE_STATUS_SNAPSHOT"
     NODE_HEARTBEAT = "NODE_HEARTBEAT"
+    NODE_DISCOVERY_HELLO = "NODE_DISCOVERY_HELLO"
     NODE_ACK = "NODE_ACK"
     NODE_ERROR = "NODE_ERROR"
     CMD_GET_STATUS = "CMD_GET_STATUS"
@@ -26,6 +27,10 @@ class MessageType(StrEnum):
     CMD_STOP_IRRIGATION = "CMD_STOP_IRRIGATION"
     CMD_STOP_CIRCUIT = "CMD_STOP_CIRCUIT"
     CMD_APPLY_CONFIG = "CMD_APPLY_CONFIG"
+    CMD_ASSIGN_NODE_ID = "CMD_ASSIGN_NODE_ID"
+    NODE_ASSIGNMENT_ACK = "NODE_ASSIGNMENT_ACK"
+    CMD_UNPAIR_NODE = "CMD_UNPAIR_NODE"
+    NODE_UNPAIR_ACK = "NODE_UNPAIR_ACK"
 
 
 class AckType(StrEnum):
@@ -84,6 +89,18 @@ def topic_command(node_id: str) -> str:
 
 def topic_config(node_id: str) -> str:
     return f"sis/v1/nodes/{node_id}/config"
+
+
+def topic_discovery_hello() -> str:
+    return "sis/v1/discovery/hello"
+
+
+def topic_discovery_command(hardware_uid: str) -> str:
+    return f"sis/v1/discovery/{hardware_uid}/command"
+
+
+def topic_discovery_ack(hardware_uid: str) -> str:
+    return f"sis/v1/discovery/{hardware_uid}/ack"
 
 
 def make_envelope(

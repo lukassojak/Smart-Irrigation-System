@@ -13,6 +13,8 @@ from smart_irrigation_system.common.mqtt_contract import (
     MessageType,
     decode_envelope,
     parse_iso_datetime,
+    topic_discovery_command,
+    topic_discovery_hello,
     topic_ack,
     topic_command,
     topic_config,
@@ -50,6 +52,8 @@ class MQTTManager(threading.Thread):
             client.subscribe("sis/v1/nodes/+/event", qos=1)
             client.subscribe("sis/v1/nodes/+/ack", qos=1)
             client.subscribe("sis/v1/nodes/+/error", qos=1)
+            client.subscribe(topic_discovery_hello(), qos=1)
+            client.subscribe("sis/v1/discovery/+/ack", qos=1)
             # Temporary legacy subscription for transition period.
             client.subscribe("irrigation/+/status", qos=1)
         else:
@@ -74,8 +78,14 @@ class MQTTManager(threading.Thread):
             self._handle_node_heartbeat(envelope)
         elif msg_type == MessageType.NODE_STATUS_SNAPSHOT.value:
             self._handle_node_status_snapshot(envelope)
+        elif msg_type == MessageType.NODE_DISCOVERY_HELLO.value:
+            self._handle_discovery_hello(envelope)
         elif msg_type == MessageType.NODE_ACK.value:
             self._handle_node_ack(envelope)
+        elif msg_type == MessageType.NODE_ASSIGNMENT_ACK.value:
+            self._handle_node_assignment_ack(envelope)
+        elif msg_type == MessageType.NODE_UNPAIR_ACK.value:
+            self._handle_node_unpair_ack(envelope)
         elif msg_type == MessageType.NODE_ERROR.value:
             self._handle_node_error(envelope)
         else:
@@ -188,6 +198,38 @@ class MQTTManager(threading.Thread):
                 if correlation_id in self._response_queues:
                     self._response_queues[correlation_id].put(envelope)
 
+    def _handle_node_assignment_ack(self, envelope: dict[str, Any]) -> None:
+        """Handle NODE_ASSIGNMENT_ACK response for pairing flow."""
+        self.logger.debug("Node assignment ACK received: %s", envelope)
+        correlation_id = envelope.get("correlation_id")
+        if correlation_id:
+            with self._response_lock:
+                if correlation_id in self._response_queues:
+                    self._response_queues[correlation_id].put(envelope)
+
+    def _handle_node_unpair_ack(self, envelope: dict[str, Any]) -> None:
+        """Handle NODE_UNPAIR_ACK response for delete/unpair flow."""
+        self.logger.debug("Node unpair ACK received: %s", envelope)
+        correlation_id = envelope.get("correlation_id")
+        if correlation_id:
+            with self._response_lock:
+                if correlation_id in self._response_queues:
+                    self._response_queues[correlation_id].put(envelope)
+
+    def _handle_discovery_hello(self, envelope: dict[str, Any]) -> None:
+        payload = envelope.get("payload", {})
+        hardware_uid = str(payload.get("hardware_uid") or envelope.get("node_id") or "").strip()
+        if not hardware_uid:
+            self.logger.warning("Ignoring discovery HELLO without hardware_uid: %s", envelope)
+            return
+
+        self.live_store.upsert_discovered_device(
+            hardware_uid=hardware_uid,
+            serial_number=payload.get("serial_number"),
+            hostname=payload.get("hostname"),
+            seen_at=parse_iso_datetime(envelope.get("sent_at")),
+        )
+
     def _handle_legacy_status(self, topic: str, payload_raw: str) -> None:
         # Legacy topic format: irrigation/{node_id}/status
         parts = topic.split("/")
@@ -239,6 +281,7 @@ class MQTTManager(threading.Thread):
         timeout: int | float,
         terminal_ack_types: set[str],
         operation_name: str,
+        terminal_message_types: set[str],
     ) -> dict[str, Any]:
         deadline = time.monotonic() + timeout
         while True:
@@ -262,6 +305,9 @@ class MQTTManager(threading.Thread):
                 message_id,
                 message_type,
             )
+
+            if message_type in terminal_message_types:
+                return response
 
             if message_type == MessageType.NODE_ERROR.value:
                 return response
@@ -293,6 +339,7 @@ class MQTTManager(threading.Thread):
         terminal_ack_types: set[str],
         timeout: int | float,
         operation_name: str,
+        terminal_message_types: set[str] | None = None,
     ) -> dict[str, Any]:
         message_id = str(envelope["message_id"])
         response_queue: Queue = Queue()
@@ -308,6 +355,7 @@ class MQTTManager(threading.Thread):
                 timeout=timeout,
                 terminal_ack_types=terminal_ack_types,
                 operation_name=operation_name,
+                terminal_message_types=terminal_message_types or set(),
             )
         finally:
             with self._response_lock:
@@ -488,6 +536,63 @@ class MQTTManager(threading.Thread):
             terminal_ack_types={AckType.APPLIED.value},
             timeout=timeout,
             operation_name="config apply",
+        )
+
+    def publish_assign_node_id(self, hardware_uid: str, assigned_node_id: str, node_name: str | None = None) -> str:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_ASSIGN_NODE_ID,
+            node_id=hardware_uid,
+            payload={
+                "assigned_node_id": str(assigned_node_id),
+                "node_name": node_name,
+            },
+        )
+        return self._publish_envelope(topic_discovery_command(hardware_uid), envelope)
+
+    def publish_assign_node_id_and_wait(
+        self,
+        hardware_uid: str,
+        assigned_node_id: str,
+        node_name: str | None = None,
+        timeout: int | float = 5,
+    ) -> dict[str, Any]:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_ASSIGN_NODE_ID,
+            node_id=hardware_uid,
+            payload={
+                "assigned_node_id": str(assigned_node_id),
+                "node_name": node_name,
+            },
+        )
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_discovery_command(hardware_uid),
+            envelope=envelope,
+            terminal_ack_types=set(),
+            terminal_message_types={MessageType.NODE_ASSIGNMENT_ACK.value},
+            timeout=timeout,
+            operation_name="node assignment",
+        )
+
+    def publish_unpair_node_and_wait(
+        self,
+        node_id: str,
+        hardware_uid: str,
+        timeout: int | float = 5,
+    ) -> dict[str, Any]:
+        envelope = make_envelope(
+            message_type=MessageType.CMD_UNPAIR_NODE,
+            node_id=node_id,
+            payload={
+                "hardware_uid": hardware_uid,
+            },
+        )
+        return self._publish_and_wait_for_terminal_response(
+            topic=topic_command(node_id),
+            envelope=envelope,
+            terminal_ack_types=set(),
+            terminal_message_types={MessageType.NODE_UNPAIR_ACK.value},
+            timeout=timeout,
+            operation_name="node unpair",
         )
 
     def publish_command(self, node_id: str, command: dict):

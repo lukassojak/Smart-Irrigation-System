@@ -3,7 +3,7 @@
 import threading, os
 from smart_irrigation_system.server.core.mqtt_manager import MQTTManager
 from smart_irrigation_system.server.core.node_registry import NodeRegistry, parse_node_status
-from smart_irrigation_system.server.core.zone_node_mapper import ZoneNodeMapper
+from smart_irrigation_system.server.core.node_topology_service import NodeTopologyService
 from smart_irrigation_system.server.utils.logger import get_logger
 
 
@@ -47,7 +47,7 @@ class IrrigationServer:
         self.logger = get_logger("IrrigationServer")
         self.node_registry = NodeRegistry(file_path=NODES_STATE_FILE)
         self.mqtt_manager = MQTTManager(self.node_registry, resolved_broker_host, resolved_broker_port)
-        self.zone_node_mapper = ZoneNodeMapper()
+        self.node_topology_service = NodeTopologyService()
         self.enable_status_polling = _env_bool("MQTT_ENABLE_STATUS_POLLING", default=False)
         self.status_polling_interval_seconds = int(
             os.getenv("MQTT_STATUS_POLL_INTERVAL_SECONDS", str(PERIODIC_STATUS_UPDATE_INTERVAL))
@@ -68,7 +68,7 @@ class IrrigationServer:
 
 
     def update_all_node_statuses(self):
-        for node_id in self.zone_node_mapper.get_all_node_ids():
+        for node_id in self.node_topology_service.get_all_node_ids():
             command = {"action": "get_status"}
             self.mqtt_manager.publish_command(node_id, command)
 
@@ -96,7 +96,7 @@ class IrrigationServer:
         self.logger.info("Server stopped.")
 
     def stop_all_irrigation(self):
-        for node_id in self.zone_node_mapper.get_all_node_ids():
+        for node_id in self.node_topology_service.get_all_node_ids():
             command = {"action": "stop_irrigation"}
             self.mqtt_manager.publish_command(node_id, command)
     

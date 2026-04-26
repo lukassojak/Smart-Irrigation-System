@@ -65,6 +65,21 @@ def _ensure_node_config_sync_status_column() -> None:
             )
 
 
+def _ensure_node_hardware_uid_column() -> None:
+    """Compatibility migration for the node hardware_uid pairing column."""
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(node)"))
+        columns = {row[1] for row in rows}
+        if "hardware_uid" not in columns:
+            conn.execute(text("ALTER TABLE node ADD COLUMN hardware_uid TEXT"))
+
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_node_hardware_uid ON node(hardware_uid)"
+            )
+        )
+
+
 # ------------------- Server Orchestrator ------------------- #
 
 server = IrrigationServer()
@@ -74,6 +89,7 @@ def on_startup():
     """Starts the orchestrator during FastAPI server startup."""
     app.logger = getattr(app, "logger", None)
     _ensure_node_config_sync_status_column()
+    _ensure_node_hardware_uid_column()
     with Session(engine) as session:
         initialize_live_store_from_config(session)
 

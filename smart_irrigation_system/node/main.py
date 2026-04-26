@@ -9,6 +9,7 @@ from smart_irrigation_system.node.interface.button import Button
 from smart_irrigation_system.node.interface.display_controller import DisplayController
 from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
+from smart_irrigation_system.node.config.identity import load_node_identity
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
 
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
@@ -55,7 +56,8 @@ def main():
 
     # Initialize network components
     try:
-        mqtt_client = MQTTClient(controller, node_id="node1")
+        identity = load_node_identity()
+        mqtt_client = MQTTClient(controller, identity=identity)
         mqtt_client.start()
         time.sleep(0.5)
         print(".", end="", flush=True)
