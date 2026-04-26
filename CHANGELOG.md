@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-*Introduction of versioned MQTT contract and end-to-end runtime live data pipeline.*
+## [1.0.0] - 2026-04-26
+*Full architecture MVP completion: multi-node distributed system with server-side runtime projection, centralized configuration, node pairing, MQTT-based communication, and unified frontend. This release enables the core end-to-end functionality of the Smart Irrigation System.*
 
 ### Added
 - Introduced versioned MQTT communication contract (`sis/v1`):
@@ -48,6 +48,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for per-zone stop command in MQTT contract (`CMD_STOP_CIRCUIT`).
 - Added node configuration sync tracking (`PENDING` / `PUSHED`) across configuration model and API schemas.
 - Added frontend runtime control state hook and result overlay for start/stop actions.
+- Introduced node discovery & pairing flow:
+  - Nodes can now operate in `UNPAIRED` / `PAIRED` state.
+  - Server can discover unpaired nodes via runtime discovery API.
+  - UI flow allows onboarding and pairing nodes into the system.
+  - Enables real multi-node deployment without manual configuration.
+- Introduced node identity management:
+  - Removed hardcoded `node1` identity.
+  - Each node now has persistent identity (`node_identity.json`).
+  - MQTT communication fully supports multiple nodes.
+- Added multi-node support across the system:
+  - Server can manage and communicate with multiple nodes simultaneously.
+  - Dynamic node registration and lifecycle handling.
+- Added server-side global configuration layer:
+  - New `global_config` domain (model, repository, service, API).
+  - Centralized configuration for all nodes.
+  - Configuration can be distributed to nodes via MQTT.
+- Added runtime discovery API:
+  - Endpoints for listing and interacting with unpaired nodes.
+  - Foundation for automated node onboarding.
+- Added UI support for new architecture features:
+  - Node discovery page.
+  - Global settings page.
+  - Extended node creation flow with pairing.
+  - Improved runtime dashboard and system overview.
 
 ### Changed
 - Refactored node MQTT layer:
@@ -70,9 +94,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - pending sync indicators in node list/sidebar
   - push-config action in node detail
   - optional "Create Zone & Push" flow in zone wizard.
+  - MQTT communication model updated to use dynamic node identities instead (DB PKs) of hardcoded node IDs.
+- Node lifecycle redesigned to include pairing state.
+- Server node management refactored to support dynamic multi-node topology.
+- Configuration flow redesigned:
+  - Configuration is now managed centrally on server and pushed to nodes.
+- Refactored server core:
+  - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
+
+### Removed
+- Removed hardcoded single-node assumptions (`node1`) across node and server.
+- Removed legacy static zone-to-node mapping (`ZoneNodeMapper`).
 
 ### Fixed
 - Improved stability of runtime live projection under continuous updates from node snapshots.
@@ -84,6 +119,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ACK / ERROR responses are not persisted or queryable on server side.
 - Runtime task lifecycle handling is still simplified (no explicit removal semantics).
 - MQTT reconnect/backoff and delivery guarantees are not fully hardened.
+- Node discovery does not yet include authentication or security layer.
+- Node identity provisioning is not yet cryptographically secured.
+- Global configuration does not yet support versioning or rollback.
 
 ---
 
