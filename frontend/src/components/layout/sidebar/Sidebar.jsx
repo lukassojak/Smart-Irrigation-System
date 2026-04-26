@@ -23,7 +23,9 @@ import {
     ChevronRight
 } from "lucide-react"
 
-export default function Sidebar({ isCollapsed, onToggle }) {
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "0.0.0"
+
+export default function Sidebar({ isCollapsed = false, onToggle }) {
     const navigate = useNavigate()
     const [hasPendingSyncNodes, setHasPendingSyncNodes] = useState(false)
 
@@ -81,7 +83,7 @@ export default function Sidebar({ isCollapsed, onToggle }) {
                             Smart Irrigation
                         </Text>
                         <Text fontSize="xs" color="gray.500">
-                            v0.8.0
+                            v{APP_VERSION}
                         </Text>
                     </VStack>
                 )}
@@ -133,7 +135,7 @@ export default function Sidebar({ isCollapsed, onToggle }) {
                     >
                         {!isCollapsed ? "Nodes" : null}
                     </SidebarItem>
-                    <SidebarItem to="/configuration/nodes/new" icon={SlidersHorizontal} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/configuration/nodes/discovery" icon={SlidersHorizontal} isCollapsed={isCollapsed}>
                         {!isCollapsed ? "Add Node" : null}
                     </SidebarItem>
                 </SidebarSection>
@@ -147,28 +149,30 @@ export default function Sidebar({ isCollapsed, onToggle }) {
                 </SidebarSection>
 
                 {/* Collapse/Expand Button */}
-                <Box
-                    mt="auto"
-                    p={2}
-                    borderRadius="md"
-                    cursor="pointer"
-                    _hover={{ bg: "rgba(56,178,172,0.06)" }}
-                    onClick={onToggle}
-                >
-                    <HStack justify={isCollapsed ? "center" : "flex-start"} spacing={isCollapsed ? 0 : 3}>
-                        {isCollapsed ? (
-                            <ChevronRight size={18} strokeWidth={2} color="#4A5568" />
-                        ) : (
-                            <ChevronLeft size={18} strokeWidth={2} color="#4A5568" />
-                        )}
+                {typeof onToggle === "function" && (
+                    <Box
+                        mt="auto"
+                        p={2}
+                        borderRadius="md"
+                        cursor="pointer"
+                        _hover={{ bg: "rgba(56,178,172,0.06)" }}
+                        onClick={onToggle}
+                    >
+                        <HStack justify={isCollapsed ? "center" : "flex-start"} spacing={isCollapsed ? 0 : 3}>
+                            {isCollapsed ? (
+                                <ChevronRight size={18} strokeWidth={2} color="#4A5568" />
+                            ) : (
+                                <ChevronLeft size={18} strokeWidth={2} color="#4A5568" />
+                            )}
 
-                        {!isCollapsed && (
-                            <Text fontSize="sm" fontWeight="500" color="gray.700">
-                                {isCollapsed ? "" : "Collapse"}
-                            </Text>
-                        )}
-                    </HStack>
-                </Box>
+                            {!isCollapsed && (
+                                <Text fontSize="sm" fontWeight="500" color="gray.700">
+                                    {isCollapsed ? "" : "Collapse"}
+                                </Text>
+                            )}
+                        </HStack>
+                    </Box>
+                )}
 
             </VStack>
         </Box >

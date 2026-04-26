@@ -7,6 +7,7 @@ from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.services.node_service import NodeService
+from smart_irrigation_system.server.configuration.services.global_config_service import GlobalConfigService
 from smart_irrigation_system.server.db.session import get_session
 from smart_irrigation_system.server.configuration.exporters.node_config_exporter import (
     export_node_config,
@@ -14,7 +15,7 @@ from smart_irrigation_system.server.configuration.exporters.node_config_exporter
 )
 from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
 from smart_irrigation_system.server.core.server_core import IrrigationServer
-from smart_irrigation_system.common.mqtt_contract import ApplyMode
+from smart_irrigation_system.common.mqtt_contract import ApplyMode, MessageType
 
 router = APIRouter()
 
@@ -35,8 +36,40 @@ def _sync_runtime_topology(session: Session) -> None:
 def create_node(data: NodeCreate, session: Session = Depends(get_session)):
     service = NodeService(session)
     node = service.create_node(data)
+    server = IrrigationServer()
+
+    session.commit()
     _sync_runtime_topology(session)
-    return NodeRead.model_validate(node)
+
+    try:
+        if node.hardware_uid:
+            response = server.mqtt_manager.publish_assign_node_id_and_wait(
+                hardware_uid=node.hardware_uid,
+                assigned_node_id=str(node.id),
+                node_name=node.name,
+                timeout=5,
+            )
+
+            if response.get("message_type") != MessageType.NODE_ASSIGNMENT_ACK.value:
+                raise HTTPException(status_code=502, detail={"message": "Unexpected assignment response", "response": response})
+
+            response_uid = response.get("payload", {}).get("assigned_node_id")
+            if str(response_uid) != str(node.id):
+                raise HTTPException(
+                    status_code=502,
+                    detail={"message": "Assignment ACK returned mismatched node id", "response": response},
+                )
+
+            server.mqtt_manager.live_store.claim_discovered_device(node.hardware_uid, node.id)
+
+        return NodeRead.model_validate(node)
+
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Device did not acknowledge node assignment within 5 seconds.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to provision node: {str(exc)}")
 
 
 @router.get(
@@ -88,9 +121,46 @@ def update_node(node_id: int, data: NodeUpdate, session: Session = Depends(get_s
 )
 def delete_node(node_id: int, session: Session = Depends(get_session)):
     service = NodeService(session)
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    server = IrrigationServer()
+    if node.hardware_uid:
+        try:
+            response = server.mqtt_manager.publish_unpair_node_and_wait(
+                node_id=str(node.id),
+                hardware_uid=node.hardware_uid,
+                timeout=5,
+            )
+        except TimeoutError:
+            raise HTTPException(
+                status_code=504,
+                detail="Node did not acknowledge unpair within 5 seconds. Delete was cancelled.",
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f"Failed to unpair node before delete: {str(exc)}")
+
+        if response.get("message_type") != MessageType.NODE_UNPAIR_ACK.value:
+            raise HTTPException(
+                status_code=502,
+                detail={"message": "Unexpected unpair response", "response": response},
+            )
+
+        response_uid = str(response.get("payload", {}).get("hardware_uid") or "")
+        if response_uid and response_uid != node.hardware_uid:
+            raise HTTPException(
+                status_code=502,
+                detail={"message": "Unpair ACK returned mismatched hardware UID", "response": response},
+            )
+
     success = service.delete_node(node_id)
     if not success:
         raise HTTPException(status_code=404, detail="Node not found")
+
+    if node.hardware_uid:
+        server.mqtt_manager.live_store.unclaim_discovered_device(node.hardware_uid)
+
     _sync_runtime_topology(session)
 
 
@@ -194,7 +264,8 @@ def export_node_legacy_runtime(node_id: int, session: Session = Depends(get_sess
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    return export_node_legacy_runtime_config(node)
+    global_config = GlobalConfigService(session).get_or_create()
+    return export_node_legacy_runtime_config(node, global_config)
 
 
 @router.post(
@@ -209,12 +280,13 @@ def push_node_config(node_id: int, session: Session = Depends(get_session)):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    legacy_runtime_config = export_node_legacy_runtime_config(node)
+    global_config = GlobalConfigService(session).get_or_create()
+    legacy_runtime_config = export_node_legacy_runtime_config(node, global_config)
     server = IrrigationServer()
     
     try:
         response = server.mqtt_manager.publish_apply_config_and_wait(
-            node_id=f"node{node_id}",
+            node_id=str(node_id),
             config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             legacy_runtime_config=legacy_runtime_config,
             apply_mode=ApplyMode.APPLY_NOW,

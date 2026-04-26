@@ -1,5 +1,3 @@
-import { useState } from "react"
-
 import {
     Box,
     Heading,
@@ -14,6 +12,7 @@ import {
 } from "@chakra-ui/react"
 
 import PanelSection from "../../../../../components/layout/PanelSection"
+import StandardConditionsContextBox from "../../../components/StandardConditionsContextBox"
 
 export default function StepIrrigationPerPlant({ data, autoOptimize, onChange, onAutoOptimizeChange }) {
     const baseVolume = data.base_target_volume_liters || ""
@@ -83,31 +82,36 @@ export default function StepIrrigationPerPlant({ data, autoOptimize, onChange, o
 
 
             {!autoOptimize && (
-                <PanelSection title="Base Target Volume"
-                    description="Set the total amount of water available for this zone per irrigation cycle. This volume will be distributed among the plants based on their individual requirements."
-                >
-                    <Field.Root required>
-                        <Field.Label>
-                            Base target zone volume (liters)
-                        </Field.Label>
-                        <Input
-                            type="number"
-                            min={0}
-                            step="1"
-                            placeholder="e.g. 40"
-                            value={baseVolume}
-                            onChange={(e) =>
-                                onChange({
-                                    ...data,
-                                    base_target_volume_liters: Number(e.target.value),
-                                })
-                            }
+                <Stack gap={6}>
+                    <PanelSection title="Base Target Volume"
+                        description="Set the total amount of water used for this zone in standard conditions. This volume will be distributed among the plants based on the emitters you assign to each plant in the next step."
+                    >
+                        <StandardConditionsContextBox
+                            helperText="This base volume should reflect a normal day represented by current standard conditions."
                         />
-                        <Field.HelperText>
-                            Total amount of water available for this zone per irrigation cycle.
-                        </Field.HelperText>
-                    </Field.Root>
-                </PanelSection>
+                        <Field.Root required mt={4}>
+                            <Field.Label>
+                                Base target zone volume (liters)
+                            </Field.Label>
+                            <Input
+                                type="number"
+                                min={0}
+                                step="1"
+                                placeholder="e.g. 40"
+                                value={baseVolume}
+                                onChange={(e) =>
+                                    onChange({
+                                        ...data,
+                                        base_target_volume_liters: Number(e.target.value),
+                                    })
+                                }
+                            />
+                            <Field.HelperText>
+                                Total amount of water available for this zone per irrigation cycle.
+                            </Field.HelperText>
+                        </Field.Root>
+                    </PanelSection>
+                </Stack>
             )}
 
             {autoOptimize ? (

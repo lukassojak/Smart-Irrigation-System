@@ -17,6 +17,8 @@ import {
 
 import PanelSection from "../../../../../components/layout/PanelSection"
 import { optimizePerPlant } from "../../../../../api/nodes.api"
+import StandardConditionsContextBox from "../../../components/StandardConditionsContextBox"
+import PerPlantAllocationCard from "../../../components/PerPlantAllocationCard"
 
 const MIN_LOADING_TIME = 3000 // Minimum loading time in milliseconds to ensure the user sees the loading state
 const DRIPPER_PRESETS = [1.2, 2, 4, 8]
@@ -181,7 +183,6 @@ export default function StepEmittersPerPlantAuto({ data, onChange, onIrrigationC
 
     return (
         <Stack gap={10}>
-
             {/* ======================================================
                 PLANTS
             ====================================================== */}
@@ -191,12 +192,16 @@ export default function StepEmittersPerPlantAuto({ data, onChange, onIrrigationC
                     title="🌿 Target volumes per plant"
                     description="Define how much water each plant should receive per irrigation cycle."
                 >
+                    <StandardConditionsContextBox
+                        helperText="Plant target volumes define the zone base volume. Set them as a normal-day baseline according to current standard conditions."
+                    />
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
 
                         {plants.map((plant, index) => (
                             <Box
                                 key={index}
                                 p={5}
+                                mt={4}
                                 borderRadius="xl"
                                 borderWidth="1px"
                                 borderColor="border.subtle"
@@ -640,87 +645,15 @@ export default function StepEmittersPerPlantAuto({ data, onChange, onIrrigationC
                                 )
 
                                 const target = originalPlant?.target_volume_liters ?? 0
-                                const actual = plant.actual_volume_liters
-
-                                const diffPercent =
-                                    target > 0
-                                        ? ((actual - target) / target) * 100
-                                        : 0
 
                                 return (
-                                    <Box
+                                    <PerPlantAllocationCard
                                         key={index}
-                                        p={5}
-                                        borderRadius="xl"
-                                        borderWidth="1px"
-                                        borderColor="border.subtle"
-                                        bg="bg.panel"
-                                        boxShadow="sm"
-                                    >
-                                        <Stack gap={4}>
-
-                                            {/* Header */}
-                                            <Text fontWeight="medium">
-                                                🌱 {plant.plant_id}
-                                            </Text>
-
-                                            {/* Target vs Actual */}
-                                            <SimpleGrid columns={2} gap={4} alignItems="baseline">
-                                                <Stack>
-                                                    <Text fontSize="sm" color="fg.muted">
-                                                        Target volume
-                                                    </Text>
-                                                    <Text fontSize="lg" color="fg.subtle" fontWeight="semibold">
-                                                        {target.toFixed(2)} L
-                                                    </Text>
-                                                </Stack>
-                                                <Stack>
-                                                    <Text fontSize="sm" color="fg.muted" mt={2}>
-                                                        Actual volume
-                                                    </Text>
-                                                    <HStack>
-                                                        <Text fontSize="lg" fontWeight="semibold">
-                                                            {actual.toFixed(2)} L
-                                                        </Text>
-                                                        <Badge
-                                                            colorPalette={
-                                                                diffPercent === 0
-                                                                    ? "gray"
-                                                                    : "orange"
-                                                            }
-                                                        >
-                                                            {diffPercent > 0 ? "+" : ""}
-                                                            {diffPercent.toFixed(0)}%
-                                                        </Badge>
-                                                    </HStack>
-                                                </Stack>
-                                            </SimpleGrid>
-
-                                            {/* Drippers */}
-                                            <Stack>
-                                                <Text fontSize="sm" color="fg.muted">
-                                                    Assigned drippers
-                                                </Text>
-                                                <HStack wrap="wrap" gap={4}>
-                                                    {plant.assigned_drippers.map((d, i) => (
-                                                        <HStack gap={1} key={i}>
-                                                            <Text fontSize="sm" color="fg.muted">
-                                                                {d.count}×
-                                                            </Text>
-                                                            <Badge
-                                                                key={i}
-                                                                colorPalette="teal"
-                                                                variant="subtle"
-                                                            >
-                                                                {d.flow_rate_lph} L/h
-                                                            </Badge>
-                                                        </HStack>
-                                                    ))}
-                                                </HStack>
-                                            </Stack>
-
-                                        </Stack>
-                                    </Box>
+                                        plantName={plant.plant_id}
+                                        targetVolumeLiters={target}
+                                        actualVolumeLiters={plant.actual_volume_liters}
+                                        assignedDrippers={plant.assigned_drippers}
+                                    />
                                 )
                             })}
 

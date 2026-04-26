@@ -128,3 +128,42 @@ export const stopIrrigation = async ({
 
     return response.data
 }
+
+export const discoverNodes = async () => {
+    const response = await http.get("/runtime/discovery/devices")
+    return response.data.map((device) => ({
+        hardwareUid: device.hardware_uid,
+        serialNumber: device.serial_number,
+        hostname: device.hostname,
+        nodeId: device.node_id,
+        firstSeenAt: device.first_seen_at ? new Date(device.first_seen_at) : null,
+        lastSeenAt: device.last_seen_at ? new Date(device.last_seen_at) : null,
+        claimedAt: device.claimed_at ? new Date(device.claimed_at) : null,
+        everSeen: device.ever_seen,
+    }))
+}
+
+export const pairDiscoveredNode = async ({
+    hardwareUid,
+    minWaitSeconds = 2,
+    timeoutSeconds = 8,
+}) => {
+    const response = await http.post(
+        `/runtime/discovery/devices/${encodeURIComponent(hardwareUid)}/pair`,
+        null,
+        {
+            params: {
+                min_wait_seconds: minWaitSeconds,
+                timeout_seconds: timeoutSeconds,
+            },
+        }
+    )
+
+    return {
+        status: response.data.status,
+        hardwareUid: response.data.hardware_uid,
+        serialNumber: response.data.serial_number,
+        hostname: response.data.hostname,
+        lastSeenAt: response.data.last_seen_at ? new Date(response.data.last_seen_at) : null,
+    }
+}

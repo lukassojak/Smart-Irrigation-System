@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
+from smart_irrigation_system.server.configuration.models.global_config import GlobalConfig
 from smart_irrigation_system.server.configuration.domain.domain import IrrigationMode
 
 
@@ -47,7 +48,7 @@ def _get_zone_config(zone: Zone) -> dict:
     return zone_config
 
 
-def export_node_legacy_runtime_config(node: Node) -> dict:
+def export_node_legacy_runtime_config(node: Node, global_config: GlobalConfig | None = None) -> dict:
     """
     Export config in the current node runtime file format.
 
@@ -56,35 +57,87 @@ def export_node_legacy_runtime_config(node: Node) -> dict:
     - zones_config.json
     """
     return {
-        "config_global": _to_legacy_global_config(node),
+        "config_global": _to_legacy_global_config(node, global_config),
         "zones_config": {
             "zones": [_to_legacy_zone_config(zone) for zone in node.zones]
         },
     }
 
 
-def _to_legacy_global_config(node: Node) -> dict:
+def _to_legacy_global_config(node: Node, global_config: GlobalConfig | None = None) -> dict:
     irrigation_limits = node.irrigation_limits or {}
     automation = node.automation or {}
     logging = node.logging or {}
     batch_strategy = node.batch_strategy or {}
 
+    default_standard_conditions = {
+        "solar_total": 5.5,
+        "rain_mm": 0.0,
+        "temperature_celsius": 15.0,
+    }
+    default_correction_factors = {
+        "solar": 0.0,
+        "rain": 0.0,
+        "temperature": 0.0,
+    }
+    default_weather_api = {
+        "api_enabled": True,
+        "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
+        "history_url": "https://api.ecowitt.net/api/v3/device/history",
+        "api_key": None,
+        "application_key": None,
+        "device_mac": None,
+    }
+
+    persisted_standard_conditions = (global_config.standard_conditions if global_config else None) or {}
+    persisted_correction_factors = (global_config.correction_factors if global_config else None) or {}
+    persisted_weather_api = (global_config.weather_api if global_config else None) or {}
+
+    standard_conditions = {
+        "solar_total": _to_float_or_default(
+            persisted_standard_conditions.get("solar_total"),
+            default_standard_conditions["solar_total"],
+        ),
+        "rain_mm": _to_float_or_default(
+            persisted_standard_conditions.get("rain_mm"),
+            default_standard_conditions["rain_mm"],
+        ),
+        "temperature_celsius": _to_float_or_default(
+            persisted_standard_conditions.get("temperature_celsius"),
+            default_standard_conditions["temperature_celsius"],
+        ),
+    }
+
+    correction_factors = {
+        "solar": _to_float_or_default(
+            persisted_correction_factors.get("solar"),
+            default_correction_factors["solar"],
+        ),
+        "rain": _to_float_or_default(
+            persisted_correction_factors.get("rain"),
+            default_correction_factors["rain"],
+        ),
+        "temperature": _to_float_or_default(
+            persisted_correction_factors.get("temperature"),
+            default_correction_factors["temperature"],
+        ),
+    }
+
+    weather_api = {
+        "api_enabled": bool(persisted_weather_api.get("api_enabled", default_weather_api["api_enabled"])),
+        "realtime_url": str(persisted_weather_api.get("realtime_url", default_weather_api["realtime_url"])),
+        "history_url": str(persisted_weather_api.get("history_url", default_weather_api["history_url"])),
+        "api_key": persisted_weather_api.get("api_key"),
+        "application_key": persisted_weather_api.get("application_key"),
+        "device_mac": persisted_weather_api.get("device_mac"),
+    }
+
     # TODO: Make node ip and port configurable in the UI, and include them in the export. For now we keep them hardcoded in the node runtime
 
     # Keep defaults explicit for backward compatibility with current node loader.
     return {
-        # TODO: Make these configurable in the UI
-        "standard_conditions": {
-            "solar_total": 5.5,
-            "rain_mm": 0.0,
-            "temperature_celsius": 15.0,
-        },
-        # TODO: Make these configurable in the UI
-        "correction_factors": {
-            "solar": 0.0,
-            "rain": 0.0,
-            "temperature": 0.0,
-        },
+        "standard_conditions": standard_conditions,
+        "correction_factors": correction_factors,
         "irrigation_limits": {
             "min_percent": int(irrigation_limits.get("min_percent", 0)),
             "max_percent": int(irrigation_limits.get("max_percent", 200)),
@@ -103,10 +156,7 @@ def _to_legacy_global_config(node: Node) -> dict:
             "enabled": bool(logging.get("enabled", True)),
             "log_level": str(logging.get("log_level", "INFO")),
         },
-        "weather_api": {
-            "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
-            "history_url": "https://api.ecowitt.net/api/v3/device/history",
-        },
+        "weather_api": weather_api,
     }
 
 

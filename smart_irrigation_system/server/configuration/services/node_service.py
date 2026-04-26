@@ -57,9 +57,15 @@ class NodeService:
         :return: The newly created Node object.
         :raises ValueError: If a node with the same name already exists.
         """
+        if data.hardware_uid:
+            existing = self.node_repo.get_by_hardware_uid(data.hardware_uid)
+            if existing:
+                raise ValueError(f"Hardware UID '{data.hardware_uid}' is already assigned to node {existing.id}")
+
         new_node = Node(
             name=data.name,
             location=data.location,
+            hardware_uid=data.hardware_uid,
             config_sync_status=CONFIG_SYNC_PENDING,
             hardware=data.hardware.model_dump(),
             irrigation_limits=data.irrigation_limits.model_dump(),
@@ -72,6 +78,10 @@ class NodeService:
         self.session.commit()
 
         return new_node
+
+
+    def get_node_by_hardware_uid(self, hardware_uid: str) -> Node | None:
+        return self.node_repo.get_by_hardware_uid(hardware_uid)
 
 
     def update_node(self, node_id: int, data: NodeUpdate) -> Node | None:

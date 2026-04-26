@@ -19,6 +19,7 @@ class NodeRead(BaseModel):
     id: int
     name: str
     location: str | None = None
+    hardware_uid: str | None = None
     config_sync_status: str
     last_updated: datetime
     version: str | None = None
@@ -33,6 +34,7 @@ class NodeRead(BaseModel):
 class NodeCreate(BaseModel):
     name: str
     location: str | None = None 
+    hardware_uid: str | None = None
     hardware: HardwareConfiguration
     irrigation_limits: IrrigationLimits
     automation: Automation
@@ -43,6 +45,7 @@ class NodeCreate(BaseModel):
 class NodeUpdate(BaseModel):
     name: str | None = None
     location: str | None = None
+    hardware_uid: str | None = None
     hardware: HardwareConfiguration | None = None
     irrigation_limits: IrrigationLimits | None = None
     automation: Automation | None = None
@@ -56,4 +59,5 @@ class NodeListRead(BaseModel):
     id: int
     name: str
     location: str | None = None
+    hardware_uid: str | None = None
     config_sync_status: str

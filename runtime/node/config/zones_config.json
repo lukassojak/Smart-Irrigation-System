@@ -1,119 +1,22 @@
 {
     "zones": [
         {
-            "id": 1,
-            "name": "Skleník [local]",
-            "relay_pin": 1,
-            "enabled": true,
-            "even_area_mode": true,
-            "target_mm": 25.0,
-            "zone_area_m2": 8.0,
-            "liters_per_minimum_dripper": null,
-            "interval_days": 3,
-            "drippers_summary": {
-                "130": 1
-            },
-            "local_correction_factors": {
-                "solar": 0.4,
-                "rain": -1.0,
-                "temperature": 0.2
-            }
-        },
-        {
-            "id": 2,
-            "name": "Borůvky [local 2]",
+            "id": 9,
+            "name": "Papriky skleník",
             "relay_pin": 2,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 23.0,
-            "zone_area_m2": 6.0,
+            "target_mm": 10.0,
+            "zone_area_m2": 0.7,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "10": 15
+                "210": 1
             },
             "local_correction_factors": {
                 "solar": 0.2,
-                "rain": 0.0,
-                "temperature": 0.1
-            }
-        },
-        {
-            "id": 3,
-            "name": "Rajčata",
-            "relay_pin": 4,
-            "enabled": true,
-            "even_area_mode": false,
-            "target_mm": null,
-            "zone_area_m2": null,
-            "liters_per_minimum_dripper": 2.16,
-            "interval_days": 1,
-            "drippers_summary": {
-                "8": 4
-            },
-            "local_correction_factors": {
-                "solar": 0.0,
-                "rain": 0.0,
-                "temperature": 0.0
-            }
-        },
-        {
-            "id": 4,
-            "name": "Maliny",
-            "relay_pin": 5,
-            "enabled": true,
-            "even_area_mode": true,
-            "target_mm": 34.0,
-            "zone_area_m2": 15.0,
-            "liters_per_minimum_dripper": null,
-            "interval_days": 5,
-            "drippers_summary": {
-                "800": 1
-            },
-            "local_correction_factors": {
-                "solar": 0.25,
-                "rain": 0.0,
-                "temperature": 0.0
-            }
-        },
-        {
-            "id": 5,
-            "name": "Lesopark",
-            "relay_pin": 2,
-            "enabled": true,
-            "even_area_mode": true,
-            "target_mm": 32.0,
-            "zone_area_m2": 22.0,
-            "liters_per_minimum_dripper": null,
-            "interval_days": 8,
-            "drippers_summary": {
-                "460": 1
-            },
-            "local_correction_factors": {
-                "solar": 0.0,
-                "rain": 0.0,
-                "temperature": 0.0
-            }
-        },
-        {
-            "id": 6,
-            "name": "Test",
-            "relay_pin": 3,
-            "enabled": true,
-            "even_area_mode": false,
-            "target_mm": null,
-            "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.99,
-            "interval_days": 1,
-            "drippers_summary": {
-                "4": 1,
-                "8": 1,
-                "1": 1
-            },
-            "local_correction_factors": {
-                "solar": 0.0,
-                "rain": 0.0,
-                "temperature": 0.0
+                "rain": -0.9,
+                "temperature": 0.05
             }
         }
     ]

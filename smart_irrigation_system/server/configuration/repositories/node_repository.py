@@ -11,6 +11,12 @@ class NodeRepository:
     
     def get(self, node_id: int) -> Node | None:
         return self.session.get(Node, node_id)
+
+
+    def get_by_hardware_uid(self, hardware_uid: str) -> Node | None:
+        return self.session.exec(
+            select(Node).where(Node.hardware_uid == hardware_uid)
+        ).first()
     
 
     def list_all(self) -> list[Node]:
