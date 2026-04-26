@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useNavigate, useOutletContext } from "react-router-dom"
 import {
-    Button,
     Stack,
     Box,
     Heading,
     Text,
-    HStack,
     SimpleGrid,
     DataList,
     Badge
 } from "@chakra-ui/react"
 
-import { fetchNodeById, deleteNode } from "../../../api/nodes.api"
+import { fetchNodeById, deleteNode, pushNodeConfig } from "../../../api/nodes.api"
 
 import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndicator"
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
 import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import ZoneCard from "../../../components/ui/cards/ZoneCard"
 
 
@@ -26,18 +25,56 @@ export default function NodeDetailPage() {
     const { nodeId } = useParams()
     const navigate = useNavigate()
     const [node, setNode] = useState(null)
+    const [nodeError, setNodeError] = useState(false)
+    const [isPushingConfig, setIsPushingConfig] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
-    useEffect(() => {
+    const loadNode = () => {
+        setNodeError(false)
         fetchNodeById(nodeId)
-            .then((response) => setNode(response.data))
-            .catch((error) => console.error("Failed to fetch node:", error))
+            .then((response) => {
+                setNode(response.data)
+            })
+            .catch((error) => {
+                console.error("Failed to fetch node:", error)
+                setNodeError(true)
+            })
+    }
+
+    useEffect(() => {
+        loadNode()
     }, [nodeId])
+
+    const handlePushConfig = async () => {
+        setIsPushingConfig(true)
+        try {
+            await pushNodeConfig(node.id)
+            await loadNode()
+            alert("Configuration was pushed successfully.")
+        } catch (error) {
+            const detail = error?.response?.data?.detail
+            if (typeof detail === "string") {
+                alert(detail)
+            } else if (detail?.message) {
+                alert(detail.message)
+            } else {
+                alert("Configuration push failed.")
+            }
+        } finally {
+            setIsPushingConfig(false)
+        }
+    }
+
+    const isPushed = node?.config_sync_status === "PUSHED"
 
     if (!node) {
         return (
             <Box p={6}>
-                <Text color="fg.muted">Loading node…</Text>
+                {nodeError ? (
+                    <DataUnavailableWarning message="Node details are unavailable. Server may be disconnected." />
+                ) : (
+                    <Text color="fg.muted">Loading node…</Text>
+                )}
             </Box>
         )
     }
@@ -66,6 +103,12 @@ export default function NodeDetailPage() {
                             Create new zone
                         </HeaderAction>
                         <HeaderAction
+                            onClick={handlePushConfig}
+                            disabled={isPushingConfig}
+                        >
+                            {isPushingConfig ? "Pushing..." : "Push config"}
+                        </HeaderAction>
+                        <HeaderAction
                             as={Link}
                             to="/configuration/nodes"
                         >
@@ -80,30 +123,32 @@ export default function NodeDetailPage() {
                 <Stack gap={10} mb={6}>
                     {/* Node summary */}
                     <PanelSection title="Node Summary">
-                        <Stack>
-                            <HStack>
-                                <Text fontSize="sm" color="fg.muted">
-                                    Node ID
-                                </Text>
-                                <Text fontSize="sm">{node.id}</Text>
-                            </HStack>
-                            <HStack>
-                                {node.location && (
-                                    <>
-                                        <Text fontSize="sm" color="fg.muted">
-                                            Location
-                                        </Text>
-                                        <Text fontSize="sm">{node.location}</Text>
-                                    </>
-                                )}
-                            </HStack>
-                            <HStack>
-                                <Text fontSize="sm" color="fg.muted">
-                                    Last updated
-                                </Text>
-                                <Text fontSize="sm">{new Date(node.last_updated).toLocaleString() || "N/A"}</Text>
-                            </HStack>
-                        </Stack>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                            <DataList.Root orientation="horizontal">
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Node ID</DataList.ItemLabel>
+                                    <DataList.ItemValue>{node.id}</DataList.ItemValue>
+                                </DataList.Item>
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Location</DataList.ItemLabel>
+                                    <DataList.ItemValue>{node.location || "N/A"}</DataList.ItemValue>
+                                </DataList.Item>
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Last updated</DataList.ItemLabel>
+                                    <DataList.ItemValue>
+                                        {node.last_updated ? new Date(node.last_updated).toLocaleString() : "N/A"}
+                                    </DataList.ItemValue>
+                                </DataList.Item>
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Config sync</DataList.ItemLabel>
+                                    <DataList.ItemValue>
+                                        <Badge colorPalette={isPushed ? "green" : "orange"}>
+                                            {isPushed ? "PUSHED" : "PENDING"}
+                                        </Badge>
+                                    </DataList.ItemValue>
+                                </DataList.Item>
+                            </DataList.Root>
+                        </SimpleGrid>
                     </PanelSection>
 
                     <PanelSection title="Configuration Overview">

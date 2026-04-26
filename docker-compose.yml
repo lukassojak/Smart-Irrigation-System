@@ -14,21 +14,28 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/runtime/server/data/sis.db
       MQTT_HOST: mqtt
+      TZ: Europe/Prague
     depends_on:
       - mqtt
     volumes:
       - ./runtime:/app/runtime
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   node:
     build:
       context: .
       dockerfile: docker/node.Dockerfile
+    restart: unless-stopped
     environment:
       MQTT_HOST: mqtt
+      TZ: Europe/Prague
     depends_on:
       - mqtt
     volumes:
       - ./runtime:/app/runtime
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
   frontend:
     build:
@@ -36,5 +43,7 @@ services:
       dockerfile: docker/frontend.Dockerfile
     ports:
       - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://server:8000
     depends_on:
       - server

@@ -1,12 +1,12 @@
 import json
 
-from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
+from smart_irrigation_system.node.core.controller import ControllerCore
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
 from smart_irrigation_system.node.utils.logger import get_logger
 
 
 class ServerCommandHandler:
-    def __init__(self, irrigation_controller: IrrigationController, mqtt_client: MQTTClient):
+    def __init__(self, irrigation_controller: ControllerCore, mqtt_client: MQTTClient):
         self.irrigation_controller = irrigation_controller
         self.mqtt_client = mqtt_client
         self.logger = get_logger("ServerCommandHandler")

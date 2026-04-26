@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react"
-import { getLiveSnapshot } from "../../../api/runtime.api"
+import { useCallback } from "react"
 import { useOutletContext } from "react-router-dom"
 
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useTodayRuntime from "../../../hooks/useTodayRuntime"
+import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 
 import {
     Box,
@@ -22,7 +22,6 @@ import {
     Droplets,
     CloudRain,
     ShieldCheck,
-    AlertTriangle
 } from "lucide-react"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
@@ -36,36 +35,14 @@ import TodaysActivityCard from "../components/TodaysActivityCard"
 import WeatherWaterSummaryCard from "../components/WeatherWaterSummaryCard"
 import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+import {
+    controlActionDialog,
+    ControlActionDialogViewport,
+} from "../components/ControlActionDialogOverlay"
 
 export default function MainDashboardPage() {
-
     // ---- Fake Data ----
-
-    // Medium-frequency, updated every 3 minutes
-    const todaysActivity = [
-        {
-            id: "t1",
-            zoneName: "Orchard",
-            time: "20:00",
-            volume: 14,
-            status: "planned"
-        },
-        {
-            id: "t2",
-            zoneName: "South Lawn",
-            time: "18:30",
-            volume: 12,
-            status: "planned"
-        },
-        {
-            id: "t3",
-            zoneName: "Greenhouse",
-            time: "12:30",
-            volume: 10,
-            status: "completed"
-        }
-
-    ]
 
     // Low-frequency, updated every 30 minutes
     const weatherWaterData = {
@@ -101,7 +78,8 @@ export default function MainDashboardPage() {
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
-    const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(3000)
+    const livePollIntervalMs = 2000
+    const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
     const {
         data: todayData,
         loading: todayLoading,
@@ -109,6 +87,67 @@ export default function MainDashboardPage() {
         refresh: refreshToday
     } = useTodayRuntime(180000)
 
+    const {
+        stoppingZoneIds,
+        isStoppingAll,
+        hasActiveTasks,
+        handleStopZone,
+        handleStopAll,
+    } = useRuntimeControlState({
+        tasks: liveData?.currentTasks ?? [],
+    })
+
+    const openStopActionDialog = useCallback((result) => {
+        if (!result) {
+            return
+        }
+
+        if (result.ok) {
+            if (result.action === "stop-zone") {
+                controlActionDialog.open("stop-action-result", {
+                    title: "Zone stop completed",
+                    description: "Irrigation stop command was completed successfully.",
+                    status: "success",
+                    zoneId: result.zoneId,
+                    nodeId: result.response?.node_id,
+                    mode: result.response?.mode,
+                    correlationId: result.response?.response?.correlation_id,
+                })
+                return
+            }
+
+            const nodeCount = Array.isArray(result.response?.nodes) ? result.response.nodes.length : 0
+            controlActionDialog.open("stop-action-result", {
+                title: "Stop all completed",
+                description: "Irrigation stop command was delivered to all target nodes.",
+                status: "success",
+                mode: result.response?.mode,
+                nodeCount,
+            })
+            return
+        }
+
+        controlActionDialog.open("stop-action-result", {
+            title: "Stop action failed",
+            description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
+            status: "error",
+            zoneId: result.zoneId,
+            nodeId: result.error?.node_id,
+            code: result.error?.code,
+            retryable: result.error?.retryable,
+            correlationId: result.error?.correlation_id,
+        })
+    }, [])
+
+    const handleStopZoneWithNotification = useCallback(async (zoneId) => {
+        const result = await handleStopZone(zoneId)
+        openStopActionDialog(result)
+    }, [handleStopZone, openStopActionDialog])
+
+    const handleStopAllWithNotification = useCallback(async () => {
+        const result = await handleStopAll()
+        openStopActionDialog(result)
+    }, [handleStopAll, openStopActionDialog])
 
     if (loading && !liveData) {
         return (
@@ -144,13 +183,17 @@ export default function MainDashboardPage() {
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-                <Text p={8} color="red.500">Failed to load live data</Text>
+                <Box p={8}>
+                    <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
+                </Box>
             </Box>
         )
     }
 
     return (
         <Box>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Dashboard"
                 subtitle="Live system overview"
@@ -194,6 +237,8 @@ export default function MainDashboardPage() {
                         <SystemOverviewCard
                             icon={Activity}
                             title="Today Summary"
+                            unavailable={!todayLoading && !todayData}
+                            unavailableMessage="Today's activities are unavailable right now."
                             value={`${todayData ? todayData.overview.tasksPlanned : "N/A"} planned`}
                             description={`${todayData ? todayData.overview.tasksCompleted : "N/A"} completed`}
                         />
@@ -216,18 +261,36 @@ export default function MainDashboardPage() {
                 </GlassPanelSection>
 
 
-                {/* SECTION 2 - CURRENT IRRIGATION */}
-                <GlassPanelSection
-                    title="Current Irrigation"
-                    description="Active irrigation tasks"
-                    collapsible
-                >
-                    <Stack gap={2}>
-                        {liveData.currentTasks.map(task => (
-                            <CurrentTaskCard key={task.id} task={task} />
-                        ))}
-                    </Stack>
-                </GlassPanelSection>
+                {/* SECTION 2 - CURRENT IRRIGATION (visible only when there are active tasks) */}
+                {liveData.currentTasks.length > 0 && (
+                    <GlassPanelSection
+                        title="Current Irrigation"
+                        description="Active irrigation tasks"
+                        actions={
+                            <Button
+                                size="xs"
+                                variant="ghost"
+                                colorPalette="red"
+                                onClick={handleStopAllWithNotification}
+                                isDisabled={!hasActiveTasks || isStoppingAll}
+                                loading={isStoppingAll}
+                            >
+                                Stop All
+                            </Button>
+                        }
+                    >
+                        <Stack gap={2}>
+                            {(liveData?.currentTasks ?? []).map(task => (
+                                <CurrentTaskCard
+                                    key={task.id}
+                                    task={task}
+                                    isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
+                                    onStop={() => handleStopZoneWithNotification(task.id)}
+                                />
+                            ))}
+                        </Stack>
+                    </GlassPanelSection>
+                )}
 
                 {/* SECTION 3 - ALERTS */}
                 <GlassPanelSection
@@ -247,20 +310,21 @@ export default function MainDashboardPage() {
                     templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
                     gap={8}
                 >
-                    {/* Guard against missing todayData due to loading or error */}
-                    {todayData ? (
-                        <TodaysActivityCard items={todayData.tasks} />
-                    ) : (
-                        <Box p={4} borderWidth={1} borderRadius="md" textAlign="center">
-                            <Text color="red.500">Failed to load today's activities</Text>
-                        </Box>
-                    )}
+                    <TodaysActivityCard
+                        items={todayData?.tasks ?? []}
+                        unavailable={Boolean(todayError)}
+                        unavailableMessage="Today's activities are unavailable right now."
+                    />
 
                     <WeatherWaterSummaryCard data={weatherWaterData} />
                 </Grid>
 
                 {/* SECTION 5 - ZONES STATUS */}
-                <ZonesGridSection zones={liveData.zones} />
+                <ZonesGridSection
+                    zones={liveData.zones}
+                    stoppingZoneIds={stoppingZoneIds}
+                    onStopZone={handleStopZoneWithNotification}
+                />
 
                 {/* SECTION 6 - WEATHER FORECAST */}
                 <WeatherForecastSection data={weatherForecastData} />

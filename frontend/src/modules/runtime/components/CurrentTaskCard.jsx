@@ -3,15 +3,25 @@ import {
     VStack,
     HStack,
     Text,
-    Badge,
-    Button
+    Badge
 } from "@chakra-ui/react"
 import { Droplets } from "lucide-react"
 import { Progress } from "@chakra-ui/react"
 
 import { PanelButtonDanger } from "../../../components/ui/ActionButtons"
+import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 
-export default function CurrentTaskCard({ task }) {
+export default function CurrentTaskCard({ task, isStopping, onStop }) {
+    const {
+        taskState,
+    } = useRuntimeControlState({
+        task,
+        isStopping,
+    })
+
+    const progressValue = taskState?.progressValue ?? 0
+    const progressLabel = taskState?.progressLabel ?? "0"
+    const isStale = taskState?.isStale === true
 
     return (
         <Box
@@ -21,6 +31,8 @@ export default function CurrentTaskCard({ task }) {
             borderRadius="lg"
             p={5}
             boxShadow="0 4px 18px rgba(15, 23, 42, 0.06)"
+            opacity={isStale ? 0.6 : 1}
+            filter={isStale ? "grayscale(0.3)" : "grayscale(0)"}
         >
             <VStack align="stretch" gap={3}>
 
@@ -35,32 +47,45 @@ export default function CurrentTaskCard({ task }) {
                             <Text fontWeight="600">
                                 {task.zoneName}
                             </Text>
-
-                            <Badge
-                                size="sm"
-                                colorPalette="green"
-                                variant="subtle"
-                            >
-                                Irrigating
-                            </Badge>
+                            {isStale ? (
+                                <Badge
+                                    size="sm"
+                                    colorPalette={taskState?.statusColorPalette ?? "gray"}
+                                    variant="subtle"
+                                >
+                                    {taskState?.statusLabel ?? "Stopped"}
+                                </Badge>
+                            ) : (
+                                <Badge
+                                    size="sm"
+                                    colorPalette="blue"
+                                    variant="subtle"
+                                >
+                                    Irrigating
+                                </Badge>
+                            )}
                         </HStack>
                     </HStack>
-
-                    <PanelButtonDanger
-                        size="sm"
-                        variant="subtle"
-                    >
-                        Stop
-                    </PanelButtonDanger>
+                    {!task.stale && (
+                        <PanelButtonDanger
+                            size="sm"
+                            variant="subtle"
+                            onClick={() => onStop?.(task.id)}
+                            isDisabled={taskState?.isStopDisabled}
+                            loading={taskState?.isStopLoading}
+                        >
+                            Stop
+                        </PanelButtonDanger>
+                    )}
                 </HStack>
 
                 <Progress.Root
-                    value={task.progress}
+                    value={progressValue}
                     borderRadius="md"
                     height="8px"
                 >
                     <Progress.Track bg="gray.100">
-                        <Progress.Range bg="teal.500" />
+                        <Progress.Range bg="teal.400" />
                     </Progress.Track>
                 </Progress.Root>
 
@@ -80,7 +105,7 @@ export default function CurrentTaskCard({ task }) {
                         fontSize="sm"
                         fontWeight="600"
                     >
-                        {task.progress}%
+                        {progressLabel}%
                     </Text>
                 </HStack>
 

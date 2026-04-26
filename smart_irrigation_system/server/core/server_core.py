@@ -3,7 +3,7 @@
 import threading, os
 from smart_irrigation_system.server.core.mqtt_manager import MQTTManager
 from smart_irrigation_system.server.core.node_registry import NodeRegistry, parse_node_status
-from smart_irrigation_system.server.core.zone_node_mapper import ZoneNodeMapper
+from smart_irrigation_system.server.core.node_topology_service import NodeTopologyService
 from smart_irrigation_system.server.utils.logger import get_logger
 
 
@@ -17,6 +17,13 @@ CONFIG_DIR = os.path.join(BASE_DIR, "runtime", "server", "config")
 
 PERIODIC_STATUS_UPDATE_INTERVAL = 10  # seconds
 
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
 class IrrigationServer:
     """Central orchestrator for the Smart Irrigation Server."""
     _instance = None
@@ -29,15 +36,22 @@ class IrrigationServer:
                 cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, broker_host="localhost", broker_port=1883):
+    def __init__(self, broker_host: str | None = None, broker_port: int | None = None):
         if hasattr(self, "_initialized") and self._initialized:
             return
         self._initialized = True
 
+        resolved_broker_host = broker_host or os.getenv("MQTT_HOST", "localhost")
+        resolved_broker_port = int(broker_port or os.getenv("MQTT_PORT", "1883"))
+
         self.logger = get_logger("IrrigationServer")
         self.node_registry = NodeRegistry(file_path=NODES_STATE_FILE)
-        self.mqtt_manager = MQTTManager(self.node_registry, broker_host, broker_port)
-        self.zone_node_mapper = ZoneNodeMapper()
+        self.mqtt_manager = MQTTManager(self.node_registry, resolved_broker_host, resolved_broker_port)
+        self.node_topology_service = NodeTopologyService()
+        self.enable_status_polling = _env_bool("MQTT_ENABLE_STATUS_POLLING", default=False)
+        self.status_polling_interval_seconds = int(
+            os.getenv("MQTT_STATUS_POLL_INTERVAL_SECONDS", str(PERIODIC_STATUS_UPDATE_INTERVAL))
+        )
         self._running = False
 
     def get_node_summary(self):
@@ -54,7 +68,7 @@ class IrrigationServer:
 
 
     def update_all_node_statuses(self):
-        for node_id in self.zone_node_mapper.get_all_node_ids():
+        for node_id in self.node_topology_service.get_all_node_ids():
             command = {"action": "get_status"}
             self.mqtt_manager.publish_command(node_id, command)
 
@@ -62,7 +76,14 @@ class IrrigationServer:
         self.logger.info("Starting Irrigation Server...")
         self.mqtt_manager.start()
         self._running = True
-        self.periodic_status_update(PERIODIC_STATUS_UPDATE_INTERVAL)
+        if self.enable_status_polling:
+            self.periodic_status_update(self.status_polling_interval_seconds)
+            self.logger.info(
+                "MQTT status polling enabled (interval=%ss).",
+                self.status_polling_interval_seconds,
+            )
+        else:
+            self.logger.info("MQTT status polling disabled. Using node push snapshots and on-demand status requests.")
         self.logger.info("Server started successfully.")
 
     def stop(self):
@@ -75,7 +96,7 @@ class IrrigationServer:
         self.logger.info("Server stopped.")
 
     def stop_all_irrigation(self):
-        for node_id in self.zone_node_mapper.get_all_node_ids():
+        for node_id in self.node_topology_service.get_all_node_ids():
             command = {"action": "stop_irrigation"}
             self.mqtt_manager.publish_command(node_id, command)
     

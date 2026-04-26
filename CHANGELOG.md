@@ -5,7 +5,177 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# [0.14.0] - 2026-03-17
+## [1.0.0] - 2026-04-26
+*Full architecture MVP completion: multi-node distributed system with server-side runtime projection, centralized configuration, node pairing, MQTT-based communication, and unified frontend. This release enables the core end-to-end functionality of the Smart Irrigation System.*
+
+### Added
+- Introduced versioned MQTT communication contract (`sis/v1`):
+  - Common message envelope with `message_id`, `correlation_id`, and typed payloads.
+  - Centralized contract definitions in `common/mqtt_contract.py` (message types, topics, validation).
+- Implemented MQTT v1 client on node side:
+  - Periodic `NODE_STATUS_SNAPSHOT` publishing (default 5s interval).
+  - Support for command handling:
+    - `CMD_GET_STATUS`
+    - `CMD_START_IRRIGATION`
+    - `CMD_STOP_IRRIGATION`
+    - `CMD_APPLY_CONFIG`
+  - ACK / ERROR response flow for mutating commands.
+- Implemented MQTT v1 manager on server side:
+  - Subscription to v1 topics (`status`, `ack`, `error`, `event`).
+  - Envelope decoding and validation.
+  - Integration with `RuntimeLiveStore`:
+    - zone state updates
+    - current task updates
+    - node heartbeat tracking
+    - alert ingestion with deduplication
+- Added configuration push over MQTT:
+  - New endpoint `POST /api/v1/nodes/{node_id}/push-config`
+  - Sends `CMD_APPLY_CONFIG` with exported runtime configuration.
+  - Shuts down node runtime on successful ACK response.
+  - Docker-compose updated to restart node container on exit for seamless config application during development.
+- Added environment-based MQTT configuration:
+  - `MQTT_HOST`, `MQTT_PORT`
+  - optional status polling controls (`MQTT_ENABLE_STATUS_POLLING`, `MQTT_STATUS_POLL_INTERVAL_SECONDS`)
+- Added detailed MQTT documentation:
+  - `MQTT_REFERENCE.md` (full contract specification)
+  - `MQTT_MVP_STATUS.md` (implementation status and roadmap)
+- Added runtime live projection from MQTT snapshots
+- Added runtime control API endpoints under `/api/v1/runtime/control`:
+  - `POST /start-irrigation`
+  - `POST /stop-zone`
+  - `POST /stop-irrigation`
+  - synchronous mode with ACK / ERROR mapping and timeout handling
+- Added support for per-zone stop command in MQTT contract (`CMD_STOP_CIRCUIT`).
+- Added node configuration sync tracking (`PENDING` / `PUSHED`) across configuration model and API schemas.
+- Added frontend runtime control state hook and result overlay for start/stop actions.
+- Introduced node discovery & pairing flow:
+  - Nodes can now operate in `UNPAIRED` / `PAIRED` state.
+  - Server can discover unpaired nodes via runtime discovery API.
+  - UI flow allows onboarding and pairing nodes into the system.
+  - Enables real multi-node deployment without manual configuration.
+- Introduced node identity management:
+  - Removed hardcoded `node1` identity.
+  - Each node now has persistent identity (`node_identity.json`).
+  - MQTT communication fully supports multiple nodes.
+- Added multi-node support across the system:
+  - Server can manage and communicate with multiple nodes simultaneously.
+  - Dynamic node registration and lifecycle handling.
+- Added server-side global configuration layer:
+  - New `global_config` domain (model, repository, service, API).
+  - Centralized configuration for all nodes.
+  - Configuration can be distributed to nodes via MQTT.
+- Added runtime discovery API:
+  - Endpoints for listing and interacting with unpaired nodes.
+  - Foundation for automated node onboarding.
+- Added UI support for new architecture features:
+  - Node discovery page.
+  - Global settings page.
+  - Extended node creation flow with pairing.
+  - Improved runtime dashboard and system overview.
+
+### Changed
+- Refactored node MQTT layer:
+  - Removed legacy `ServerCommandHandler` coupling in favor of contract-driven dispatch.
+  - Introduced controller-driven command execution.
+- Refactored server MQTT manager:
+  - Replaced ad-hoc message handling with contract-based processing.
+  - Integrated runtime live projection directly from MQTT telemetry.
+- Updated runtime live behavior:
+  - Improved `stale` and `offline` thresholds (15s / 30s).
+  - Runtime state is now primarily driven by MQTT snapshots instead of polling.
+- Updated frontend runtime integration:
+  - Adjusted field mapping (`last_run` handling).
+- Refactored runtime API routing to split status endpoints and control endpoints:
+  - status endpoints moved under `/api/v1/runtime/statuses`.
+- Updated frontend API base URL behavior:
+  - uses relative `/api/v1` fallback when `VITE_API_URL` is empty.
+  - Vite dev server proxy now configurable via `VITE_API_PROXY_TARGET` (including Docker setup).
+- Updated configuration frontend with config sync UX:
+  - pending sync indicators in node list/sidebar
+  - push-config action in node detail
+  - optional "Create Zone & Push" flow in zone wizard.
+  - MQTT communication model updated to use dynamic node identities instead (DB PKs) of hardcoded node IDs.
+- Node lifecycle redesigned to include pairing state.
+- Server node management refactored to support dynamic multi-node topology.
+- Configuration flow redesigned:
+  - Configuration is now managed centrally on server and pushed to nodes.
+- Refactored server core:
+  - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
+
+### Deprecated
+- Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
+
+### Removed
+- Removed hardcoded single-node assumptions (`node1`) across node and server.
+- Removed legacy static zone-to-node mapping (`ZoneNodeMapper`).
+
+### Fixed
+- Improved stability of runtime live projection under continuous updates from node snapshots.
+- Reduced dependency on periodic polling for runtime updates.
+
+### Known Issues
+- Legacy runtime config exporter is not fully reliable in all edge cases.
+- `CMD_APPLY_CONFIG` does not yet support in-process runtime reload on node (`ControllerCore.reload_config` missing).
+- ACK / ERROR responses are not persisted or queryable on server side.
+- Runtime task lifecycle handling is still simplified (no explicit removal semantics).
+- MQTT reconnect/backoff and delivery guarantees are not fully hardened.
+- Node discovery does not yet include authentication or security layer.
+- Node identity provisioning is not yet cryptographically secured.
+- Global configuration does not yet support versioning or rollback.
+
+---
+
+## [0.15.0] - 2026-03-28
+*Runtime live projection stabilization and config/runtime synchronization improvements.*
+
+### Added
+- Added in-memory runtime state layer under `server/runtime/state/live_store.py`:
+  - `RuntimeLiveStore` with thread-safe snapshot management (`RLock`).
+  - Runtime dataclasses for node, zone, task, and alert state.
+  - Topology preload support from configuration DB (`register_expected_topology`).
+  - Upsert-based runtime mutation methods for heartbeats, zone states, tasks, and alerts.
+- Added startup initialization of runtime topology from configuration DB in `server/main.py`.
+- Added stale/connecting flags to runtime response schema:
+  - `ZoneLive.stale`
+  - `ZoneLive.connecting_to_node`
+  - `CurrentTask.stale`
+- Added runtime topology refresh after configuration mutations (create/delete/update node/zone) in configuration API.
+- Added missing PATCH endpoints in configuration API:
+  - `PATCH /api/v1/nodes/{node_id}`
+  - `PATCH /api/v1/nodes/{node_id}/zones/{zone_id}`
+- Added legacy runtime configuration exporter for node compatibility:
+  - New export helper `export_node_legacy_runtime_config(...)`.
+  - New endpoint `GET /api/v1/nodes/{node_id}/export/legacy-runtime`.
+  - Output includes `config_global` and `zones_config` payloads compatible with the current node runtime format.
+
+### Changed
+- Refactored `server/runtime/services/live_service.py`:
+  - Removed simulated hardcoded snapshot data.
+  - Introduced `LiveService` class using `RuntimeLiveStore` snapshot projection.
+  - Added timeout-based state resolution for `connecting`, `stale`, and `offline` behavior.
+  - Kept API response contract backward-compatible while extending models with additional status metadata.
+- Updated configuration stack to support runtime sync after DB edits:
+  - `NodeRepository.update(...)` is now implemented.
+  - `NodeService.update_node(...)` is now implemented.
+  - `NodeService.update_zone(...)` is now implemented.
+- Extended node export capabilities to support both:
+  - structured server-native export (`/export`)
+  - node-legacy runtime export (`/export/legacy-runtime`).
+
+### Fixed
+- Fixed runtime/config drift where newly created or edited nodes/zones were visible only after server restart.
+- Fixed missing update flow in configuration module that blocked end-to-end topology synchronization to runtime.
+
+### Removed
+- Removed mocked live snapshot generation path from runtime live service.
+
+### Known Issues
+- MQTT layer is still in transition from prototype manager/client to a production-ready contract-driven implementation.
+- Runtime live store is prepared for MQTT ingest, but full bridge from new MQTT message contract to store upserts is not finalized yet.
+
+---
+
+## [0.14.0] - 2026-03-17
 *Initial implementation of the unified frontend and server architecture with Docker-based deployment.*
 
 ### Added
@@ -41,7 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-# [0.13.0] - 2025-02-19
+## [0.13.0] - 2025-02-19
 *Integration of Node Manager configuration module into the Smart Irrigation System backend and frontend consolidation.*
 
 ### Added

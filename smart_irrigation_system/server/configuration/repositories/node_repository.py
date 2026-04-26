@@ -11,6 +11,12 @@ class NodeRepository:
     
     def get(self, node_id: int) -> Node | None:
         return self.session.get(Node, node_id)
+
+
+    def get_by_hardware_uid(self, hardware_uid: str) -> Node | None:
+        return self.session.exec(
+            select(Node).where(Node.hardware_uid == hardware_uid)
+        ).first()
     
 
     def list_all(self) -> list[Node]:
@@ -24,8 +30,16 @@ class NodeRepository:
     
 
     def update(self, node_id: int, node_data: dict) -> Node | None:
-        # TODO: implement update logic
-        pass
+        # Validation should be done by service layer
+        node = self.get(node_id)
+        if not node:
+            return None
+
+        for key, value in node_data.items():
+            setattr(node, key, value)
+
+        self.session.flush()
+        return node
     
 
     def delete(self, node_id: int) -> bool:

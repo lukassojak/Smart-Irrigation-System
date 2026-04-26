@@ -46,6 +46,24 @@ def get_today_snapshot() -> TodayResponse:
             expected_volume_liters=8.75,
             expected_adjustment_percent=20,
             status=TaskStatus.IN_PROGRESS
+        ),
+        TodayTask(
+            id=5,
+            zone_id=5,
+            zone_name="Flower Beds",
+            scheduled_time=now.replace(hour=18, minute=0, second=0),
+            expected_volume_liters=6.3,
+            expected_adjustment_percent=15,
+            status=TaskStatus.PLANNED
+        ),
+        TodayTask(
+            id=6,
+            zone_id=6,
+            zone_name="Herb Garden",
+            scheduled_time=now.replace(hour=18, minute=30, second=0),
+            expected_volume_liters=3.8,
+            expected_adjustment_percent=10,
+            status=TaskStatus.PLANNED
         )
     ]
 

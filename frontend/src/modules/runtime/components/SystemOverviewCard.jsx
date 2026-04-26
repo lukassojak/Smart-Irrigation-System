@@ -2,15 +2,17 @@ import {
     Box,
     VStack,
     HStack,
-    Text,
-    Badge
+    Text
 } from "@chakra-ui/react"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 
 export default function SystemOverviewCard({
     icon: Icon,
     title,
     value,
     description,
+    unavailable = false,
+    unavailableMessage = "Data is currently unavailable.",
     status = "neutral", // success | warning | error | neutral
     footer
 }) {
@@ -52,24 +54,32 @@ export default function SystemOverviewCard({
                     </HStack>
                 </HStack>
 
-                <Text
-                    fontSize="2xl"
-                    fontWeight="600"
-                    color="gray.800"
-                >
-                    {value}
-                </Text>
+                {unavailable ? (
+                    <Box pt={2} w="full">
+                        <DataUnavailableWarning message={unavailableMessage} />
+                    </Box>
+                ) : (
+                    <>
+                        <Text
+                            fontSize="2xl"
+                            fontWeight="600"
+                            color="gray.800"
+                        >
+                            {value}
+                        </Text>
 
-                {description && (
-                    <Text fontSize="sm" color="gray.500">
-                        {description}
-                    </Text>
-                )}
+                        {description && (
+                            <Text fontSize="sm" color="gray.500">
+                                {description}
+                            </Text>
+                        )}
 
-                {footer && (
-                    <HStack gap={2} pt={2}>
-                        {footer}
-                    </HStack>
+                        {footer && (
+                            <HStack gap={2} pt={2}>
+                                {footer}
+                            </HStack>
+                        )}
+                    </>
                 )}
 
             </VStack>

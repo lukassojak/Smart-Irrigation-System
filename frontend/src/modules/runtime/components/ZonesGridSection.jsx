@@ -11,7 +11,7 @@ const STATUS_PRIORITY = {
     offline: 4
 }
 
-export default function ZonesGridSection({ zones }) {
+export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone }) {
 
     const sortedZones = [...zones].sort((a, b) => {
         return STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
@@ -30,7 +30,12 @@ export default function ZonesGridSection({ zones }) {
                 gap={6}
             >
                 {sortedZones.map(zone => (
-                    <ZoneRuntimeCard key={zone.id} zone={zone} />
+                    <ZoneRuntimeCard
+                        key={zone.id}
+                        zone={zone}
+                        isStopping={stoppingZoneIds?.[String(zone.id)] === true}
+                        onStop={onStopZone}
+                    />
                 ))}
             </Grid>
         </GlassPanelSection>

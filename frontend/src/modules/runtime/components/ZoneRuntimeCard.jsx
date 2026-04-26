@@ -12,27 +12,21 @@ import {
     Square,
     Info,
 } from "lucide-react"
+import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 
-export default function ZoneRuntimeCard({ zone }) {
 
-    // ---- Accent color logic ----
-    let accentColor = "green.400"
+export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
+    const {
+        zoneState,
+    } = useRuntimeControlState({
+        zone,
+        isStopping,
+    })
 
-    if (zone.status === "error") {
-        accentColor = "red.500"
-    } else if (!zone.online) {
-        accentColor = "gray.400"
-    }
-
-    // ---- Badge config ----
-    const badgeConfig = {
-        idle: { label: "Idle", color: "gray" },
-        irrigating: { label: "Irrigating", color: "green" },
-        stopping: { label: "Stopping", color: "orange" },
-        error: { label: "Error", color: "red" },
-    }[zone.status]
-
-    const isIrrigating = zone.status === "irrigating"
+    const isStale = zoneState?.isStale === true
+    const accentColor = zoneState?.accentColor ?? "green.400"
+    const badgeConfig = zoneState?.badgeConfig ?? { label: zone.status, color: "gray" }
+    const isIrrigating = zoneState?.isIrrigating === true
 
     return (
         <Box
@@ -49,6 +43,8 @@ export default function ZoneRuntimeCard({ zone }) {
                 boxShadow: "0 6px 22px rgba(15,23,42,0.06)",
                 transform: "translateY(-2px)"
             }}
+            opacity={zone.stale ? 0.6 : 1}
+            filter={zone.stale ? "grayscale(0.3)" : "grayscale(0)"}
         >
             {/* Left Accent */}
             <Box
@@ -105,6 +101,9 @@ export default function ZoneRuntimeCard({ zone }) {
                                 colorPalette="red"
                                 aria-label="Stop irrigation"
                                 p={1}
+                                isDisabled={zoneState?.isStopDisabled}
+                                onClick={() => onStop?.(zone.id)}
+                                loading={zoneState?.isStopLoading}
                             >
                                 <Square size={14} />
                             </Button>
@@ -115,6 +114,7 @@ export default function ZoneRuntimeCard({ zone }) {
                                 colorPalette="green"
                                 aria-label="Start irrigation"
                                 p={1}
+                                isDisabled={zoneState?.isStartDisabled}
                             >
                                 <Play size={14} />
                             </Button>
@@ -128,6 +128,7 @@ export default function ZoneRuntimeCard({ zone }) {
                             colorPalette="gray"
                             aria-label="View error details"
                             p={1}
+                            isDisabled={zoneState?.isInfoDisabled}
                         >
                             <Info size={14} />
                         </Button>
@@ -140,6 +141,7 @@ export default function ZoneRuntimeCard({ zone }) {
                             colorPalette="gray"
                             aria-label="View reconnection options"
                             p={1}
+                            isDisabled={zoneState?.isInfoDisabled}
                         >
                             <Info size={14} />
                         </Button>
@@ -149,10 +151,11 @@ export default function ZoneRuntimeCard({ zone }) {
                 {/* Meta Info */}
                 <HStack justify="space-between">
                     <Text fontSize="xs" color="gray.500">
-                        {zone.online ? "Online" : "Offline"}
+                        {zoneState?.statusLabel ?? (zone.online ? (zone.stale ? "Disconnected" : "Online") : "Offline")}
                     </Text>
+                    {/* Display zone.lastRun */}
                     <Text fontSize="xs" color="gray.500">
-                        {zone.lastRun ? `Last run: ${zone.lastRun.toLocaleTimeString()}` : "Last run: -"}
+                        Last run: {zoneState?.lastRunLabel ?? "-"}
                     </Text>
                 </HStack>
 

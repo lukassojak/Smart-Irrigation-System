@@ -10,7 +10,7 @@ import {
     Button,
 } from "@chakra-ui/react"
 
-import { createZone } from "../../../../api/nodes.api"
+import { createZone, pushNodeConfig } from "../../../../api/nodes.api"
 
 import StepBasicInfo from "./steps/StepBasicInfo"
 import StepIrrigationMode from "./steps/StepIrrigationMode"
@@ -36,6 +36,7 @@ export default function Wizard() {
 
     const [currentStep, setCurrentStep] = useState(0)
     const [submitError, setSubmitError] = useState(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
 
@@ -271,26 +272,47 @@ export default function Wizard() {
         }
     }
 
-    const handleSubmit = () => {
-        createZone(nodeId, zoneDraft)
-            .then((res) =>
-                navigate(`/configuration/nodes/${nodeId}/zones/${res.data.id}`)
-            )
-            .catch((error) => {
-                console.error("Create zone failed:", error)
+    const getErrorMessage = (error) => {
+        const detail = error.response?.data?.detail
+        if (typeof detail === "string") return detail
+        if (detail?.message) return detail.message
+        return (
+            error.response?.data?.message ??
+            JSON.stringify(error.response?.data, null, 2) ??
+            "An unknown error occurred."
+        )
+    }
 
-                if (error.response) {
-                    console.error("Response data:", error.response.data)
-                    console.error("Status:", error.response.status)
+    const submitZone = async (pushAfterCreate = false) => {
+        setIsSubmitting(true)
+        setSubmitError(null)
+
+        try {
+            const createResponse = await createZone(nodeId, zoneDraft)
+            const createdZoneId = createResponse.data.id
+
+            if (pushAfterCreate) {
+                try {
+                    await pushNodeConfig(nodeId)
+                } catch (pushError) {
+                    console.error("Push config failed after zone creation:", pushError)
+                    alert(`Zone created, but config push failed: ${getErrorMessage(pushError)}`)
                 }
-
-                setSubmitError(
-                    error.response?.data?.message ??
-                    JSON.stringify(error.response?.data, null, 2) ??
-                    "An unknown error occurred."
-                )
             }
-            )
+
+            navigate(`/configuration/nodes/${nodeId}/zones/${createdZoneId}`)
+        } catch (error) {
+            console.error("Create zone failed:", error)
+
+            if (error.response) {
+                console.error("Response data:", error.response.data)
+                console.error("Status:", error.response.status)
+            }
+
+            setSubmitError(getErrorMessage(error))
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     /* --------------------------------------------
@@ -386,7 +408,7 @@ export default function Wizard() {
                                 variant="outline"
                                 colorPalette="teal"
                                 onClick={goBack}
-                                disabled={currentStep === 0}
+                                disabled={currentStep === 0 || isSubmitting}
                             >
                                 Back
                             </Button>
@@ -401,12 +423,24 @@ export default function Wizard() {
                                     Next
                                 </Button>
                             ) : (
-                                <Button
-                                    colorPalette="teal"
-                                    onClick={handleSubmit}
-                                >
-                                    Create Zone
-                                </Button>
+                                <HStack>
+                                    <Button
+                                        colorPalette="teal"
+                                        onClick={() => submitZone(false)}
+                                        disabled={isSubmitting}
+                                    >
+                                        Create Zone
+                                    </Button>
+                                    <Button
+                                        loading={isSubmitting}
+                                        loadingText="Creating ..."
+                                        colorPalette="teal"
+                                        onClick={() => submitZone(true)}
+                                        disabled={isSubmitting}
+                                    >
+                                        Create Zone &amp; Push
+                                    </Button>
+                                </HStack>
                             )}
                         </HStack>
                     </Stack>

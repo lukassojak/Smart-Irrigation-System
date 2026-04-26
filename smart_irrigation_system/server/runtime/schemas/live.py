@@ -31,7 +31,8 @@ class ZoneLive(BaseModel):
     status: ZoneStatus
     enabled: bool
     online: bool
-    stale: bool
+    stale: bool = False
+    connecting_to_node: bool = False
     last_run: datetime | None = None
     progress_percent: float | None = None
 
@@ -49,7 +50,7 @@ class CurrentTask(BaseModel):
     current_volume: float
     target_volume: float
     remaining_minutes: int
-    stale: bool
+    stale: bool = False
 
 class LiveResponse(BaseModel):
     overview: Overview

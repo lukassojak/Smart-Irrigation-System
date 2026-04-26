@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate, useOutletContext } from "react-router-dom"
-import { For, SegmentGroup, Switch, Field, Text, Box, Heading, Input, Button, Stack, SimpleGrid, HStack } from "@chakra-ui/react"
+import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom"
+import { For, SegmentGroup, Switch, Field, Text, Box, Heading, Input, Button, Stack, SimpleGrid, HStack, Badge } from "@chakra-ui/react"
 import { createNode } from "../../../api/nodes.api"
 
 import HelpSidebar from "../../../components/HelpSidebar"
@@ -13,9 +13,12 @@ import { createNodeHelp, createNodeAdvancedHelp } from "../../../help/createNode
 
 
 export default function CreateNodePage() {
+    const locationState = useLocation().state || {}
     const navigate = useNavigate()
     const [name, setName] = useState("")
     const [location, setLocation] = useState("")
+    const hardwareUid = locationState.hardwareUid || ""
+    const discoveredNode = locationState.discoveredNode || null
     const [scheduledHour, setScheduledHour] = useState(18)
     const [scheduledMinute, setScheduledMinute] = useState(0)
     const [scheduledTime, setScheduledTime] = useState("18:00")
@@ -44,6 +47,7 @@ export default function CreateNodePage() {
         const payload = {
             name,
             location,
+            hardware_uid: hardwareUid || undefined,
             hardware: {
                 input_pins: { pins: [] },
                 output_pins: { pins: [] },
@@ -109,6 +113,31 @@ export default function CreateNodePage() {
 
                             <PanelSection title="Basic Information">
                                 <Stack gap={6}>
+                                    {hardwareUid && (
+                                        <Box
+                                            borderRadius="md"
+                                            p={4}
+                                            bg="rgba(56,178,172,0.06)"
+                                            border="1px solid rgba(56,178,172,0.24)"
+                                        >
+                                            <Stack gap={2}>
+                                                <Text fontSize="xs" color="fg.muted" textTransform="uppercase" letterSpacing="0.04em">
+                                                    Paired Device
+                                                </Text>
+                                                <HStack>
+                                                    <Text fontSize="sm" color="fg.muted">Hardware UID:</Text>
+                                                    <Badge colorPalette="teal">{hardwareUid}</Badge>
+                                                </HStack>
+                                                {discoveredNode?.serialNumber && (
+                                                    <Text fontSize="sm" color="fg.muted">Serial: {discoveredNode.serialNumber}</Text>
+                                                )}
+                                                {discoveredNode?.hostname && (
+                                                    <Text fontSize="sm" color="fg.muted">Hostname: {discoveredNode.hostname}</Text>
+                                                )}
+                                            </Stack>
+                                        </Box>
+                                    )}
+
                                     {/* Name input */}
                                     <Field.Root required>
                                         <Field.Label>Node Name <Field.RequiredIndicator /></Field.Label>

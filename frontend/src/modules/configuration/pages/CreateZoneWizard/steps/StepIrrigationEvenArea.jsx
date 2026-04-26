@@ -10,6 +10,7 @@ import {
 } from "@chakra-ui/react"
 
 import PanelSection from "../../../../../components/layout/PanelSection"
+import StandardConditionsContextBox from "../../../components/StandardConditionsContextBox"
 
 export default function StepIrrigationEvenArea({ data, onChange }) {
     const zoneArea = data.zone_area_m2 || ""
@@ -27,6 +28,11 @@ export default function StepIrrigationEvenArea({ data, onChange }) {
                 The system calculates the required water volume from the
                 zone area and the target water depth."
         >
+            <Box mb={6}>
+                <StandardConditionsContextBox
+                    helperText="These are the baseline weather values used for 100% base watering. Set area and target depth with this baseline in mind."
+                />
+            </Box>
 
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
                 {/* Zone area */}

@@ -1,39 +1,68 @@
 import {
     Box,
+    Text,
     Stack
 } from "@chakra-ui/react"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import TimelineItem from "./TimelineItem"
 
-export default function TodaysActivityCard({ items }) {
+export default function TodaysActivityCard({
+    items,
+    unavailable = false,
+    unavailableMessage = "Today's activities are unavailable right now.",
+}) {
+    const visibleItemsCount = 4
+    const timelineItemMinHeightPx = 70
+    const timelineGapPx = 24
+    const timelineViewportHeightPx =
+        visibleItemsCount * timelineItemMinHeightPx +
+        (visibleItemsCount - 1) * timelineGapPx
 
-    // Sort items by scheduled time from latest to earliest
-    const sortedItems = [...items].sort((a, b) => b.scheduledTime - a.scheduledTime)
+    const sortedItems = [...items].sort((b, a) => a.scheduledTime - b.scheduledTime)
+
+    const shouldScroll = sortedItems.length > 4
 
     return (
         <GlassPanelSection
             title="Today's Activity"
             description="Planned and completed irrigation tasks for today"
         >
-            <Box position="relative" pl="28px">
+            {unavailable && <DataUnavailableWarning message={unavailableMessage} />}
 
-                {/* Vertical timeline line */}
+            {!unavailable && sortedItems.length === 0 && (
+                <Text fontSize="sm" color="fg.muted">
+                    No activities found for today.
+                </Text>
+            )}
+
+            {!unavailable && sortedItems.length > 0 && (
                 <Box
-                    position="absolute"
-                    left="12px"
-                    top="0"
-                    bottom="0"
-                    width="2px"
-                    bg="rgba(56,178,172,0.12)"
-                />
+                    h={`${timelineViewportHeightPx}px`}
+                    overflowY={shouldScroll ? "auto" : "visible"}
+                    pr={shouldScroll ? "2" : "0"}
+                >
+                    <Box position="relative" pl="28px">
 
-                <Stack gap={6}>
-                    {sortedItems.map(item => (
-                        <TimelineItem key={item.id} item={item} />
-                    ))}
-                </Stack>
+                        {/* Vertical timeline line */}
+                        <Box
+                            position="absolute"
+                            left="12px"
+                            top="0"
+                            bottom="0"
+                            width="2px"
+                            bg="rgba(56,178,172,0.12)"
+                        />
 
-            </Box>
+                        <Stack gap={6}>
+                            {sortedItems.map(item => (
+                                <TimelineItem key={item.id} item={item} />
+                            ))}
+                        </Stack>
+
+                    </Box>
+                </Box>
+            )}
         </GlassPanelSection>
     )
 }

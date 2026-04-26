@@ -1,104 +1,22 @@
 {
     "zones": [
         {
-            "id": 1,
-            "name": "Záhon pod balkonem",
-            "relay_pin": 1,
-            "enabled": true,
-            "even_area_mode": true,
-            "target_mm": 6.0,
-            "zone_area_m2": 5.0,
-            "liters_per_minimum_dripper": null,
-            "interval_days": 1,
-            "drippers_summary": {
-                "12": 20,
-                "15": 40
-            },
-            "local_correction_factors": {
-                "solar": 0.05,
-                "rain": 0.1,
-                "temperature": 0
-            }
-        },
-        {
-            "id": 2,
-            "name": "Záhon u skleníku",
+            "id": 9,
+            "name": "Papriky skleník",
             "relay_pin": 2,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 3.0,
-            "zone_area_m2": 2.0,
+            "target_mm": 10.0,
+            "zone_area_m2": 0.7,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "4": 20
+                "210": 1
             },
             "local_correction_factors": {
-                "solar": 0.0,
-                "rain": 0.1,
-                "temperature": 0.0
-            }
-        },
-        {
-            "id": 3,
-            "name": "Skleník",
-            "relay_pin": 3,
-            "enabled": true,
-            "even_area_mode": false,
-            "target_mm": null,
-            "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.4,
-            "interval_days": 1,
-            "drippers_summary": {
-                "8": 8,
-                "2": 8,
-                "12": 4
-            },
-            "local_correction_factors": {
-                "solar": 0.1,
-                "rain": 0.0,
-                "temperature": 0.0
-            }
-        },
-        {
-            "id": 4,
-            "name": "Truhlíky jih",
-            "relay_pin": 4,
-            "enabled": true,
-            "even_area_mode": false,
-            "target_mm": null,
-            "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.2,
-            "interval_days": 2,
-            "drippers_summary": {
-                "12": 3,
-                "8": 1,
-                "2": 6
-            },
-            "local_correction_factors": {
-                "solar": 0.03,
-                "rain": -0.3,
-                "temperature": 0.02
-            }
-        },
-        {
-            "id": 5,
-            "name": "Zeleninový záhon",
-            "relay_pin": 5,
-            "enabled": true,
-            "even_area_mode": false,
-            "target_mm": null,
-            "zone_area_m2": null,
-            "liters_per_minimum_dripper": 0.1,
-            "interval_days": 1,
-            "drippers_summary": {
-                "12": 15,
-                "8": 5
-            },
-            "local_correction_factors": {
-                "solar": 0.05,
-                "rain": 0.0,
-                "temperature": 0.02
+                "solar": 0.2,
+                "rain": -0.9,
+                "temperature": 0.05
             }
         }
     ]

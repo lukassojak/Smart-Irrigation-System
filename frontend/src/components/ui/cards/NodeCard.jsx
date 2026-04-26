@@ -1,10 +1,15 @@
 // NodeCard.jsx
-import { Box, Heading, Text, Stack, HStack } from "@chakra-ui/react"
+import { Box, Heading, Text, Stack, HStack, Badge } from "@chakra-ui/react"
 import { Link } from "react-router-dom"
 
-import { Router } from "lucide-react"
+import {
+    Router,
+    RefreshCcw,
+} from "lucide-react"
 
 export default function NodeCard({ node }) {
+    const isPushed = node?.config_sync_status === "PUSHED"
+
     return (
         <Box
             as={Link}
@@ -34,9 +39,17 @@ export default function NodeCard({ node }) {
                 </Box>
 
                 <Stack spacing={1} flex="1">
-                    <Heading size="md" fontWeight="600">
-                        Node #{node.id}
-                    </Heading>
+                    <HStack justify="space-between" align="flex-start">
+                        <Heading size="md" fontWeight="600">
+                            Node #{node.id}
+                        </Heading>
+                        {!isPushed && (
+                            <Badge colorPalette="orange" fontSize="0.75em">
+                                <RefreshCcw size={14} style={{ marginRight: "4px" }} />
+                                Not synced
+                            </Badge>
+                        )}
+                    </HStack>
 
                     <Text fontSize="sm" color="gray.600">
                         {node.name}

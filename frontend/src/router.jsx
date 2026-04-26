@@ -4,9 +4,11 @@ import { Box } from "@chakra-ui/react"
 import MainDashboardPage from "./modules/runtime/pages/MainDashboardPage"
 import ManualControlPage from "./modules/runtime/pages/ManualControlPage"
 import NodesDashboardPage from "./modules/configuration/pages/DashboardPage"
+import NodeDiscoveryPage from "./modules/configuration/pages/NodeDiscoveryPage"
 import NodeDetailPage from "./modules/configuration/pages/NodeDetailPage"
 import CreateNodePage from "./modules/configuration/pages/CreateNodePage"
 import ZoneDetailPage from "./modules/configuration/pages/ZoneDetailPage"
+import GlobalSettingsPage from "./modules/configuration/pages/GlobalSettingsPage"
 import Wizard from "./modules/configuration/pages/CreateZoneWizard/Wizard"
 import AppLayout from "./components/layout/AppLayout"
 
@@ -39,6 +41,10 @@ const router = createBrowserRouter([
                         element: <NodesDashboardPage />,
                     },
                     {
+                        path: "nodes/discovery",
+                        element: <NodeDiscoveryPage />,
+                    },
+                    {
                         path: "nodes/new",
                         element: <CreateNodePage />,
                     },
@@ -53,6 +59,10 @@ const router = createBrowserRouter([
                     {
                         path: "nodes/:nodeId/zones/new",
                         element: <Wizard />,
+                    },
+                    {
+                        path: "settings",
+                        element: <GlobalSettingsPage />,
                     }
                 ]
             },

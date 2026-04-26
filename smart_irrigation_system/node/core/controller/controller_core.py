@@ -85,6 +85,8 @@ class ControllerCore(LegacyControllerAPI):
         )
 
         self._state_lock = threading.Lock()
+        self._cleanup_lock = threading.Lock()
+        self._cleanup_done = threading.Event()
         self._controller_state = ControllerState.IDLE
         self._register_signal_handlers()
         atexit.register(self._cleanup)
@@ -227,7 +229,7 @@ class ControllerCore(LegacyControllerAPI):
                 target_fn=manual_irrigation_wrapper
             )
         except WorkerThreadAlreadyExistsError:
-            self.logger.warning(f"Manual irrigation for circuit {circuit_id} is already running.")
+            self.logger.warning(f"Manual irrigation for circuit {circuit_id} is already running. Aborting.")
         except Exception as e:
             self.logger.error(f"Error during manual irrigation for circuit {circuit_id}: {e}")
             self._on_executor_error(circuit_id=circuit_id, exception=e)
@@ -284,9 +286,15 @@ class ControllerCore(LegacyControllerAPI):
     # Public API - Shutdown & Restart
     # ==================================================================================================================
 
-    def shutdown(self) -> None:
-        """Perform clean shutdown of the controller."""
-        pass
+    def shutdown(self, force: bool = False) -> None:
+        """Perform shutdown of the controller.
+        
+        Args:
+            force: If True, immediately terminate all irrigation and workers (0s timeouts).
+                   If False (default), gracefully shut down with reasonable timeouts (60s for irrigation, 10s for tasks).
+        """
+        self.logger.info(f"Initiating {'forced' if force else 'graceful'} shutdown of ControllerCore...")
+        self._cleanup(force=force)
 
     def restart(self) -> None:
         """Restart the controller."""
@@ -456,20 +464,36 @@ class ControllerCore(LegacyControllerAPI):
     # ==================================================================================================================
 
 
-    def _cleanup(self):
-        """Cleans up the resources used by the irrigation controller"""
-        self.logger.info("Cleaning up resources...")
+    def _cleanup(self, force: bool = False):
+        """Cleans up the resources used by the irrigation controller.
+        
+        Args:
+            force: If True, use 0s timeouts for immediate termination.
+                   If False, use graceful timeouts (60s for irrigation, 10s for tasks).
+        """
+        with self._cleanup_lock:
+            if self._cleanup_done.is_set():
+                self.logger.debug("Cleanup already executed, skipping duplicate call.")
+                return
+            self._cleanup_done.set()
+
+        # Determine timeouts based on force mode
+        irrigation_timeout = 0.0 if force else 60.0
+        task_timeout = 0.0 if force else 10.0
+        worker_timeout = 0.0 if force else 10.0
+        
+        self.logger.info(f"Cleaning up resources ({'forced' if force else 'graceful'} mode, timeouts: irrigation={irrigation_timeout}s, tasks={task_timeout}s, workers={worker_timeout}s)...")
         if self.controller_state != ControllerState.IDLE:
             try:
                 self.logger.info("Stopping all ongoing irrigation tasks before shutdown...")
-                self.irrigation_executor.stop_all_irrigation(timeout=60.0)
+                self.irrigation_executor.stop_all_irrigation(timeout=irrigation_timeout)
             except TimeoutError:
-                self.logger.critical("Timeout while stopping irrigation tasks during cleanup.")
+                self.logger.critical(f"Timeout while stopping irrigation tasks during cleanup (timeout={irrigation_timeout}s).")
             except Exception as e:
                 self.logger.critical(f"Unexpected error while stopping irrigation tasks during cleanup: {e}")
 
-        self.task_scheduler.stop(timeout=10.0)
-        self.thread_manager.join_all_workers(timeout=10.0)
+        self.task_scheduler.stop(timeout=task_timeout)
+        self.thread_manager.join_all_workers(timeout=worker_timeout)
 
         # Double check if all valves are closed
         for circuit in self.circuits.values():

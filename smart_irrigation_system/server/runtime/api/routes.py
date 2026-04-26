@@ -1,27 +1,23 @@
-from fastapi import APIRouter, HTTPException
-from smart_irrigation_system.server.runtime.services.live_service import get_live_snapshot
-from smart_irrigation_system.server.runtime.services.today_service import get_today_snapshot
-from smart_irrigation_system.server.runtime.schemas.live import LiveResponse
-from smart_irrigation_system.server.runtime.schemas.today import TodayResponse
+from fastapi import APIRouter
+from .control import router as control_router
+from .discovery import router as discovery_router
+from .statuses import router as statuses_router
 
 
 router = APIRouter()
-
-
-@router.get(
-    "/live",
-    summary="Get live status snapshot",
-    response_model=LiveResponse,
-    status_code=200
+router.include_router(
+    statuses_router,
+    prefix="/statuses",
+    tags=["statuses"]
 )
-def live():
-    return get_live_snapshot()
-
-@router.get(
-    "/today",
-    summary="Get today's irrigation scheduled tasks",
-    response_model=TodayResponse,
-    status_code=200
+router.include_router(
+    control_router,
+    prefix="/control",
+    tags=["control"]
 )
-def today():
-    return get_today_snapshot()
+router.include_router(
+    discovery_router,
+    prefix="/discovery",
+    tags=["discovery"]
+)
+

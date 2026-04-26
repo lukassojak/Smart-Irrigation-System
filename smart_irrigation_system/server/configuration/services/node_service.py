@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlmodel import Session
 
 from smart_irrigation_system.server.configuration.repositories.node_repository import NodeRepository
@@ -5,7 +7,11 @@ from smart_irrigation_system.server.configuration.repositories.zone_repository i
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeUpdate
-from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate
+from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneUpdate
+from smart_irrigation_system.server.configuration.models.node import (
+    CONFIG_SYNC_PENDING,
+    CONFIG_SYNC_PUSHED,
+)
 
 
 class NodeService:
@@ -51,9 +57,16 @@ class NodeService:
         :return: The newly created Node object.
         :raises ValueError: If a node with the same name already exists.
         """
+        if data.hardware_uid:
+            existing = self.node_repo.get_by_hardware_uid(data.hardware_uid)
+            if existing:
+                raise ValueError(f"Hardware UID '{data.hardware_uid}' is already assigned to node {existing.id}")
+
         new_node = Node(
             name=data.name,
             location=data.location,
+            hardware_uid=data.hardware_uid,
+            config_sync_status=CONFIG_SYNC_PENDING,
             hardware=data.hardware.model_dump(),
             irrigation_limits=data.irrigation_limits.model_dump(),
             automation=data.automation.model_dump(),
@@ -67,8 +80,65 @@ class NodeService:
         return new_node
 
 
+    def get_node_by_hardware_uid(self, hardware_uid: str) -> Node | None:
+        return self.node_repo.get_by_hardware_uid(hardware_uid)
+
+
     def update_node(self, node_id: int, data: NodeUpdate) -> Node | None:
-        pass
+        update_data = data.model_dump(exclude_unset=True)
+        config_fields = {"hardware", "irrigation_limits", "automation", "batch_strategy", "logging"}
+
+        if "hardware" in update_data and update_data["hardware"] is not None:
+            update_data["hardware"] = update_data["hardware"].model_dump()
+        if "irrigation_limits" in update_data and update_data["irrigation_limits"] is not None:
+            update_data["irrigation_limits"] = update_data["irrigation_limits"].model_dump()
+        if "automation" in update_data and update_data["automation"] is not None:
+            update_data["automation"] = update_data["automation"].model_dump()
+        if "batch_strategy" in update_data and update_data["batch_strategy"] is not None:
+            update_data["batch_strategy"] = update_data["batch_strategy"].model_dump()
+        if "logging" in update_data and update_data["logging"] is not None:
+            update_data["logging"] = update_data["logging"].model_dump()
+
+        if config_fields.intersection(update_data.keys()):
+            update_data["config_sync_status"] = CONFIG_SYNC_PENDING
+
+        if update_data:
+            update_data["last_updated"] = datetime.now(timezone.utc)
+
+        node = self.node_repo.update(node_id, update_data)
+        if not node:
+            return None
+
+        self.session.commit()
+        return node
+
+
+    def update_zone(self, node_id: int, zone_id: int, data: ZoneUpdate) -> Zone | None:
+        zone = self.zone_repo.get(zone_id)
+        if not zone or zone.node_id != node_id:
+            return None
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "local_correction_factors" in update_data and update_data["local_correction_factors"] is not None:
+            update_data["local_correction_factors"] = update_data["local_correction_factors"].model_dump()
+        if "frequency_settings" in update_data and update_data["frequency_settings"] is not None:
+            update_data["frequency_settings"] = update_data["frequency_settings"].model_dump()
+        if "fallback_strategy" in update_data and update_data["fallback_strategy"] is not None:
+            update_data["fallback_strategy"] = update_data["fallback_strategy"].model_dump()
+        if "irrigation_configuration" in update_data and update_data["irrigation_configuration"] is not None:
+            update_data["irrigation_configuration"] = update_data["irrigation_configuration"].model_dump()
+        if "emitters_configuration" in update_data and update_data["emitters_configuration"] is not None:
+            update_data["emitters_configuration"] = update_data["emitters_configuration"].model_dump()
+
+        updated_zone = self.zone_repo.update(zone_id, update_data)
+        if not updated_zone:
+            return None
+
+        self._mark_node_config_pending(node_id)
+
+        self.session.commit()
+        return updated_zone
 
 
     def delete_node(self, node_id: int) -> bool:
@@ -87,6 +157,8 @@ class NodeService:
         deleted = self.zone_repo.delete(zone_id)
         if not deleted:
             return False
+
+        self._mark_node_config_pending(node_id)
         
         self.session.commit()
         return True
@@ -119,7 +191,27 @@ class NodeService:
         )
 
         self.zone_repo.create(new_zone)
+        self._mark_node_config_pending(node_id)
         self.session.commit()
         
 
         return new_zone
+
+    def mark_config_pushed(self, node_id: int) -> Node | None:
+        node = self.node_repo.get(node_id)
+        if not node:
+            return None
+
+        node.config_sync_status = CONFIG_SYNC_PUSHED
+        node.last_updated = datetime.now(timezone.utc)
+        self.session.flush()
+        self.session.commit()
+        return node
+
+    def _mark_node_config_pending(self, node_id: int) -> None:
+        node = self.node_repo.get(node_id)
+        if not node:
+            return
+        node.config_sync_status = CONFIG_SYNC_PENDING
+        node.last_updated = datetime.now(timezone.utc)
+        self.session.flush()
