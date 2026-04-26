@@ -12,6 +12,7 @@ from smart_irrigation_system.server.runtime.schemas.live import (
     ZoneStatus,
     AlertType
 )
+from smart_irrigation_system.server.runtime.schemas.discovery import DiscoveredDeviceRead
 from smart_irrigation_system.server.runtime.state.live_store import RuntimeLiveStore
 
 
@@ -168,3 +169,7 @@ def initialize_live_store_from_config(session: Session) -> None:
 
 def get_live_snapshot() -> LiveResponse:
     return _live_service.get_live_snapshot()
+
+
+def get_discovered_devices() -> list[DiscoveredDeviceRead]:
+    return [DiscoveredDeviceRead.model_validate(device) for device in _runtime_live_store.list_discovered_devices()]

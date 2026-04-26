@@ -23,6 +23,18 @@ class NodeRuntimeState:
 
 
 @dataclass
+class DiscoveredDeviceRuntimeState:
+    hardware_uid: str
+    serial_number: str | None = None
+    hostname: str | None = None
+    node_id: int | None = None
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    claimed_at: datetime | None = None
+    ever_seen: bool = False
+
+
+@dataclass
 class ZoneRuntimeState:
     zone_id: int
     node_id: int
@@ -60,6 +72,7 @@ class RuntimeLiveSnapshot:
     started_at: datetime
     last_update_at: datetime
     nodes: dict[int, NodeRuntimeState]
+    discovered_devices: dict[str, DiscoveredDeviceRuntimeState]
     zones: dict[int, ZoneRuntimeState]
     current_tasks: dict[int, CurrentTaskRuntimeState]
     alerts: list[AlertRuntimeState]
@@ -73,6 +86,7 @@ class RuntimeLiveStore:
         self.started_at = utcnow()
         self._last_update_at = self.started_at
         self._nodes: dict[int, NodeRuntimeState] = {}
+        self._discovered_devices: dict[str, DiscoveredDeviceRuntimeState] = {}
         self._zones: dict[int, ZoneRuntimeState] = {}
         self._current_tasks: dict[int, CurrentTaskRuntimeState] = {}
         self._alerts: list[AlertRuntimeState] = []
@@ -82,6 +96,7 @@ class RuntimeLiveStore:
         """Initialize known nodes and zones from config DB into an offline baseline."""
         with self._lock:
             self._nodes.clear()
+            self._discovered_devices.clear()
             self._zones.clear()
             self._current_tasks.clear()
 
@@ -102,6 +117,65 @@ class RuntimeLiveStore:
                     )
 
             self._last_update_at = utcnow()
+
+    def upsert_discovered_device(
+        self,
+        hardware_uid: str,
+        serial_number: str | None = None,
+        hostname: str | None = None,
+        seen_at: datetime | None = None,
+    ) -> None:
+        seen_at = seen_at or utcnow()
+        with self._lock:
+            device_state = self._discovered_devices.get(hardware_uid)
+            if device_state is None:
+                device_state = DiscoveredDeviceRuntimeState(hardware_uid=hardware_uid)
+                self._discovered_devices[hardware_uid] = device_state
+
+            if serial_number is not None:
+                device_state.serial_number = serial_number
+            if hostname is not None:
+                device_state.hostname = hostname
+
+            device_state.last_seen_at = seen_at
+            if not device_state.ever_seen:
+                device_state.first_seen_at = seen_at
+                device_state.ever_seen = True
+
+            self._last_update_at = seen_at
+
+    def claim_discovered_device(self, hardware_uid: str, node_id: int, claimed_at: datetime | None = None) -> None:
+        claimed_at = claimed_at or utcnow()
+        with self._lock:
+            device_state = self._discovered_devices.get(hardware_uid)
+            if device_state is None:
+                device_state = DiscoveredDeviceRuntimeState(hardware_uid=hardware_uid)
+                self._discovered_devices[hardware_uid] = device_state
+
+            device_state.node_id = node_id
+            device_state.claimed_at = claimed_at
+            device_state.last_seen_at = claimed_at
+            if not device_state.ever_seen:
+                device_state.first_seen_at = claimed_at
+                device_state.ever_seen = True
+
+            self._last_update_at = claimed_at
+
+    def unclaim_discovered_device(self, hardware_uid: str, unclaimed_at: datetime | None = None) -> None:
+        unclaimed_at = unclaimed_at or utcnow()
+        with self._lock:
+            device_state = self._discovered_devices.get(hardware_uid)
+            if device_state is None:
+                return
+
+            device_state.node_id = None
+            device_state.claimed_at = None
+            device_state.last_seen_at = unclaimed_at
+            self._last_update_at = unclaimed_at
+
+    def list_discovered_devices(self) -> list[DiscoveredDeviceRuntimeState]:
+        with self._lock:
+            return [deepcopy(device) for device in self._discovered_devices.values()]
 
     def upsert_node_heartbeat(self, node_id: int, seen_at: datetime | None = None) -> None:
         seen_at = seen_at or utcnow()
@@ -223,6 +297,7 @@ class RuntimeLiveStore:
                 started_at=self.started_at,
                 last_update_at=self._last_update_at,
                 nodes=deepcopy(self._nodes),
+                discovered_devices=deepcopy(self._discovered_devices),
                 zones=deepcopy(self._zones),
                 current_tasks=deepcopy(self._current_tasks),
                 alerts=deepcopy(self._alerts),
