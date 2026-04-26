@@ -24,6 +24,8 @@ class Overview(BaseModel):
     errors: int
 
 class ZoneLive(BaseModel):
+    # in future add "connecting" boolean flag to indicate if zone is in process of coming online (e.g. after a restart or network issue)
+    # after restart, nodes will have startup grace period where they are considered in "connecting" state until they successfully check in with the server.
     id: int
     name: str
     status: ZoneStatus
