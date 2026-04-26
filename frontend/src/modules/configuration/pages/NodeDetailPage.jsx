@@ -16,6 +16,7 @@ import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndica
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
 import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import ZoneCard from "../../../components/ui/cards/ZoneCard"
 
 
@@ -24,13 +25,20 @@ export default function NodeDetailPage() {
     const { nodeId } = useParams()
     const navigate = useNavigate()
     const [node, setNode] = useState(null)
+    const [nodeError, setNodeError] = useState(false)
     const [isPushingConfig, setIsPushingConfig] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const loadNode = () => {
+        setNodeError(false)
         fetchNodeById(nodeId)
-            .then((response) => setNode(response.data))
-            .catch((error) => console.error("Failed to fetch node:", error))
+            .then((response) => {
+                setNode(response.data)
+            })
+            .catch((error) => {
+                console.error("Failed to fetch node:", error)
+                setNodeError(true)
+            })
     }
 
     useEffect(() => {
@@ -62,7 +70,11 @@ export default function NodeDetailPage() {
     if (!node) {
         return (
             <Box p={6}>
-                <Text color="fg.muted">Loading node…</Text>
+                {nodeError ? (
+                    <DataUnavailableWarning message="Node details are unavailable. Server may be disconnected." />
+                ) : (
+                    <Text color="fg.muted">Loading node…</Text>
+                )}
             </Box>
         )
     }

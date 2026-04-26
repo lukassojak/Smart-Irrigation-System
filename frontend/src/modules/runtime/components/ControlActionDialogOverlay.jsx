@@ -49,15 +49,26 @@ export const controlActionDialog = createOverlay((props) => {
     return (
         <Dialog.Root {...rest}>
             <Portal>
-                <Dialog.Backdrop />
+                <Dialog.Backdrop bg="rgba(15, 23, 42, 0.28)" backdropFilter="blur(6px)" />
                 <Dialog.Positioner alignItems="flex-start" pt={{ base: 4, md: 8 }}>
-                    <Dialog.Content borderTopWidth="4px" borderTopColor={statusColor}>
+                    <Dialog.Content
+                        bg="rgba(255,255,255,0.72)"
+                        backdropFilter="blur(18px) saturate(160%)"
+                        border="1px solid"
+                        borderColor="rgba(56,178,172,0.12)"
+                        borderTopWidth="4px"
+                        borderTopColor={statusColor}
+                        boxShadow="
+                            inset 0 1px 0 rgba(255,255,255,0.85),
+                            0 16px 40px rgba(15, 23, 42, 0.12)
+                        "
+                    >
                         {title && (
-                            <Dialog.Header>
+                            <Dialog.Header borderBottomWidth="1px" borderBottomColor="rgba(56,178,172,0.10)">
                                 <Dialog.Title>
                                     <Stack direction="row" align="center" gap={2}>
                                         <StatusIcon size={18} />
-                                        <Text>{title}</Text>
+                                        <Text color="gray.800">{title}</Text>
                                     </Stack>
                                 </Dialog.Title>
                             </Dialog.Header>
@@ -66,7 +77,7 @@ export const controlActionDialog = createOverlay((props) => {
                         <Dialog.Body>
                             <Stack gap={3}>
                                 {description && (
-                                    <Dialog.Description>{description}</Dialog.Description>
+                                    <Dialog.Description color="gray.700">{description}</Dialog.Description>
                                 )}
 
                                 <Stack gap={1}>

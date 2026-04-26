@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useNavigate, useOutletContext } from 'react-router-dom'
-import { SimpleGrid, DataList, Badge, HStack, Button, Stack, Box, Heading, Text } from '@chakra-ui/react'
+import { SimpleGrid, DataList, Badge, HStack, Stack, Box, Text } from '@chakra-ui/react'
 import { fetchZoneById, deleteZone } from '../../../api/nodes.api'
 
 import FrequencyTimeline from '../../../components/FrequencyTimeline'
@@ -11,6 +11,9 @@ import HelpBox from "../../../components/HelpBox"
 import PanelSection from '../../../components/layout/PanelSection'
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
 import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
+import DataUnavailableWarning from '../../../components/ui/DataUnavailableWarning'
+import EmitterOverviewCard from '../components/EmitterOverviewCard'
+import PerPlantAllocationCard from '../components/PerPlantAllocationCard'
 
 import { zoneDetailHelp } from "../../../help/zoneDetailHelp"
 
@@ -19,25 +22,45 @@ export default function ZoneDetailPage() {
     const { nodeId, zoneId } = useParams();
     const navigate = useNavigate();
     const [zone, setZone] = useState(null);
+    const [zoneError, setZoneError] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     useEffect(() => {
+        setZoneError(false)
         fetchZoneById(nodeId, zoneId)
             .then((response) => {
                 setZone(response.data)
             })
             .catch((error) => {
                 console.error('Failed to fetch zone:', error)
+                setZoneError(true)
             })
-    }, [zoneId])
+    }, [nodeId, zoneId])
 
     if (!zone) {
         return (
             <Box p={4} >
-                <Text>Loading zone details...</Text>
+                {zoneError ? (
+                    <DataUnavailableWarning message="Zone details are unavailable. Server may be disconnected." />
+                ) : (
+                    <Text>Loading zone details...</Text>
+                )}
             </Box>
         )
     }
+
+    const evenAreaEmitters = zone.emitters_configuration?.summary || []
+    const totalEvenAreaFlow = evenAreaEmitters.reduce(
+        (sum, emitter) =>
+            sum +
+            (emitter.type === "soaker_hose"
+                ? emitter.flow_rate_lph || 0
+                : (emitter.flow_rate_lph || 0) * (emitter.count || 0)),
+        0
+    )
+
+    const perPlantZoneBaseVolumeLiters =
+        zone.irrigation_configuration?.base_target_volume_liters ?? 0
 
     return (
         <>
@@ -314,163 +337,60 @@ export default function ZoneDetailPage() {
                             <PanelSection title="Emitters Overview">
                                 {zone.irrigation_mode === "even_area" && (
                                     <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
-                                        {zone.emitters_configuration.summary.map((emitter, index) => (
-                                            <Box
+                                        {evenAreaEmitters.map((emitter, index) => (
+                                            <EmitterOverviewCard
                                                 key={index}
-                                                bg="bg.muted"
-                                                borderRadius="md"
-                                                p={4}
-                                                borderWidth="1px"
-                                                borderColor="border.subtle"
-                                            >
-                                                {/* Header */}
-                                                <HStack mb={3}>
-                                                    <Box
-                                                        w="36px"
-                                                        h="36px"
-                                                        borderRadius="md"
-                                                        bg="bg.panel"
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        justifyContent="center"
-                                                        fontSize="lg"
-                                                    >
-                                                        🫗
-                                                    </Box>
-
-                                                    <Box>
-                                                        <Text fontSize="xs" color="fg.muted">
-                                                            Emitter type
-                                                        </Text>
-                                                        <Badge colorPalette="blue" variant="subtle">
-                                                            {emitter.type}
-                                                        </Badge>
-                                                    </Box>
-                                                </HStack>
-
-                                                {/* Stats */}
-                                                <Stack>
-                                                    <HStack justify="space-between">
-                                                        <Text fontSize="sm" color="fg.muted">
-                                                            Flow rate
-                                                        </Text>
-                                                        <Text fontSize="sm" fontWeight="medium">
-                                                            {emitter.flow_rate_lph} l/h
-                                                        </Text>
-                                                    </HStack>
-
-                                                    <HStack justify="space-between">
-                                                        <Text fontSize="sm" color="fg.muted">
-                                                            Count
-                                                        </Text>
-                                                        <Text fontSize="sm" fontWeight="medium">
-                                                            {emitter.count} pcs
-                                                        </Text>
-                                                    </HStack>
-                                                </Stack>
-                                            </Box>
+                                                emitter={emitter}
+                                                totalFlow={totalEvenAreaFlow}
+                                            />
                                         ))}
                                     </SimpleGrid>
                                 )}
 
                                 {zone.irrigation_mode === "per_plant" && (
-                                    <Stack>
-                                        {zone.emitters_configuration.plants.map((plant, plantIndex) => (
-                                            <Box
-                                                key={plantIndex}
-                                                bg="bg.muted"
-                                                borderRadius="md"
-                                                p={4}
-                                                borderWidth="1px"
-                                                borderColor="border.subtle"
-                                            >
-                                                {/* Plant header */}
-                                                <HStack mb={4}>
-                                                    <Box
-                                                        w="36px"
-                                                        h="36px"
-                                                        borderRadius="md"
-                                                        bg="bg.panel"
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        justifyContent="center"
-                                                        fontSize="lg"
-                                                    >
-                                                        🌱
-                                                    </Box>
+                                    <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
+                                        {(() => {
+                                            const plants = zone.emitters_configuration?.plants || []
+                                            const getEmitterFlow = (emitter) =>
+                                                emitter.type === "soaker_hose"
+                                                    ? emitter.flow_rate_lph || 0
+                                                    : (emitter.flow_rate_lph || 0) * (emitter.count || 0)
 
-                                                    <Box>
-                                                        <Text fontSize="xs" color="fg.muted">
-                                                            Plant #{plantIndex + 1}
-                                                        </Text>
-                                                        <Heading size="sm">
-                                                            {plant.name || "Unnamed Plant"}
-                                                        </Heading>
-                                                    </Box>
-                                                </HStack>
+                                            const totalPlantFlow = plants.reduce(
+                                                (sum, plant) =>
+                                                    sum +
+                                                    (plant.emitters || []).reduce(
+                                                        (plantSum, emitter) => plantSum + getEmitterFlow(emitter),
+                                                        0
+                                                    ),
+                                                0
+                                            )
 
-                                                {/* Emitters grid */}
-                                                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
-                                                    {plant.emitters.map((emitter, emitterIndex) => (
-                                                        <Box
-                                                            key={emitterIndex}
-                                                            bg="bg.panel"
-                                                            borderRadius="md"
-                                                            p={4}
-                                                            borderWidth="1px"
-                                                            borderColor="border.subtle"
-                                                        >
-                                                            {/* Header */}
-                                                            <HStack mb={3}>
-                                                                <Box
-                                                                    w="32px"
-                                                                    h="32px"
-                                                                    borderRadius="md"
-                                                                    bg="bg.muted"
-                                                                    display="flex"
-                                                                    alignItems="center"
-                                                                    justifyContent="center"
-                                                                    fontSize="lg"
-                                                                >
-                                                                    🫗
-                                                                </Box>
+                                            return plants.map((plant, plantIndex) => {
+                                                const plantFlow = (plant.emitters || []).reduce(
+                                                    (sum, emitter) => sum + getEmitterFlow(emitter),
+                                                    0
+                                                )
 
-                                                                <Box>
-                                                                    <Text fontSize="xs" color="fg.muted">
-                                                                        Emitter type
-                                                                    </Text>
-                                                                    <Badge colorPalette="blue" variant="subtle">
-                                                                        {emitter.type}
-                                                                    </Badge>
-                                                                </Box>
-                                                            </HStack>
+                                                const baseVolumeLiters =
+                                                    totalPlantFlow > 0
+                                                        ? (plantFlow / totalPlantFlow) * perPlantZoneBaseVolumeLiters
+                                                        : 0
 
-                                                            {/* Stats */}
-                                                            <Stack>
-                                                                <HStack justify="space-between">
-                                                                    <Text fontSize="sm" color="fg.muted">
-                                                                        Flow rate
-                                                                    </Text>
-                                                                    <Text fontSize="sm" fontWeight="medium">
-                                                                        {emitter.flow_rate_lph} l/h
-                                                                    </Text>
-                                                                </HStack>
-
-                                                                <HStack justify="space-between">
-                                                                    <Text fontSize="sm" color="fg.muted">
-                                                                        Count
-                                                                    </Text>
-                                                                    <Text fontSize="sm" fontWeight="medium">
-                                                                        {emitter.count} pcs
-                                                                    </Text>
-                                                                </HStack>
-                                                            </Stack>
-                                                        </Box>
-                                                    ))}
-                                                </SimpleGrid>
-                                            </Box>
-                                        ))}
-                                    </Stack>
+                                                return (
+                                                    <PerPlantAllocationCard
+                                                        key={plantIndex}
+                                                        plantName={plant.name || `Plant #${plantIndex + 1}`}
+                                                        baseVolumeLiters={baseVolumeLiters}
+                                                        assignedDrippers={(plant.emitters || []).map((emitter) => ({
+                                                            count: emitter.count,
+                                                            flow_rate_lph: emitter.flow_rate_lph,
+                                                        }))}
+                                                    />
+                                                )
+                                            })
+                                        })()}
+                                    </SimpleGrid>
                                 )}
 
                             </PanelSection>

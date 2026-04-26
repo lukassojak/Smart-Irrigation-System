@@ -35,6 +35,7 @@ import TodaysActivityCard from "../components/TodaysActivityCard"
 import WeatherWaterSummaryCard from "../components/WeatherWaterSummaryCard"
 import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
     controlActionDialog,
     ControlActionDialogViewport,
@@ -182,7 +183,9 @@ export default function MainDashboardPage() {
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-                <Text p={8} color="red.500">Failed to load live data</Text>
+                <Box p={8}>
+                    <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
+                </Box>
             </Box>
         )
     }
@@ -234,6 +237,8 @@ export default function MainDashboardPage() {
                         <SystemOverviewCard
                             icon={Activity}
                             title="Today Summary"
+                            unavailable={!todayLoading && !todayData}
+                            unavailableMessage="Today's activities are unavailable right now."
                             value={`${todayData ? todayData.overview.tasksPlanned : "N/A"} planned`}
                             description={`${todayData ? todayData.overview.tasksCompleted : "N/A"} completed`}
                         />
@@ -256,34 +261,36 @@ export default function MainDashboardPage() {
                 </GlassPanelSection>
 
 
-                {/* SECTION 2 - CURRENT IRRIGATION with STOP ALL action */}
-                <GlassPanelSection
-                    title="Current Irrigation"
-                    description="Active irrigation tasks"
-                    actions={
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            onClick={handleStopAllWithNotification}
-                            isDisabled={!hasActiveTasks || isStoppingAll}
-                            loading={isStoppingAll}
-                        >
-                            Stop All
-                        </Button>
-                    }
-                >
-                    <Stack gap={2}>
-                        {(liveData?.currentTasks ?? []).map(task => (
-                            <CurrentTaskCard
-                                key={task.id}
-                                task={task}
-                                isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
-                                onStop={() => handleStopZoneWithNotification(task.id)}
-                            />
-                        ))}
-                    </Stack>
-                </GlassPanelSection>
+                {/* SECTION 2 - CURRENT IRRIGATION (visible only when there are active tasks) */}
+                {liveData.currentTasks.length > 0 && (
+                    <GlassPanelSection
+                        title="Current Irrigation"
+                        description="Active irrigation tasks"
+                        actions={
+                            <Button
+                                size="xs"
+                                variant="ghost"
+                                colorPalette="red"
+                                onClick={handleStopAllWithNotification}
+                                isDisabled={!hasActiveTasks || isStoppingAll}
+                                loading={isStoppingAll}
+                            >
+                                Stop All
+                            </Button>
+                        }
+                    >
+                        <Stack gap={2}>
+                            {(liveData?.currentTasks ?? []).map(task => (
+                                <CurrentTaskCard
+                                    key={task.id}
+                                    task={task}
+                                    isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
+                                    onStop={() => handleStopZoneWithNotification(task.id)}
+                                />
+                            ))}
+                        </Stack>
+                    </GlassPanelSection>
+                )}
 
                 {/* SECTION 3 - ALERTS */}
                 <GlassPanelSection
@@ -303,14 +310,11 @@ export default function MainDashboardPage() {
                     templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
                     gap={8}
                 >
-                    {/* Guard against missing todayData due to loading or error */}
-                    {todayData ? (
-                        <TodaysActivityCard items={todayData.tasks} />
-                    ) : (
-                        <Box p={4} borderWidth={1} borderRadius="md" textAlign="center">
-                            <Text color="red.500">Failed to load today's activities</Text>
-                        </Box>
-                    )}
+                    <TodaysActivityCard
+                        items={todayData?.tasks ?? []}
+                        unavailable={Boolean(todayError)}
+                        unavailableMessage="Today's activities are unavailable right now."
+                    />
 
                     <WeatherWaterSummaryCard data={weatherWaterData} />
                 </Grid>

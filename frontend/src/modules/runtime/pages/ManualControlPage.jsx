@@ -20,6 +20,7 @@ import SelectableZoneCard from "../components/SelectableZoneCard"
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 import { startIrrigation as startIrrigationApi } from "../../../api/runtime.api"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
     controlActionDialog,
     ControlActionDialogViewport,
@@ -236,8 +237,9 @@ export default function ManualControlPage() {
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-
-                <Text p={8} color="red.500">Failed to load live data</Text>
+                <Box p={8}>
+                    <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
+                </Box>
             </Box>
         )
     }
