@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from datetime import datetime
 
@@ -61,3 +61,4 @@ class NodeListRead(BaseModel):
     location: str | None = None
     hardware_uid: str | None = None
     config_sync_status: str
+    zones: list[ZoneRead] = Field(default_factory=list)

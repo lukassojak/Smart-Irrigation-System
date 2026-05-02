@@ -32,6 +32,10 @@ export function pushNodeConfig(nodeId) {
     return http.post(`/nodes/${nodeId}/push-config`)
 }
 
+export function pushAllPendingNodeConfigs() {
+    return http.post("/nodes/push-config-all")
+}
+
 export function optimizePerPlant(payload) {
     return http.post("/optimization/per-plant", payload)
 }

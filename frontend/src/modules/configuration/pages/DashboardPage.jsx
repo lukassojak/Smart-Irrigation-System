@@ -8,10 +8,11 @@ import {
     HStack,
     DataList,
     Heading,
+    Button,
 } from "@chakra-ui/react"
 import { Link, useOutletContext } from "react-router-dom"
-import { Cloud, Thermometer, Settings, MonitorCog, FileSliders } from "lucide-react"
-import { fetchNodes } from "../../../api/nodes.api"
+import { Cloud, Thermometer, Settings, MonitorCog, FileSliders, RefreshCcw, LayoutGrid, Droplets, Activity } from "lucide-react"
+import { fetchNodes, pushAllPendingNodeConfigs } from "../../../api/nodes.api"
 import { fetchGlobalConfig } from "../../../api/globalConfig.api"
 import { FullCorrectionIndicator } from "../../../components/CorrectionIndicator"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
@@ -19,13 +20,22 @@ import { HeaderAction, PanelButton } from '../../../components/ui/ActionButtons'
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import PanelSection from '../../../components/layout/PanelSection'
 import NodeCard from "../../../components/ui/cards/NodeCard"
+import {
+    controlActionDialog,
+    ControlActionDialogViewport,
+} from "../../runtime/components/ControlActionDialogOverlay"
 
 
 export default function NodesDashboardPage() {
     const [nodes, setNodes] = useState([])
     const [nodesError, setNodesError] = useState(false)
     const [globalConfig, setGlobalConfig] = useState(null)
+    const [isSyncingAll, setIsSyncingAll] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+    const openControlDialog = (payload) => {
+        controlActionDialog.open("nodes-dashboard-action-result", payload)
+    }
 
     useEffect(() => {
         setNodesError(false)
@@ -42,8 +52,51 @@ export default function NodesDashboardPage() {
             .catch((error) => console.error("Error fetching global config:", error))
     }, [])
 
+    const handleSyncAll = async () => {
+        if (isSyncingAll) {
+            return
+        }
+
+        setIsSyncingAll(true)
+        try {
+            const response = await pushAllPendingNodeConfigs()
+            const result = response?.data ?? {}
+
+            openControlDialog({
+                title: "Sync completed",
+                description: `Applied ${result.applied ?? 0} of ${result.pending_nodes ?? 0} pending nodes.`,
+                status: "success",
+                mode: result.status,
+            })
+
+            const refreshed = await fetchNodes()
+            setNodes(refreshed.data)
+        } catch (error) {
+            const message = error?.response?.data?.detail?.message || error?.response?.data?.detail || "Failed to sync nodes."
+            openControlDialog({
+                title: "Sync failed",
+                description: message,
+                status: "error",
+            })
+        } finally {
+            setIsSyncingAll(false)
+        }
+    }
+
+    const totalZones = nodes.reduce((sum, node) => sum + (node.zones?.length ?? 0), 0)
+    const pendingNodes = nodes.filter((node) => node.config_sync_status === "PENDING")
+    const pushedNodes = nodes.filter((node) => node.config_sync_status === "PUSHED")
+    const pendingCount = pendingNodes.length
+    const pushedCount = pushedNodes.length
+    const hasNodes = nodes.length > 0
+    const isAllSynced = hasNodes && pendingCount === 0
+    const isNoneSynced = hasNodes && pushedCount === 0
+    const isSomeUnsynced = hasNodes && pendingCount > 0 && pushedCount > 0
+
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Configuration Dashboard"
                 subtitle="Manage system configuration, nodes and their zones"
@@ -60,7 +113,7 @@ export default function NodesDashboardPage() {
                 showMobileMenuButton={isMobile}
                 onMobileMenuClick={openMobileSidebar}
             />
-            <Box p={6}>
+            <Stack gap={6} mb={4} p={6}>
                 <PanelSection>
                     {globalConfig ? (
                         <Stack gap={6}>
@@ -240,6 +293,124 @@ export default function NodesDashboardPage() {
                     )}
                 </PanelSection>
 
+                <PanelSection>
+                    <Stack gap={6}>
+                        <HStack justify="space-between" align="flex-start">
+                            <HStack gap={4} align="flex-start" flex="1">
+                                <Box
+                                    w="44px"
+                                    h="44px"
+                                    borderRadius="md"
+                                    bg="rgba(56,178,172,0.08)"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                    flexShrink={0}
+                                >
+                                    <LayoutGrid size={22} color="#319795" />
+                                </Box>
+                                <Stack spacing={1}>
+                                    <Heading size="md" fontWeight="600" color="fg">
+                                        Nodes Configuration Overview
+                                    </Heading>
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Aggregate status across all nodes and zones
+                                    </Text>
+                                </Stack>
+                            </HStack>
+                            <Button
+                                size="sm"
+                                colorPalette="teal"
+                                flexShrink={0}
+                                onClick={handleSyncAll}
+                                loading={isSyncingAll}
+                                isDisabled={pendingCount === 0 || isSyncingAll}
+                            >
+                                <RefreshCcw size={14} style={{ marginRight: "6px" }} />
+                                Sync all nodes
+                            </Button>
+                        </HStack>
+
+                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                            <Box
+                                borderRadius="md"
+                                p={4}
+                                bg="rgba(56,178,172,0.03)"
+                                border="1px solid rgba(56,178,172,0.08)"
+                            >
+                                <HStack gap={2} mb={2}>
+                                    <Box w="28px" h="28px" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                                        <Activity size={18} color="#319795" />
+                                    </Box>
+                                    <Text fontSize="sm" fontWeight="600" color="teal.700">
+                                        Sync Status
+                                    </Text>
+                                </HStack>
+                                <Stack gap={1}>
+                                    <Text fontSize="xs" color="fg.muted">
+                                        {pendingCount} pending, {pushedCount} synced
+                                    </Text>
+                                    <HStack gap={2} flexWrap="wrap">
+                                        <Badge colorPalette={isAllSynced ? "green" : "gray"} size="sm">
+                                            All synced
+                                        </Badge>
+                                        <Badge colorPalette={isSomeUnsynced ? "orange" : "gray"} size="sm">
+                                            Some pending
+                                        </Badge>
+                                        <Badge colorPalette={isNoneSynced ? "orange" : "gray"} size="sm">
+                                            None synced
+                                        </Badge>
+                                    </HStack>
+                                </Stack>
+                            </Box>
+
+                            <Box
+                                borderRadius="md"
+                                p={4}
+                                bg="rgba(56,178,172,0.03)"
+                                border="1px solid rgba(56,178,172,0.08)"
+                            >
+                                <HStack gap={2} mb={2}>
+                                    <Box w="28px" h="28px" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                                        <Droplets size={18} color="#319795" />
+                                    </Box>
+                                    <Text fontSize="sm" fontWeight="600" color="teal.700">
+                                        Zones Configured
+                                    </Text>
+                                </HStack>
+                                <Text fontSize="xs" color="fg.muted">
+                                    Total zones across all nodes
+                                </Text>
+                                <Text fontSize="lg" fontWeight="600" color="fg">
+                                    {totalZones}
+                                </Text>
+                            </Box>
+
+                            <Box
+                                borderRadius="md"
+                                p={4}
+                                bg={pendingCount > 0 ? "rgba(245,158,11,0.08)" : "rgba(56,178,172,0.03)"}
+                                border={pendingCount > 0 ? "1px solid rgba(245,158,11,0.16)" : "1px solid rgba(56,178,172,0.08)"}
+                            >
+                                <HStack gap={2} mb={2}>
+                                    <Box w="28px" h="28px" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                                        <RefreshCcw size={18} color={pendingCount > 0 ? "#d97706" : "#319795"} />
+                                    </Box>
+                                    <Text fontSize="sm" fontWeight="600" color={pendingCount > 0 ? "orange.700" : "teal.700"}>
+                                        Pending Sync
+                                    </Text>
+                                </HStack>
+                                <Text fontSize="xs" color="fg.muted">
+                                    Nodes needing config push
+                                </Text>
+                                <Text fontSize="lg" fontWeight="600" color="fg">
+                                    {pendingCount}
+                                </Text>
+                            </Box>
+                        </SimpleGrid>
+                    </Stack>
+                </PanelSection>
+
                 {/* Info text */}
                 <Text mt={6} mb={4} fontSize="sm" color="fg.muted">
                     {nodes.length} configured node{nodes.length !== 1 && "s"}
@@ -275,7 +446,7 @@ export default function NodesDashboardPage() {
                         />
                     ))}
                 </SimpleGrid>
-            </Box>
+            </Stack>
         </>
     )
 }

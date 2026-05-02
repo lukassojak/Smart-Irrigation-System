@@ -2,21 +2,21 @@
     "zones": [
         {
             "id": 9,
-            "name": "Papriky skleník",
-            "relay_pin": 2,
+            "name": "Rajčata X",
+            "relay_pin": 3,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 10.0,
-            "zone_area_m2": 0.7,
+            "target_mm": 2.0,
+            "zone_area_m2": 23.4,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "210": 1
+                "456": 1
             },
             "local_correction_factors": {
-                "solar": 0.2,
-                "rain": -0.9,
-                "temperature": 0.05
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
             }
         }
     ]

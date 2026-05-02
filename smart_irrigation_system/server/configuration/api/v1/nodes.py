@@ -6,6 +6,7 @@ from smart_irrigation_system.server.configuration.schemas.node import NodeCreate
 from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneRead, ZoneListRead, ZoneUpdate
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
+from smart_irrigation_system.server.configuration.models.node import CONFIG_SYNC_PENDING
 from smart_irrigation_system.server.configuration.services.node_service import NodeService
 from smart_irrigation_system.server.configuration.services.global_config_service import GlobalConfigService
 from smart_irrigation_system.server.db.session import get_session
@@ -337,3 +338,87 @@ def push_node_config(node_id: int, session: Session = Depends(get_session)):
             status_code=504,
             detail="Node did not respond within 5 seconds. The node may be offline or busy."
         )
+
+
+@router.post(
+    "/push-config-all",
+    summary="Push configuration to all nodes with pending sync status",
+    response_model=dict,
+    status_code=200,
+)
+def push_all_pending_node_configs(session: Session = Depends(get_session)):
+    service = NodeService(session)
+    global_config = GlobalConfigService(session).get_or_create()
+    server = IrrigationServer()
+
+    nodes = service.list_nodes()
+    pending_nodes = [node for node in nodes if node.config_sync_status == CONFIG_SYNC_PENDING]
+
+    results: list[dict] = []
+    success_count = 0
+
+    for node in pending_nodes:
+        legacy_runtime_config = export_node_legacy_runtime_config(node, global_config)
+        try:
+            response = server.mqtt_manager.publish_apply_config_and_wait(
+                node_id=str(node.id),
+                config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                legacy_runtime_config=legacy_runtime_config,
+                apply_mode=ApplyMode.APPLY_NOW,
+                requested_by="configuration-api-bulk",
+                timeout=5,
+            )
+
+            if response.get("message_type") == "NODE_ACK" and response.get("payload", {}).get("ack_type") == "applied":
+                service.mark_config_pushed(node.id)
+                success_count += 1
+                results.append({
+                    "node_id": node.id,
+                    "status": "APPLIED",
+                    "message": "Configuration applied successfully.",
+                    "correlation_id": response.get("correlation_id"),
+                })
+                continue
+
+            if response.get("message_type") == "NODE_ERROR":
+                payload = response.get("payload", {})
+                results.append({
+                    "node_id": node.id,
+                    "status": "ERROR",
+                    "message": payload.get("message") or "Node rejected configuration apply.",
+                    "code": payload.get("code"),
+                    "retryable": bool(payload.get("retryable", False)),
+                    "correlation_id": response.get("correlation_id"),
+                })
+                continue
+
+            results.append({
+                "node_id": node.id,
+                "status": "ERROR",
+                "message": f"Unexpected response type: {response.get('message_type')}",
+                "correlation_id": response.get("correlation_id"),
+            })
+        except TimeoutError:
+            results.append({
+                "node_id": node.id,
+                "status": "TIMEOUT",
+                "message": "Node did not respond within 5 seconds. The node may be offline or busy.",
+            })
+        except Exception as exc:
+            results.append({
+                "node_id": node.id,
+                "status": "ERROR",
+                "message": str(exc),
+            })
+
+    _sync_runtime_topology(session)
+
+    return {
+        "status": "COMPLETED",
+        "message": "Bulk configuration push completed.",
+        "total_nodes": len(nodes),
+        "pending_nodes": len(pending_nodes),
+        "applied": success_count,
+        "failed": len(pending_nodes) - success_count,
+        "results": results,
+    }

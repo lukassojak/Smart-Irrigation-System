@@ -15,6 +15,7 @@ import AppLayout from "./components/layout/AppLayout"
 import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
 import RuntimeNodeDetailPage from "./modules/runtime/pages/RuntimeNodeDetailPage"
 import StatisticsPage from "./modules/runtime/pages/StatisticsPage"
+import IrrigationHistoryPage from "./modules/history/pages/IrrigationHistoryPage"
 import HomePage from "./HomePage"
 
 const router = createBrowserRouter([
@@ -107,15 +108,7 @@ const router = createBrowserRouter([
 
             {
                 path: "irrigation-history",
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Irrigation History
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the irrigation history page placeholder.
-                    </Box>
-                </Box>
+                element: <IrrigationHistoryPage />
             },
 
             {

@@ -12,10 +12,16 @@ import {
 } from "@chakra-ui/react"
 
 import { fetchGlobalConfig, updateGlobalConfig } from "../../../api/globalConfig.api"
+import {
+    controlActionDialog,
+    ControlActionDialogViewport,
+} from "../../runtime/components/ControlActionDialogOverlay"
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from "../../../components/layout/GlassPageHeader"
-import { HeaderAction, PanelButton } from "../../../components/ui/ActionButtons"
+import { HeaderAction } from "../../../components/ui/ActionButtons"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+
+const SUCCESS_REDIRECT_DELAY_MS = 900
 
 
 export default function GlobalSettingsPage() {
@@ -24,6 +30,10 @@ export default function GlobalSettingsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+    const openControlDialog = (payload) => {
+        controlActionDialog.open("global-config-action-result", payload)
+    }
 
     const loadConfig = async () => {
         setIsLoading(true)
@@ -65,18 +75,32 @@ export default function GlobalSettingsPage() {
             }
             const response = await updateGlobalConfig(payload)
             setConfig(response.data)
-            alert("Global configuration saved.")
+
+            openControlDialog({
+                title: "Global configuration saved",
+                description: "System configuration has been updated successfully.",
+                status: "success",
+            })
+
+            window.setTimeout(() => {
+                navigate(`/configuration/nodes`)
+            }, SUCCESS_REDIRECT_DELAY_MS)
         } catch (error) {
             console.error("Failed to update global config", error)
-            alert("Failed to save global configuration.")
+            openControlDialog({
+                title: "Save failed",
+                description: "Failed to save global configuration.",
+                status: "error",
+            })
         } finally {
             setIsSaving(false)
-            navigate(`/configuration/nodes`)
         }
     }
 
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="System Configuration"
                 subtitle="Shared weather and correction settings for all nodes"

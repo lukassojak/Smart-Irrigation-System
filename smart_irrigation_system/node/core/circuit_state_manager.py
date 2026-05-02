@@ -2,8 +2,9 @@
 
 import json
 import threading
-from typing import Any
-from datetime import datetime
+from typing import Any, Optional, TYPE_CHECKING
+from datetime import datetime, date, timedelta
+from pathlib import Path
 
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.enums import IrrigationOutcome, SnapshotCircuitState
@@ -12,6 +13,9 @@ from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 import smart_irrigation_system.node.utils.result_factory as result_factory
 import smart_irrigation_system.node.utils.time_utils as time_utils
 from smart_irrigation_system.node.utils.logger import get_logger
+
+if TYPE_CHECKING:
+    from smart_irrigation_system.node.core.history_sync import HistorySyncManager
 
 
 class CircuitStateManager():
@@ -23,14 +27,14 @@ class CircuitStateManager():
     # Initialization
     # =========================================================================
 
-    def __new__(cls, state_file: str, irrigation_log_file: str) -> "CircuitStateManager":
+    def __new__(cls, state_file: str, irrigation_log_file: str, history_sync: Optional["HistorySyncManager"] = None) -> "CircuitStateManager":
         with cls._lock:
             if cls._instance is None:
                 cls._instance = super(CircuitStateManager, cls).__new__(cls)
         return cls._instance
 
 
-    def __init__(self, state_file: str, irrigation_log_file: str) -> None:
+    def __init__(self, state_file: str, irrigation_log_file: str, history_sync: Optional["HistorySyncManager"] = None) -> None:
         if hasattr(self, '_initialized') and self._initialized:
             return
 
@@ -43,6 +47,7 @@ class CircuitStateManager():
         self.state_file: str = state_file
         self.state: dict[str, Any] = self._load_state()     # The internal state is loaded, then used to update the file
         self.irrigation_log_file: str = irrigation_log_file # The irrigation log file is append-only, used for historical data.
+        self.history_sync: Optional["HistorySyncManager"] = history_sync  # Optional sync manager for server uploads
 
         # For optimization, quick access to circuits by their ID
         self.circuit_index: dict[int, int] = {}             # Maps circuit ID to index in self.state["circuits"]
@@ -273,25 +278,112 @@ class CircuitStateManager():
         """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
         with self.irrigation_log_file_lock:
             try:
-                # Load the existing log file or initialize an empty dictionary
-                try:
-                    with open(self.irrigation_log_file, "r") as f:
-                        try:
-                            log_data = json.load(f)
-                        except json.JSONDecodeError:
-                            log_data = {}
-                except FileNotFoundError:
-                    log_data = {}
-        
                 irrigation_full_datetime = datetime.fromisoformat(result.to_dict()["start_time"])
                 irrigation_date = irrigation_full_datetime.date().isoformat()
-                if irrigation_date not in log_data:
-                    log_data[irrigation_date] = []
-                log_data[irrigation_date].append(result.to_dict())
-        
-                # Save the updated log back to the file
-                with open(self.irrigation_log_file, "w") as f:
-                    json.dump(log_data, f, indent=4)
+
+                log_path = Path(self.irrigation_log_file)
+                log_dir = log_path.parent
+                log_dir.mkdir(parents=True, exist_ok=True)
+
+                base_name = log_path.stem  # expected 'irrigation_log'
+
+                def dated_filename(d: str) -> Path:
+                    return log_dir / f"{base_name}-{d}.json"
+
+                # Helper: rotate old files keeping last 30 days (including today)
+                def _rotate_logs(keep_days: int = 30) -> None:
+                    files = list(log_dir.glob(f"{base_name}*.json"))
+                    date_map: dict[date, Path] = {}
+                    for p in files:
+                        name = p.stem  # e.g. irrigation_log or irrigation_log-YYYY-MM-DD
+                        if name == base_name:
+                            # today's file -- treat as today's date
+                            try:
+                                date_map[date.today()] = p
+                            except Exception:
+                                continue
+                        elif name.startswith(base_name + "-"):
+                            suffix = name[len(base_name) + 1 :]
+                            try:
+                                d = date.fromisoformat(suffix)
+                                date_map[d] = p
+                            except Exception:
+                                continue
+
+                    # Keep only last `keep_days` dates
+                    keep_cutoff = date.today() - timedelta(days=keep_days - 1)
+                    for d, p in list(date_map.items()):
+                        if d < keep_cutoff:
+                            try:
+                                p.unlink()
+                            except Exception:
+                                self.logger.debug(f"Failed to remove old irrigation log {p}")
+
+                # Helper: migrate legacy single-file mapping format
+                def _migrate_legacy(content: dict) -> None:
+                    # Expecting mapping date->list; write each date to its own file
+                    for k, v in content.items():
+                        if not isinstance(k, str) or not isinstance(v, list):
+                            continue
+                        try:
+                            _ = date.fromisoformat(k)
+                        except Exception:
+                            continue
+                        target = dated_filename(k)
+                        try:
+                            with open(target, "w") as tf:
+                                json.dump(v, tf, indent=4)
+                        except Exception:
+                            self.logger.debug(f"Failed to migrate irrigation log for date {k} to {target}")
+
+                # Read existing file if present
+                today_list: list = []
+                if log_path.exists():
+                    try:
+                        with open(log_path, "r") as f:
+                            existing = json.load(f)
+                    except json.JSONDecodeError:
+                        existing = None
+
+                    # If legacy mapping format detected (dict of date -> list), migrate
+                    if isinstance(existing, dict):
+                        # Heuristic: keys look like dates
+                        date_keys = [k for k in existing.keys() if isinstance(k, str) and len(k) >= 8]
+                        if date_keys and any(_ for _ in date_keys):
+                            _migrate_legacy(existing)
+                            # If today's date present in mapping, use that as today's list
+                            today_list = existing.get(irrigation_date, [])
+                        else:
+                            # Unexpected dict shape, ignore and start fresh
+                            today_list = []
+                    elif isinstance(existing, list):
+                        # New per-day format: today's file contains just a list
+                        today_list = existing
+                    else:
+                        today_list = []
+                else:
+                    today_list = []
+
+                # Append new entry to today's list
+                today_list.append(result.to_dict())
+
+                # Write today's file as the canonical `irrigation_log.json`
+                try:
+                    with open(log_path, "w") as f:
+                        json.dump(today_list, f, indent=4)
+                except Exception as e:
+                    self.logger.error(f"Failed to write today's irrigation log to {self.irrigation_log_file}: {e}")
+
+                # Also ensure there is a dated file for today (mirror)
+                try:
+                    with open(dated_filename(irrigation_date), "w") as df:
+                        json.dump(today_list, df, indent=4)
+                except Exception:
+                    self.logger.debug(f"Failed to write dated irrigation log for {irrigation_date}")
+
+                # Rotate older files
+                _rotate_logs(keep_days=30)
+
             except Exception as e:
                 self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
 
@@ -373,6 +465,16 @@ class CircuitStateManager():
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
+        
+        # Sync record to server if sync manager is available
+        if self.history_sync:
+            try:
+                record = result.to_dict()
+                self.history_sync.add_record_to_queue(record)
+                # Try to sync immediately (non-blocking)
+                self.history_sync.sync_to_server(blocking=False)
+            except Exception as e:
+                self.logger.error(f"Failed to queue irrigation result for sync: {e}")
         # if circuit_id == 2:
             # raise RuntimeError("TEST CRASH - SIMULATED THREAD FAILURE (should be caught and logged)")
 
