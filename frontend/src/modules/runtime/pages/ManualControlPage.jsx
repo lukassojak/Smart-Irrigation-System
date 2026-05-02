@@ -22,9 +22,9 @@ import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 import { startIrrigation as startIrrigationApi } from "../../../api/runtime.api"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 const buildErrorDetail = (error, fallbackMessage) => {
     const detail = error?.response?.data?.detail
@@ -89,7 +89,8 @@ export default function ManualControlPage() {
     }, [selectedZoneData])
 
     const openControlDialog = useCallback((payload) => {
-        controlActionDialog.open("manual-control-action-result", payload)
+        const id = `manual-control-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
     }, [])
 
     const handleStartManual = useCallback(async () => {

@@ -37,9 +37,9 @@ import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 export default function MainDashboardPage() {
     // ---- Fake Data ----
@@ -104,39 +104,55 @@ export default function MainDashboardPage() {
 
         if (result.ok) {
             if (result.action === "stop-zone") {
-                controlActionDialog.open("stop-action-result", {
-                    title: "Zone stop completed",
-                    description: "Irrigation stop command was completed successfully.",
-                    status: "success",
-                    zoneId: result.zoneId,
-                    nodeId: result.response?.node_id,
-                    mode: result.response?.mode,
-                    correlationId: result.response?.response?.correlation_id,
+                const id = `stop-action-result-${Date.now()}`
+                openControlActionDialog(id, {
+                    ...{
+                        title: "Zone stop completed",
+                        description: "Irrigation stop command was completed successfully.",
+                        status: "success",
+                        zoneId: result.zoneId,
+                        nodeId: result.response?.node_id,
+                        mode: result.response?.mode,
+                        correlationId: result.response?.response?.correlation_id,
+                    },
+                    overlayId: id,
                 })
                 return
             }
 
             const nodeCount = Array.isArray(result.response?.nodes) ? result.response.nodes.length : 0
-            controlActionDialog.open("stop-action-result", {
-                title: "Stop all completed",
-                description: "Irrigation stop command was delivered to all target nodes.",
-                status: "success",
-                mode: result.response?.mode,
-                nodeCount,
-            })
+            {
+                const id = `stop-action-result-${Date.now()}`
+                openControlActionDialog(id, {
+                    ...{
+                        title: "Stop all completed",
+                        description: "Irrigation stop command was delivered to all target nodes.",
+                        status: "success",
+                        mode: result.response?.mode,
+                        nodeCount,
+                    },
+                    overlayId: id,
+                })
+            }
             return
         }
 
-        controlActionDialog.open("stop-action-result", {
-            title: "Stop action failed",
-            description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
-            status: "error",
-            zoneId: result.zoneId,
-            nodeId: result.error?.node_id,
-            code: result.error?.code,
-            retryable: result.error?.retryable,
-            correlationId: result.error?.correlation_id,
-        })
+        {
+            const id = `stop-action-result-${Date.now()}`
+            openControlActionDialog(id, {
+                ...{
+                    title: "Stop action failed",
+                    description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
+                    status: "error",
+                    zoneId: result.zoneId,
+                    nodeId: result.error?.node_id,
+                    code: result.error?.code,
+                    retryable: result.error?.retryable,
+                    correlationId: result.error?.correlation_id,
+                },
+                overlayId: id,
+            })
+        }
     }, [])
 
     const handleStopZoneWithNotification = useCallback(async (zoneId) => {

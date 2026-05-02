@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate, useOutletContext } from "react-router-d
 import { For, SegmentGroup, Switch, Field, Text, Box, Heading, Input, Button, Stack, SimpleGrid, HStack, Badge } from "@chakra-ui/react"
 import { createNode, pushNodeConfig } from "../../../api/nodes.api"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../../runtime/components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 import HelpSidebar from "../../../components/HelpSidebar"
 import HelpBox from "../../../components/HelpBox"
@@ -91,7 +91,8 @@ export default function CreateNodePage() {
     }
 
     const openControlDialog = (payload) => {
-        controlActionDialog.open("create-node-action-result", payload)
+        const id = `create-node-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
     }
 
     const handleSubmit = async () => {

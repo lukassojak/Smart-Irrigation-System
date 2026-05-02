@@ -21,9 +21,9 @@ import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarnin
 import PanelSection from '../../../components/layout/PanelSection'
 import NodeCard from "../../../components/ui/cards/NodeCard"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../../runtime/components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 
 export default function NodesDashboardPage() {
@@ -34,7 +34,8 @@ export default function NodesDashboardPage() {
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openControlDialog = (payload) => {
-        controlActionDialog.open("nodes-dashboard-action-result", payload)
+        const id = `nodes-dashboard-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
     }
 
     useEffect(() => {

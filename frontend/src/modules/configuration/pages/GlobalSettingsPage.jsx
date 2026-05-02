@@ -13,9 +13,9 @@ import {
 
 import { fetchGlobalConfig, updateGlobalConfig } from "../../../api/globalConfig.api"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../../runtime/components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from "../../../components/layout/GlassPageHeader"
 import { HeaderAction } from "../../../components/ui/ActionButtons"
@@ -32,7 +32,8 @@ export default function GlobalSettingsPage() {
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openControlDialog = (payload) => {
-        controlActionDialog.open("global-config-action-result", payload)
+        const id = `global-config-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
     }
 
     const loadConfig = async () => {

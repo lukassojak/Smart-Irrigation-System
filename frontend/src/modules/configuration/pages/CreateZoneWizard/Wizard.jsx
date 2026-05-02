@@ -12,9 +12,9 @@ import {
 
 import { createZone, pushNodeConfig } from "../../../../api/nodes.api"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../../../runtime/components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../../components/ui/ControlActionDialogOverlay"
 
 import StepBasicInfo from "./steps/StepBasicInfo"
 import StepIrrigationMode from "./steps/StepIrrigationMode"
@@ -46,7 +46,8 @@ export default function Wizard() {
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openControlDialog = (payload) => {
-        controlActionDialog.open("create-zone-action-result", payload)
+        const id = `create-zone-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
     }
 
 

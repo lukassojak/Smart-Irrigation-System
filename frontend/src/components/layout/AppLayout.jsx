@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom"
 import Sidebar from "./sidebar/Sidebar"
 import MobileSidebar from "./sidebar/MobileSidebar"
 import { useState } from "react"
+import { OverlayCleanup } from "../ui/ControlActionDialogOverlay"
 
 
 export default function AppLayout() {
@@ -34,6 +35,7 @@ export default function AppLayout() {
                 minH="100vh"
                 transition="margin 0.2s ease"
             >
+                <OverlayCleanup />
                 <Outlet
                     context={{
                         isMobile,
