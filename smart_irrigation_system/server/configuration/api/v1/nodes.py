@@ -128,6 +128,39 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
 
     server = IrrigationServer()
     if node.hardware_uid:
+        # First: attempt to push an updated (empty) runtime config to the node
+        # so that the node will remove any configured zones before we unpair it.
+        try:
+            global_config = GlobalConfigService(session).get_or_create()
+            legacy_runtime_config = export_node_legacy_runtime_config(node, global_config)
+            # Clear zones in the runtime config so node will remove them
+            if isinstance(legacy_runtime_config, dict):
+                legacy_runtime_config["zones"] = []
+
+            try:
+                response = server.mqtt_manager.publish_apply_config_and_wait(
+                    node_id=str(node.id),
+                    config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                    legacy_runtime_config=legacy_runtime_config,
+                    apply_mode=ApplyMode.APPLY_NOW,
+                    requested_by="configuration-api-delete-node",
+                    timeout=5,
+                )
+
+                if response.get("message_type") == "NODE_ACK" and response.get("payload", {}).get("ack_type") == "applied":
+                    # mark pushed so server-side state stays consistent
+                    service.mark_config_pushed(node.id)
+                # ignore other responses and proceed to unpair; unpair may still succeed
+            except TimeoutError:
+                # No ACK from node, continue to unpair anyway.
+                pass
+            except Exception:
+                pass
+        except Exception:
+            # Non-fatal: proceed with unpair even if we could not generate/push the empty config
+            pass
+
+        # Now unpair the node
         try:
             response = server.mqtt_manager.publish_unpair_node_and_wait(
                 node_id=str(node.id),
@@ -232,9 +265,41 @@ def update_zone(node_id: int, zone_id: int, data: ZoneUpdate, session: Session =
 )
 def delete_zone(node_id: int, zone_id: int, session: Session = Depends(get_session)):
     service = NodeService(session)
+    # fetch node to know whether we should push updated config to device
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
     success = service.delete_zone(node_id, zone_id)
     if not success:
         raise HTTPException(status_code=404, detail="Zone not found")
+
+    # Push updated runtime config to node so it removes the zone from its local config
+    if node.hardware_uid:
+        server = IrrigationServer()
+        try:
+            global_config = GlobalConfigService(session).get_or_create()
+            legacy_runtime_config = export_node_legacy_runtime_config(node, global_config)
+            try:
+                response = server.mqtt_manager.publish_apply_config_and_wait(
+                    node_id=str(node.id),
+                    config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                    legacy_runtime_config=legacy_runtime_config,
+                    apply_mode=ApplyMode.APPLY_NOW,
+                    requested_by="configuration-api-delete-zone",
+                    timeout=5,
+                )
+
+                if response.get("message_type") == "NODE_ACK" and response.get("payload", {}).get("ack_type") == "applied":
+                    service.mark_config_pushed(node.id)
+            except TimeoutError:
+                # Proceed; even if node doesn't ACK, server-side deletion succeeded
+                pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     _sync_runtime_topology(session)
     
 

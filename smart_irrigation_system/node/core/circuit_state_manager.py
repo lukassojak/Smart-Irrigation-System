@@ -219,6 +219,27 @@ class CircuitStateManager():
 
     def _init_circuit_states(self) -> None:
         """Initializes the state of all circuits to 'idle'. Checks for unclean shutdown."""
+        # Remove circuit entries that are no longer present in the current configured zones.
+        # This prevents stale state from being applied to newly created zones that reuse old IDs.
+        try:
+            config_path = Path(self.state_file).parent.parent / "config" / "zones_config.json"
+            if config_path.exists():
+                try:
+                    with open(config_path, "r") as cf:
+                        cfg = json.load(cf)
+                    configured_ids = {int(z.get("id")) for z in cfg.get("zones", []) if isinstance(z.get("id"), int)}
+                    orig_len = len(self.state.get("circuits", []))
+                    pruned = [c for c in self.state.get("circuits", []) if int(c.get("id")) in configured_ids]
+                    if len(pruned) != orig_len:
+                        self.state["circuits"] = pruned
+                        self._rebuild_circuit_index()
+                        self.logger.info(f"Pruned {orig_len - len(pruned)} stale circuit state entries not present in {config_path}")
+                except Exception as e:
+                    self.logger.debug(f"Failed to read/parse config for pruning: {e}")
+        except Exception:
+            # non-fatal; proceed with initialization
+            pass
+
         unclean_shutdown_detected = False
         recovered_circuits = []  # List of circuit IDs that were irrigating during unclean shutdown
         for circuit in self.state.get("circuits", []):

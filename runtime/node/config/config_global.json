@@ -18,7 +18,7 @@
         "enabled": true,
         "sequential": false,
         "scheduled_hour": 18,
-        "scheduled_minute": 38,
+        "scheduled_minute": 0,
         "max_flow_monitoring": false,
         "environment": "development",
         "use_weathersimulator": false
