@@ -18,6 +18,11 @@ import GlassPanelSection from "../../../components/layout/GlassPanelSection"
 import HistoryRecordsTable from "../components/HistoryRecordsTable"
 import HistoryStats from "../components/HistoryStats"
 import { HeaderActionDanger } from "../../../components/ui/ActionButtons"
+import {
+    ControlActionDialogViewport,
+    openControlActionConfirmDialog,
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 import { fetchNodes } from "../../../api/nodes.api"
 import { fetchAllHistoryRecords, fetchNodeHistory } from "../../../api/history.api"
@@ -89,6 +94,54 @@ export default function IrrigationHistoryPage() {
     const [includeDeleted, setIncludeDeleted] = useState(true)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+
+    const openDialog = (payload) => {
+        const id = `history-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
+    }
+
+    const getErrorMessage = (err, fallbackMessage) => {
+        const detail = err?.response?.data?.detail
+        if (typeof detail === "string") {
+            return detail
+        }
+        if (detail?.message) {
+            return detail.message
+        }
+        return err?.message ?? fallbackMessage
+    }
+
+    const handleDeleteAllRecords = async () => {
+        const id = `history-delete-confirm-${Date.now()}`
+        const confirmed = await openControlActionConfirmDialog(id, {
+            title: "Delete irrigation history",
+            description: "Delete all irrigation history records? This action cannot be undone.",
+            status: "error",
+            confirmLabel: "Delete all",
+            cancelLabel: "Cancel",
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            await deleteAllHistory()
+            await loadHistory()
+            openDialog({
+                title: "History deleted",
+                description: "All irrigation history records were deleted.",
+                status: "success",
+            })
+        } catch (err) {
+            openDialog({
+                title: "Delete failed",
+                description: getErrorMessage(err, "Failed to delete history records."),
+                status: "error",
+            })
+        }
+    }
+
     const nodeLabelById = useMemo(
         () => Object.fromEntries(nodes.map((node) => [String(node.id), node.name ?? `Node ${node.id}`])),
         [nodes],
@@ -182,22 +235,15 @@ export default function IrrigationHistoryPage() {
 
     return (
         <Box>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Irrigation History"
                 subtitle="Search irrigation cycles across nodes, tune ordering, and inspect outcomes at a glance"
                 actions={(
                     <>
                         <HeaderActionDanger
-                            onClick={async () => {
-                                if (!confirm("Delete all irrigation history records? This cannot be undone.")) return
-                                try {
-                                    await deleteAllHistory()
-                                    await loadHistory()
-                                    alert("Deleted history records")
-                                } catch (err) {
-                                    alert("Failed to delete history: " + (err?.response?.data?.detail || err.message))
-                                }
-                            }}
+                            onClick={handleDeleteAllRecords}
                         >
                             Delete all records
                         </HeaderActionDanger>
