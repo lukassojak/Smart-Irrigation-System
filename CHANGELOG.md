@@ -112,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Improved stability of runtime live projection under continuous updates from node snapshots.
 - Reduced dependency on periodic polling for runtime updates.
+- Previously occurring CLI exceptions during active tasks fixed
 
 ### Known Issues
 - Legacy runtime config exporter is not fully reliable in all edge cases.

@@ -6,6 +6,9 @@ from smart_irrigation_system.server.configuration.repositories.node_repository i
 from smart_irrigation_system.server.configuration.repositories.zone_repository import ZoneRepository
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
+from sqlmodel import select
+from smart_irrigation_system.server.configuration.repositories.zone_lifecycle_repository import ZoneLifecycleRepository
+from smart_irrigation_system.server.configuration.models.zone_lifecycle import ZoneLifecycle
 from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeUpdate
 from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneUpdate
 from smart_irrigation_system.server.configuration.models.node import (
@@ -19,6 +22,7 @@ class NodeService:
         self.session = session
         self.node_repo = NodeRepository(session)
         self.zone_repo = ZoneRepository(session)
+        self.zone_lifecycle_repo = ZoneLifecycleRepository(session)
 
 
     def get_node(self, node_id: int) -> Node | None:
@@ -142,27 +146,74 @@ class NodeService:
 
 
     def delete_node(self, node_id: int) -> bool:
+        """Delete a node and all its zones, marking their history as deleted."""
+        zones = self.zone_repo.list_by_node(node_id)
+        
+        # Delete each zone (which also marks history as deleted)
+        for zone in zones:
+            success = self._delete_zone_impl(node_id, zone.id)
+            if not success:
+                return False
+        
+        # Delete the node
         deleted = self.node_repo.delete(node_id)
         if not deleted:
             return False
         
+        self._mark_node_config_pending(node_id)
         self.session.commit()
         return True
     
 
     def delete_zone(self, node_id: int, zone_id: int) -> bool:
+        """Delete a zone and mark its history as deleted."""
+        success = self._delete_zone_impl(node_id, zone_id)
+        if success:
+            # _delete_zone_impl already calls commit
+            self.session.commit()
+        return success
+
+
+    def _delete_zone_impl(self, node_id: int, zone_id: int) -> bool:
+        """
+        Internal implementation for zone deletion.
+        Marks zone lifecycle as deleted and flags irrigation history records.
+        """
         zone = self.zone_repo.get(zone_id)
         if not zone or zone.node_id != node_id:
             return False
+
+        now = datetime.now(timezone.utc)
+        
+        # Mark the active zone lifecycle as deleted
+        lifecycle = self.zone_lifecycle_repo.mark_deleted(node_id, zone_id, now)
+
+        from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory
+
+        # Mark ALL history records for this zone as deleted (from any generation)
+        # Don't filter by lifecycle because history records may be from old zone generations
+        history_statement = select(IrrigationHistory).where(
+            IrrigationHistory.node_id == node_id,
+            IrrigationHistory.circuit_id == zone_id,
+        )
+
+        history_records = self.session.exec(history_statement).all()
+        
+        # Mark each history record as deleted
+        for history_record in history_records:
+            history_record.zone_deleted = True
+
+        # Commit the history updates before deleting the zone
+        self.session.commit()
+
+        # Now delete the zone
         deleted = self.zone_repo.delete(zone_id)
         if not deleted:
             return False
 
         self._mark_node_config_pending(node_id)
         
-        self.session.commit()
         return True
-
 
     def add_zone_to_node(self, node_id: int, zone_data: ZoneCreate) -> Zone:
         """
@@ -192,6 +243,16 @@ class NodeService:
 
         self.zone_repo.create(new_zone)
         self._mark_node_config_pending(node_id)
+        self.session.commit()
+        
+
+        # Create lifecycle entry for this zone
+        self.zone_lifecycle_repo.create(
+            ZoneLifecycle(
+                node_id=node_id,
+                zone_id=new_zone.id,
+            )
+        )
         self.session.commit()
         
 
