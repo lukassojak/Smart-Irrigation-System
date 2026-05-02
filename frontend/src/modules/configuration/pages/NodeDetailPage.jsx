@@ -169,6 +169,12 @@ export default function NodeDetailPage() {
                         </HeaderActionDanger>
                         <HeaderAction
                             as={Link}
+                            to={`/configuration/nodes/${node.id}/edit`}
+                        >
+                            Edit node
+                        </HeaderAction>
+                        <HeaderAction
+                            as={Link}
                             to={`/configuration/nodes/${node.id}/zones/new`}
                         >
                             Create new zone

@@ -12,12 +12,20 @@ export function createNode(data) {
     return http.post("/nodes/", data)
 }
 
+export function updateNode(nodeId, data) {
+    return http.patch(`/nodes/${nodeId}`, data)
+}
+
 export function fetchZoneById(nodeId, zoneId) {
     return http.get(`/nodes/${nodeId}/zones/${zoneId}`)
 }
 
 export function createZone(nodeId, data) {
     return http.post(`/nodes/${nodeId}/zones`, data)
+}
+
+export function updateZone(nodeId, zoneId, data) {
+    return http.patch(`/nodes/${nodeId}/zones/${zoneId}`, data)
 }
 
 export function deleteNode(nodeId) {

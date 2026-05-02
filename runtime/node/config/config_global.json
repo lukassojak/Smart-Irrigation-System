@@ -18,7 +18,7 @@
         "enabled": true,
         "sequential": false,
         "scheduled_hour": 18,
-        "scheduled_minute": 0,
+        "scheduled_minute": 38,
         "max_flow_monitoring": false,
         "environment": "development",
         "use_weathersimulator": false
@@ -31,8 +31,8 @@
         "api_enabled": true,
         "realtime_url": "https://api.ecowitt.net/api/v3/device/real_time",
         "history_url": "https://api.ecowitt.net/api/v3/device/history",
-        "api_key": null,
-        "application_key": null,
-        "device_mac": null
+        "api_key": "6f7266a5-3a7c-4383-a78a-53c27cdd7f91",
+        "application_key": "EB3B3829AA860E2DB6CA1471C9149D01",
+        "device_mac": "BC:FF:4D:F8:3B:5B"
     }
 }

@@ -149,6 +149,13 @@ export default function ZoneDetailPage() {
 
                         <HeaderAction
                             as={Link}
+                            to={`/configuration/nodes/${nodeId}/zones/${zoneId}/edit`}
+                        >
+                            Edit zone
+                        </HeaderAction>
+
+                        <HeaderAction
+                            as={Link}
                             to={`/configuration/nodes/${nodeId}`}
                         >
                             ← Back to Node #{nodeId}

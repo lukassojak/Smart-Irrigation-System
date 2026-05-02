@@ -89,19 +89,26 @@ class NodeService:
 
 
     def update_node(self, node_id: int, data: NodeUpdate) -> Node | None:
-        update_data = data.model_dump(exclude_unset=True)
         config_fields = {"hardware", "irrigation_limits", "automation", "batch_strategy", "logging"}
-
-        if "hardware" in update_data and update_data["hardware"] is not None:
-            update_data["hardware"] = update_data["hardware"].model_dump()
-        if "irrigation_limits" in update_data and update_data["irrigation_limits"] is not None:
-            update_data["irrigation_limits"] = update_data["irrigation_limits"].model_dump()
-        if "automation" in update_data and update_data["automation"] is not None:
-            update_data["automation"] = update_data["automation"].model_dump()
-        if "batch_strategy" in update_data and update_data["batch_strategy"] is not None:
-            update_data["batch_strategy"] = update_data["batch_strategy"].model_dump()
-        if "logging" in update_data and update_data["logging"] is not None:
-            update_data["logging"] = update_data["logging"].model_dump()
+        
+        # Build update_data by directly accessing fields and converting nested models
+        update_data = {}
+        
+        # Add fields that are set (not None)
+        if data.name is not None:
+            update_data["name"] = data.name
+        if data.location is not None:
+            update_data["location"] = data.location
+        if data.hardware is not None:
+            update_data["hardware"] = data.hardware.model_dump()
+        if data.irrigation_limits is not None:
+            update_data["irrigation_limits"] = data.irrigation_limits.model_dump()
+        if data.automation is not None:
+            update_data["automation"] = data.automation.model_dump()
+        if data.batch_strategy is not None:
+            update_data["batch_strategy"] = data.batch_strategy.model_dump()
+        if data.logging is not None:
+            update_data["logging"] = data.logging.model_dump()
 
         if config_fields.intersection(update_data.keys()):
             update_data["config_sync_status"] = CONFIG_SYNC_PENDING
@@ -122,18 +129,26 @@ class NodeService:
         if not zone or zone.node_id != node_id:
             return None
 
-        update_data = data.model_dump(exclude_unset=True)
-
-        if "local_correction_factors" in update_data and update_data["local_correction_factors"] is not None:
-            update_data["local_correction_factors"] = update_data["local_correction_factors"].model_dump()
-        if "frequency_settings" in update_data and update_data["frequency_settings"] is not None:
-            update_data["frequency_settings"] = update_data["frequency_settings"].model_dump()
-        if "fallback_strategy" in update_data and update_data["fallback_strategy"] is not None:
-            update_data["fallback_strategy"] = update_data["fallback_strategy"].model_dump()
-        if "irrigation_configuration" in update_data and update_data["irrigation_configuration"] is not None:
-            update_data["irrigation_configuration"] = update_data["irrigation_configuration"].model_dump()
-        if "emitters_configuration" in update_data and update_data["emitters_configuration"] is not None:
-            update_data["emitters_configuration"] = update_data["emitters_configuration"].model_dump()
+        # Build update_data by directly accessing fields and converting nested models
+        update_data = {}
+        
+        # Add fields that are set (not None)
+        if data.name is not None:
+            update_data["name"] = data.name
+        if data.relay_pin is not None:
+            update_data["relay_pin"] = data.relay_pin
+        if data.enabled is not None:
+            update_data["enabled"] = data.enabled
+        if data.local_correction_factors is not None:
+            update_data["local_correction_factors"] = data.local_correction_factors.model_dump()
+        if data.frequency_settings is not None:
+            update_data["frequency_settings"] = data.frequency_settings.model_dump()
+        if data.fallback_strategy is not None:
+            update_data["fallback_strategy"] = data.fallback_strategy.model_dump()
+        if data.irrigation_configuration is not None:
+            update_data["irrigation_configuration"] = data.irrigation_configuration.model_dump()
+        if data.emitters_configuration is not None:
+            update_data["emitters_configuration"] = data.emitters_configuration.model_dump()
 
         updated_zone = self.zone_repo.update(zone_id, update_data)
         if not updated_zone:

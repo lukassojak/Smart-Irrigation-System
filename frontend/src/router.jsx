@@ -7,9 +7,11 @@ import NodesDashboardPage from "./modules/configuration/pages/DashboardPage"
 import NodeDiscoveryPage from "./modules/configuration/pages/NodeDiscoveryPage"
 import NodeDetailPage from "./modules/configuration/pages/NodeDetailPage"
 import CreateNodePage from "./modules/configuration/pages/CreateNodePage"
+import EditNodePage from "./modules/configuration/pages/EditNodePage"
 import ZoneDetailPage from "./modules/configuration/pages/ZoneDetailPage"
 import GlobalSettingsPage from "./modules/configuration/pages/GlobalSettingsPage"
 import Wizard from "./modules/configuration/pages/CreateZoneWizard/Wizard"
+import EditZoneWizard from "./modules/configuration/pages/EditZoneWizard/EditZoneWizard"
 import AppLayout from "./components/layout/AppLayout"
 
 import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
@@ -50,16 +52,24 @@ const router = createBrowserRouter([
                         element: <CreateNodePage />,
                     },
                     {
-                        path: "nodes/:nodeId",
-                        element: <NodeDetailPage />,
+                        path: "nodes/:nodeId/edit",
+                        element: <EditNodePage />,
+                    },
+                    {
+                        path: "nodes/:nodeId/zones/new",
+                        element: <Wizard />,
+                    },
+                    {
+                        path: "nodes/:nodeId/zones/:zoneId/edit",
+                        element: <EditZoneWizard />,
                     },
                     {
                         path: "nodes/:nodeId/zones/:zoneId",
                         element: <ZoneDetailPage />,
                     },
                     {
-                        path: "nodes/:nodeId/zones/new",
-                        element: <Wizard />,
+                        path: "nodes/:nodeId",
+                        element: <NodeDetailPage />,
                     },
                     {
                         path: "settings",
