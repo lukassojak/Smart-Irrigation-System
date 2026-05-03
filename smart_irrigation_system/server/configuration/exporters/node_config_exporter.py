@@ -190,6 +190,13 @@ def _to_legacy_zone_config(zone: Zone) -> dict:
         "zone_area_m2": zone_area_m2,
         "liters_per_minimum_dripper": liters_per_minimum_dripper,
         "interval_days": int(frequency_settings.get("min_interval_days", 1)),
+        "frequency_settings": {
+            "dynamic_interval": bool(frequency_settings.get("dynamic_interval", False)),
+            "min_interval_days": int(frequency_settings.get("min_interval_days", 1)),
+            "max_interval_days": int(frequency_settings.get("max_interval_days", frequency_settings.get("min_interval_days", 1))),
+            "carry_over_volume": bool(frequency_settings.get("carry_over_volume", False)),
+            "irrigation_volume_threshold_percent": int(frequency_settings.get("irrigation_volume_threshold_percent", 100)),
+        },
         "drippers_summary": drippers_summary,
         "local_correction_factors": {
             "solar": _to_float_or_default((zone.local_correction_factors or {}).get("solar"), 0.0),

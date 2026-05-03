@@ -43,7 +43,8 @@ class IrrigationCircuit:
                  enabled: bool, even_area_mode: bool, target_mm: float | None,
                  zone_area_m2: float | None, liters_per_minimum_dripper: float | None,
                  interval_days: int, drippers: Drippers,
-                 correction_factors: CorrectionFactors, calculation_model=None):
+                 correction_factors: CorrectionFactors, calculation_model=None,
+                 frequency_settings: dict | None = None):
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
         self.id: int = circuit_id
         self.name: str = name
@@ -54,6 +55,13 @@ class IrrigationCircuit:
         self.zone_area_m2: float | None = zone_area_m2
         self.liters_per_minimum_dripper: float | None = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
         self.interval_days: int = interval_days
+        # Frequency/dynamic irrigation interval settings
+        fs = frequency_settings or {}
+        self.dynamic_interval: bool = bool(fs.get("dynamic_interval", False))
+        self.min_interval_days: int = int(fs.get("min_interval_days", self.interval_days or 1))
+        self.max_interval_days: int = int(fs.get("max_interval_days", self.min_interval_days))
+        self.carry_over_volume: bool = bool(fs.get("carry_over_volume", False))
+        self.irrigation_volume_threshold_percent: int = int(fs.get("irrigation_volume_threshold_percent", 100))
         self.drippers: Drippers = drippers
         self.local_correction_factors: CorrectionFactors = correction_factors
 

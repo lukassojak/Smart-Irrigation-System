@@ -152,13 +152,16 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
                     service.mark_config_pushed(node.id)
                 # ignore other responses and proceed to unpair; unpair may still succeed
             except TimeoutError:
-                # No ACK from node, continue to unpair anyway.
-                pass
+                # No ACK from node - reject delete
+                raise HTTPException(
+                    status_code=504,
+                    detail="Node did not acknowledge config apply within 5 seconds. Delete was cancelled.",
+                )
             except Exception:
-                pass
+                raise HTTPException(status_code=503, detail="Failed to push config to node before delete. Delete was cancelled.")
         except Exception:
-            # Non-fatal: proceed with unpair even if we could not generate/push the empty config
-            pass
+            # Reject delete if attempt to prepare node for deletion fails
+            raise HTTPException(status_code=503, detail="Failed to prepare node for deletion. Delete was cancelled.")
 
         # Now unpair the node
         try:

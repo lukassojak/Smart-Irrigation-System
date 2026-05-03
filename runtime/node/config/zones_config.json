@@ -1,17 +1,37 @@
 {
     "zones": [
         {
-            "id": 9,
-            "name": "Jahody",
-            "relay_pin": 3,
+            "id": 10,
+            "name": "Okurky",
+            "relay_pin": 5,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 23.0,
-            "zone_area_m2": 7.0,
+            "target_mm": 24.0,
+            "zone_area_m2": 1.5,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
             "drippers_summary": {
-                "10": 1
+                "150": 1
+            },
+            "local_correction_factors": {
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            }
+        },
+        {
+            "id": 11,
+            "name": "Bylinky",
+            "relay_pin": 6,
+            "enabled": true,
+            "even_area_mode": false,
+            "target_mm": null,
+            "zone_area_m2": null,
+            "liters_per_minimum_dripper": 0.468,
+            "interval_days": 1,
+            "drippers_summary": {
+                "4": 1,
+                "1": 1
             },
             "local_correction_factors": {
                 "solar": 0.0,

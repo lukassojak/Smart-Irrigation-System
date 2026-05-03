@@ -238,6 +238,7 @@ class CircuitStateManager():
                     self.logger.debug(f"Failed to read/parse config for pruning: {e}")
         except Exception:
             # non-fatal; proceed with initialization
+            self.logger.warning("Failed to access zones_config for pruning circuit state. Proceeding without pruning.")
             pass
 
         unclean_shutdown_detected = False
