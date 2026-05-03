@@ -78,6 +78,7 @@ class CircuitStateManager():
             "last_irrigation": None,
             "last_duration": None,
             "last_volume": None,
+            "carry_over_volume_liters": 0.0,
         }
         self.state["circuits"].append(entry)
         self._rebuild_circuit_index()
@@ -198,6 +199,8 @@ class CircuitStateManager():
                 raise ValueError("Each circuit must contain 'last_volume' key.")
             if circuit["last_volume"] is not None and not isinstance(circuit["last_volume"], (int, float)):
                 raise ValueError("Circuit 'last_volume' must be a number or None.")
+            if "carry_over_volume_liters" in circuit and circuit["carry_over_volume_liters"] is not None and not isinstance(circuit["carry_over_volume_liters"], (int, float)):
+                raise ValueError("Circuit 'carry_over_volume_liters' must be a number or None.")
 
 
     # =========================================================================
@@ -244,6 +247,8 @@ class CircuitStateManager():
         unclean_shutdown_detected = False
         recovered_circuits = []  # List of circuit IDs that were irrigating during unclean shutdown
         for circuit in self.state.get("circuits", []):
+            if not isinstance(circuit.get("carry_over_volume_liters"), (int, float)):
+                circuit["carry_over_volume_liters"] = 0.0
             circuit_id = circuit.get("id")
             # The circuit is considered uncleanly shutdown if its state is not 'shutdown'
             if circuit.get("circuit_state") != SnapshotCircuitState.SHUTDOWN.value:
@@ -487,6 +492,11 @@ class CircuitStateManager():
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
+
+        if result.outcome == IrrigationOutcome.SUCCESS:
+            entry = self._get_or_create_entry(circuit_id)
+            entry["carry_over_volume_liters"] = 0.0
+            self._save_state()
         
         # Sync record to server if sync manager is available
         if self.history_sync:
@@ -507,3 +517,13 @@ class CircuitStateManager():
             circuit["circuit_state"] = SnapshotCircuitState.SHUTDOWN.value
         self._save_state()
         self.logger.debug("All circuits set to 'shutdown' state during clean exit.")
+
+    def get_carry_over_volume_liters(self, circuit_id: int) -> float:
+        entry = self._get_or_create_entry(circuit_id)
+        value = entry.get("carry_over_volume_liters", 0.0)
+        return float(value) if isinstance(value, (int, float)) else 0.0
+
+    def set_carry_over_volume_liters(self, circuit_id: int, volume_liters: float) -> None:
+        entry = self._get_or_create_entry(circuit_id)
+        entry["carry_over_volume_liters"] = max(float(volume_liters), 0.0)
+        self._save_state()
