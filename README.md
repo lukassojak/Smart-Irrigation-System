@@ -14,7 +14,7 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
   </tr>
 </table>
 
-> Project is currently in *Phase 3 (v0.13)* - fundamental node and server functionality is complete, UI is in prototype stage. Focus is on server-side configuration management and multi-node support.
+> Project is currently in *Phase 5 (v1.0)*, with a fully functional multi-node architecture and core features implemented. Future phases will focus on stability improvements, real-world deployment, and additional features for real-world usage.
 
 ---
 
@@ -26,7 +26,7 @@ The project demonstrates a fully functional **prototype** of a irrigation networ
 2. **Central Server** – Main coordinator handling multiple irrigation nodes via MQTT, configuration & data hub, REST API provider. Runs on Raspberry Pi 4/5 or PC.
 3. **Irrigation Nodes** – autonomous controllers managing valves and sensors, fail-safe operation. Runs on Raspberry Pi Zero 2 W.
 
-The Smart Irrigation System uses **edge computing** to manage watering zones autonomously. In case of network failure, each node continues to operate based on local data, schedules, weather conditions and configuration. 
+The Smart Irrigation System uses **edge computing** to manage watering zones autonomously. In case of network failure, each node continues to operate based on local data, schedules, weather conditions and configuration.
 Each **node** controls multiple irrigation circuits, while a **central server** coordinates and monitors the network through MQTT and a REST API.
 
 <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px">
@@ -79,6 +79,12 @@ Node Manager allows users to:
 - define irrigation strategies, limits, and fallback behavior,
 - validate domain rules.
 
+---
+
+## Live control and monitoring
+The web dashboard provides real-time monitoring of node status, active irrigation zones, and irrigation history. Users can manually start or stop irrigation for specific zones, override automatic scheduling, and view detailed logs.
+
+---
 
 ## Setup & Deployment
 
@@ -117,14 +123,15 @@ http://localhost:5173
 
 ## Roadmap
 
-| Phase | Version | Status | Focus |
-|-------|---------|--------|-------|
-| 1     | v0.6    | Completed | **Node MVP**: autonomous irrigation logic, MQTT communication, configuration & logging |
-| 2     | v0.8    | Completed | **Server prototype**: MQTT communication with single demo node, REST API |
-| 3     | v0.9    | Completed | Web UI prototype: basic dashboard for manual control and monitoring (React), REST integration |
-| **4**     | **v0.12**    | **Completed** | **Node core redesign**: substantially refactored node controller architecture, stability improvements |
-| 5     | v1.0    | *Planned* | **Full architecture MVP**: multi-node support, server-side configuration, log collection, Web UI enhancements |
-| 6     | v1.1+   | *Planned* | Stability improvements, refactoring node codebase, security enhancements (TLS, OAuth, credential management) |
+| Phase | Version  | Status | Focus |
+|-------|----------|--------|-------|
+| 1     | v0.6     | Completed   | **Node MVP**: autonomous irrigation logic, MQTT communication, configuration & logging |
+| 2     | v0.8     | Completed   | **Server prototype**: MQTT communication with single demo node, REST API |
+| 3     | v0.9     | Completed   | Web UI prototype: basic dashboard for manual control and monitoring (React), REST integration |
+| 4     | v0.12    | Completed   | **Node core redesign**: substantially refactored node controller architecture, stability improvements |
+| **5** | **v1.0** | **Completed** | **Full architecture MVP**: multi-node support, server-side configuration, Web UI enhancements |
+| 6     | v1.1     | *Planned* | **Full feature set & real-world deployment**: Dynamic interval node support, log collection, server-side weather fetching, deployment optimizations |
+| 7     | v1.2+   | *Planned* | Stability improvements, refactoring node codebase, security enhancements (TLS, OAuth, credential management) |
 
 ---
 

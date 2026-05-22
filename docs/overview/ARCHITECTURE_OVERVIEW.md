@@ -38,25 +38,11 @@ The system consists of three main layers:
 ## Component Responsibilities
 
 ### User Layer (Web UI)
-Provides a simple, user-friendly interface for monitoring and controlling the irrigation system. Communicates with the Central Server via REST API.
+Provides a simple, user-friendly interface for configuring, monitoring, and controlling the irrigation system. Communicates with the Central Server via REST API.
 
-**Features (prototype):**
-- Display all the nodes with their statuses:
-    - node online/offline
-    - node state last update
-    - controller state
-    - auto mode enabled/disabled
-    - currently irrigating zones
-- Manual control panel:
-    - Start irrigation on selected zones
-    - Stop all irrigation
-- Refresh button to update the dashboard data (manual polling)
-- Periodic polling for live status
-- REST API integration using Axios
 
 **Planned extensions:**
 - Real-time updates (Server-Sent Events or WebSockets)
-- Zone visualization panel with live progress
 - Weather overview panel
 - Node and zone configuration management
 - Log viewing and export

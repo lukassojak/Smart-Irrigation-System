@@ -17,8 +17,8 @@
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 0,
-        "scheduled_minute": 4,
+        "scheduled_hour": 12,
+        "scheduled_minute": 7,
         "max_flow_monitoring": false,
         "environment": "development",
         "use_weathersimulator": false

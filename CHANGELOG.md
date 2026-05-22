@@ -73,11 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added runtime discovery API:
   - Endpoints for listing and interacting with unpaired nodes.
   - Foundation for automated node onboarding.
+- Added server irrigation history database and API endpoints, enabling node to push irrigation records to the server for centralized storage and analytics.
 - Added UI support for new architecture features:
   - Node discovery page.
   - Global settings page.
   - Extended node creation flow with pairing.
   - Improved runtime dashboard and system overview.
+  - Irrigation history page.
 
 ### Changed
 - Refactored node MQTT layer:
@@ -107,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configuration is now managed centrally on server and pushed to nodes.
 - Refactored server core:
   - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
+- Updated node's CircuitStateManager to support irrigation record pushing to server after irrigation attempts.
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
