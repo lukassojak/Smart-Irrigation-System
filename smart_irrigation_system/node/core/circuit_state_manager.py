@@ -507,9 +507,6 @@ class CircuitStateManager():
                 self.history_sync.sync_to_server(blocking=False)
             except Exception as e:
                 self.logger.error(f"Failed to queue irrigation result for sync: {e}")
-        # if circuit_id == 2:
-            # raise RuntimeError("TEST CRASH - SIMULATED THREAD FAILURE (should be caught and logged)")
-
     
     def handle_clean_shutdown(self) -> None:
         """Sets all circuits to 'shutdown' state during a clean exit."""
