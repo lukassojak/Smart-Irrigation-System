@@ -11,7 +11,7 @@ const STATUS_PRIORITY = {
     offline: 4
 }
 
-export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone }) {
+export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone, onZoneClick }) {
 
     const sortedZones = [...zones].sort((a, b) => {
         return STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]
@@ -20,7 +20,7 @@ export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone })
     return (
         <GlassPanelSection
             title="Zones"
-            description="Runtime status and quick controls"
+            description="Runtime status and quick controls. Click any zone card to open its runtime detail."
         >
             <Grid
                 templateColumns={{
@@ -35,6 +35,7 @@ export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone })
                         zone={zone}
                         isStopping={stoppingZoneIds?.[String(zone.id)] === true}
                         onStop={onStopZone}
+                        onClick={onZoneClick}
                     />
                 ))}
             </Grid>

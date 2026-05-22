@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useOutletContext } from "react-router-dom"
 
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
@@ -40,6 +40,7 @@ import {
     ControlActionDialogViewport,
     openControlActionDialog,
 } from "../../../components/ui/ControlActionDialogOverlay"
+import RuntimeZoneDetailPage from "./RuntimeZoneDetailPage"
 
 export default function MainDashboardPage() {
     // ---- Fake Data ----
@@ -77,6 +78,7 @@ export default function MainDashboardPage() {
     }
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+    const [selectedZoneId, setSelectedZoneId] = useState(null)
 
     const livePollIntervalMs = 2000
     const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
@@ -96,6 +98,18 @@ export default function MainDashboardPage() {
     } = useRuntimeControlState({
         tasks: liveData?.currentTasks ?? [],
     })
+
+    const selectedZone = useMemo(() => {
+        if (selectedZoneId === null || selectedZoneId === undefined) {
+            return null
+        }
+
+        return liveData?.zones?.find((zone) => String(zone.id) === String(selectedZoneId)) ?? null
+    }, [liveData?.zones, selectedZoneId])
+
+    const handleOpenZoneDetail = useCallback((zone) => {
+        setSelectedZoneId(zone?.id ?? null)
+    }, [])
 
     const openStopActionDialog = useCallback((result) => {
         if (!result) {
@@ -164,6 +178,19 @@ export default function MainDashboardPage() {
         const result = await handleStopAll()
         openStopActionDialog(result)
     }, [handleStopAll, openStopActionDialog])
+
+    if (selectedZone) {
+        return (
+            <RuntimeZoneDetailPage
+                zone={selectedZone}
+                liveData={liveData}
+                todayData={todayData}
+                currentTasks={liveData?.currentTasks ?? []}
+                todayTasks={todayData?.tasks ?? []}
+                onBack={() => setSelectedZoneId(null)}
+            />
+        )
+    }
 
     if (loading && !liveData) {
         return (
@@ -340,6 +367,7 @@ export default function MainDashboardPage() {
                     zones={liveData.zones}
                     stoppingZoneIds={stoppingZoneIds}
                     onStopZone={handleStopZoneWithNotification}
+                    onZoneClick={handleOpenZoneDetail}
                 />
 
                 {/* SECTION 6 - WEATHER FORECAST */}
