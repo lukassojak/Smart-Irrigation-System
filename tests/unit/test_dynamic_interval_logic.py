@@ -12,24 +12,6 @@ from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 from smart_irrigation_system.node.utils import result_factory
 
 
-class FakeDrippers:
-    def __init__(self, consumption: float = 10.0):
-        self.total_consumption = consumption
-        self.drippers = {}
-
-    def add_dripper(self, _):
-        pass
-
-    def remove_dripper(self, _):
-        pass
-
-    def get_consumption(self):
-        return self.total_consumption
-
-    def get_minimum_dripper_flow(self):
-        return 1
-
-
 class FakeCorrectionFactors:
     def __init__(self, solar=0.0, rain=0.0, temperature=0.0):
         self.factors = {
@@ -58,8 +40,8 @@ def _make_circuit(
     threshold_percent: int = 50,
     min_interval_days: int = 1,
     max_interval_days: int = 5,
-    target_mm: float = 10.0,
-    zone_area_m2: float = 10.0,
+    base_volume_liters: float = 100.0,
+    base_flow_lph: float = 10.0,
     interval_days: int = 3,
 ) -> IrrigationCircuit:
     with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve"):
@@ -69,11 +51,9 @@ def _make_circuit(
             relay_pin=1,
             enabled=True,
             even_area_mode=True,
-            target_mm=target_mm,
-            zone_area_m2=zone_area_m2,
-            liters_per_minimum_dripper=3,
+            base_volume_liters=base_volume_liters,
+            base_flow_lph=base_flow_lph,
             interval_days=interval_days,
-            drippers=FakeDrippers(),
             correction_factors=FakeCorrectionFactors(),
             frequency_settings={
                 "dynamic_interval": dynamic_interval,

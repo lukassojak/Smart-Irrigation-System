@@ -1,7 +1,7 @@
 import json
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.node.core.drippers import Drippers
 from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.config.zone_config import ZoneConfig
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.config.secrets import get_secret
@@ -135,13 +135,26 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     # not used in this version, but can be used for sensors
     # sensor_pins = zone.get("sensor_pins", [])  # expected to be a list of lists
 
-    drippers = Drippers()
-    # Add drippers to the drippers instance
-    drippers_dict = zone.get("drippers_summary", {})
-    for dripper_flow_str, count in drippers_dict.items():
-        for _ in range(count):
-            drippers.add_dripper(int(dripper_flow_str))
-        
+    # Compute base_volume_liters and base_flow_lph from legacy fields (temporary)
+    drippers_dict = zone.get("drippers_summary", {}) or {}
+    total_consumption = 0.0
+    min_dripper_flow = 0.0
+    if isinstance(drippers_dict, dict) and drippers_dict:
+        entries = [(int(k), int(v)) for k, v in drippers_dict.items()]
+        total_consumption = float(sum(flow * count for flow, count in entries))  # liters per hour
+        min_dripper_flow = float(min(flow for flow, _ in entries))
+
+    # Determine base target volume
+    if even_area_mode:
+        base_volume_liters = target_mm * zone_area_m2
+    else:
+        # Fallback: compute duration using liters_per_minimum_dripper and min dripper flow
+        if min_dripper_flow <= 0:
+            base_volume_liters = 0.0
+        else:
+            duration_hours = (liters_per_minimum_dripper or 0) / min_dripper_flow
+            base_volume_liters = total_consumption * duration_hours
+
 
     # Set local correction factors
     file_correction_factors = zone.get("local_correction_factors", {})
@@ -158,12 +171,10 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         relay_pin=relay_pin,
         enabled=enabled,
         even_area_mode=even_area_mode,
-        target_mm=target_mm,
-        zone_area_m2=zone_area_m2,
-        liters_per_minimum_dripper=liters_per_minimum_dripper,
+        base_volume_liters=round(float(base_volume_liters or 0.0), 3),
+        base_flow_lph=round(float(total_consumption or 0.0), 3),
         interval_days=interval_days,
         frequency_settings=frequency_settings,
-        drippers=drippers,
         correction_factors=correction_factors
     )
 
@@ -315,11 +326,9 @@ def circuit_to_config(circuit: IrrigationCircuit) -> dict:
         "relay_pin": circuit.valve.relay_pin,
         "enabled": circuit.enabled,
         "even_area_mode": circuit.even_area_mode,
-        "target_mm": circuit.target_mm,
-        "zone_area_m2": circuit.zone_area_m2,
-        "liters_per_minimum_dripper": circuit.liters_per_minimum_dripper,
+        "base_volume_liters": getattr(circuit, "base_volume_liters", None),
+        "base_flow_lph": getattr(circuit, "base_flow_lph", None),
         "interval_days": circuit.interval_days,
-        "drippers_summary": {str(flow_rate): count for flow_rate, count in circuit.drippers.drippers.items()},
         "local_correction_factors": {"solar": circuit.correction_factors.get_factor("solar"),
                                      "rain": circuit.correction_factors.get_factor("rain"),
                                      "temperature": circuit.correction_factors.get_factor("temperature")},

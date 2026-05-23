@@ -14,7 +14,6 @@ from smart_irrigation_system.node.core.enums import (
 import smart_irrigation_system.node.exceptions as exceptions
 
 from smart_irrigation_system.node.core.relay_valve import RelayValve
-from smart_irrigation_system.node.core.drippers import Drippers
 from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
@@ -40,9 +39,9 @@ class IrrigationStoppedException(Exception):
 
 class IrrigationCircuit:
     def __init__(self, name: str, circuit_id: int, relay_pin: int,
-                 enabled: bool, even_area_mode: bool, target_mm: float | None,
-                 zone_area_m2: float | None, liters_per_minimum_dripper: float | None,
-                 interval_days: int, drippers: Drippers,
+                 enabled: bool, even_area_mode: bool,
+                 base_volume_liters: float, base_flow_lph: float,
+                 interval_days: int,
                  correction_factors: CorrectionFactors, calculation_model=None,
                  frequency_settings: dict | None = None):
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
@@ -51,9 +50,8 @@ class IrrigationCircuit:
         self.valve = RelayValve(relay_pin)
         self.enabled: bool = enabled
         self.even_area_mode: bool = even_area_mode
-        self.target_mm: float | None = target_mm
-        self.zone_area_m2: float | None = zone_area_m2
-        self.liters_per_minimum_dripper: float | None = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
+        self.base_volume_liters: float = base_volume_liters
+        self.base_flow_lph: float = base_flow_lph
         self.interval_days: int = interval_days
         # Frequency/dynamic irrigation interval settings
         fs = frequency_settings or {}
@@ -62,7 +60,6 @@ class IrrigationCircuit:
         self.max_interval_days: int = int(fs.get("max_interval_days", self.min_interval_days))
         self.carry_over_volume: bool = bool(fs.get("carry_over_volume", False))
         self.irrigation_volume_threshold_percent: int = int(fs.get("irrigation_volume_threshold_percent", 100))
-        self.drippers: Drippers = drippers
         self.local_correction_factors: CorrectionFactors = correction_factors
 
         # Calculation model for weather adjustments
@@ -311,20 +308,13 @@ class IrrigationCircuit:
     @property
     def circuit_consumption(self) -> float:
         """Returns the total consumption of all drippers in liters per hour."""
-        return self.drippers.get_consumption()
+        return float(getattr(self, "base_flow_lph", 0.0))
 
     @property
     def base_target_volume(self) -> float:
         """Calculates the target water amount for irrigation based on global configuration and conditions."""
-        if self.even_area_mode:
-            # Calculate the target water amount based on the target mm and zone area
-            base_target_volume = self.target_mm * self.zone_area_m2    # in mm * m^2 = liters
-        else:
-            # Calculate the target water amount based on the liters per minimum dripper
-            duration = self.liters_per_minimum_dripper / self.drippers.get_minimum_dripper_flow() 
-            base_target_volume = self.circuit_consumption * duration  # in liters per hour * hours = liters
-        
-        return round(base_target_volume, 3)
+        # For Phase 1 we use precomputed base_volume_liters provided by the loader
+        return round(float(getattr(self, "base_volume_liters", 0.0)), 3)
 
     @property
     def is_currently_irrigating(self) -> bool:

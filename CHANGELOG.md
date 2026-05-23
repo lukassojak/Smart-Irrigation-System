@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Runtime: `stop-irrigation` is now hybrid — synchronous wait for nodes with currently irrigating zones, asynchronous delivery for others (avoids global timeouts).
+## Added
 
+## Changed
+
+## Removed
+
+## Fixed
+
+## Known Issues
+
+---
 
 ## [1.0.0] - 2026-04-26
 *Full architecture MVP completion: multi-node distributed system with server-side runtime projection, centralized configuration, node pairing, MQTT-based communication, and unified frontend. This release enables the core end-to-end functionality of the Smart Irrigation System.*
@@ -110,6 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored server core:
   - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
 - Updated node's CircuitStateManager to support irrigation record pushing to server after irrigation attempts.
+- Runtime: `stop-irrigation` is now hybrid — synchronous wait for nodes with currently irrigating zones, asynchronous delivery for others (avoids global timeouts).
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
