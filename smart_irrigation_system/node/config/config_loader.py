@@ -127,7 +127,10 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         zone_area_m2 = None
         liters_per_minimum_dripper = zone["liters_per_minimum_dripper"]
 
-    interval_days = zone["interval_days"]
+    # Backwards-compatible: support both legacy `interval_days` and new `frequency_settings`
+    frequency_settings = zone.get("frequency_settings", {}) if isinstance(zone, dict) else {}
+    # Fallback to legacy single value
+    interval_days = zone.get("interval_days") if isinstance(zone, dict) and zone.get("interval_days") is not None else int(frequency_settings.get("min_interval_days", 1))
 
     # not used in this version, but can be used for sensors
     # sensor_pins = zone.get("sensor_pins", [])  # expected to be a list of lists
@@ -159,6 +162,7 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         zone_area_m2=zone_area_m2,
         liters_per_minimum_dripper=liters_per_minimum_dripper,
         interval_days=interval_days,
+        frequency_settings=frequency_settings,
         drippers=drippers,
         correction_factors=correction_factors
     )

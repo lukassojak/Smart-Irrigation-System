@@ -15,7 +15,7 @@ import {
 import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 
 
-export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
+export default function ZoneRuntimeCard({ zone, isStopping, onStop, onClick }) {
     const {
         zoneState,
     } = useRuntimeControlState({
@@ -38,10 +38,24 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
             p={5}
             boxShadow="0 4px 16px rgba(15,23,42,0.05)"
             transition="all 0.15s ease"
+            cursor={onClick ? "pointer" : "default"}
             _hover={{
                 borderColor: "rgba(56,178,172,0.18)",
                 boxShadow: "0 6px 22px rgba(15,23,42,0.06)",
                 transform: "translateY(-2px)"
+            }}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onClick={() => onClick?.(zone)}
+            onKeyDown={(event) => {
+                if (!onClick) {
+                    return
+                }
+
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    onClick(zone)
+                }
             }}
             opacity={zone.stale ? 0.6 : 1}
             filter={zone.stale ? "grayscale(0.3)" : "grayscale(0)"}
@@ -102,7 +116,10 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
                                 aria-label="Stop irrigation"
                                 p={1}
                                 isDisabled={zoneState?.isStopDisabled}
-                                onClick={() => onStop?.(zone.id)}
+                                onClick={(event) => {
+                                    event.stopPropagation()
+                                    onStop?.(zone.id)
+                                }}
                                 loading={zoneState?.isStopLoading}
                             >
                                 <Square size={14} />
@@ -115,6 +132,7 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
                                 aria-label="Start irrigation"
                                 p={1}
                                 isDisabled={zoneState?.isStartDisabled}
+                                onClick={(event) => event.stopPropagation()}
                             >
                                 <Play size={14} />
                             </Button>
@@ -129,6 +147,7 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
                             aria-label="View error details"
                             p={1}
                             isDisabled={zoneState?.isInfoDisabled}
+                            onClick={(event) => event.stopPropagation()}
                         >
                             <Info size={14} />
                         </Button>
@@ -142,6 +161,7 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop }) {
                             aria-label="View reconnection options"
                             p={1}
                             isDisabled={zoneState?.isInfoDisabled}
+                            onClick={(event) => event.stopPropagation()}
                         >
                             <Info size={14} />
                         </Button>

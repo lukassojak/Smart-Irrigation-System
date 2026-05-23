@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useOutletContext } from "react-router-dom"
 
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
@@ -37,9 +37,10 @@ import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
-    controlActionDialog,
     ControlActionDialogViewport,
-} from "../components/ControlActionDialogOverlay"
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
+import RuntimeZoneDetailPage from "./RuntimeZoneDetailPage"
 
 export default function MainDashboardPage() {
     // ---- Fake Data ----
@@ -77,6 +78,7 @@ export default function MainDashboardPage() {
     }
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+    const [selectedZoneId, setSelectedZoneId] = useState(null)
 
     const livePollIntervalMs = 2000
     const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
@@ -97,6 +99,18 @@ export default function MainDashboardPage() {
         tasks: liveData?.currentTasks ?? [],
     })
 
+    const selectedZone = useMemo(() => {
+        if (selectedZoneId === null || selectedZoneId === undefined) {
+            return null
+        }
+
+        return liveData?.zones?.find((zone) => String(zone.id) === String(selectedZoneId)) ?? null
+    }, [liveData?.zones, selectedZoneId])
+
+    const handleOpenZoneDetail = useCallback((zone) => {
+        setSelectedZoneId(zone?.id ?? null)
+    }, [])
+
     const openStopActionDialog = useCallback((result) => {
         if (!result) {
             return
@@ -104,39 +118,55 @@ export default function MainDashboardPage() {
 
         if (result.ok) {
             if (result.action === "stop-zone") {
-                controlActionDialog.open("stop-action-result", {
-                    title: "Zone stop completed",
-                    description: "Irrigation stop command was completed successfully.",
-                    status: "success",
-                    zoneId: result.zoneId,
-                    nodeId: result.response?.node_id,
-                    mode: result.response?.mode,
-                    correlationId: result.response?.response?.correlation_id,
+                const id = `stop-action-result-${Date.now()}`
+                openControlActionDialog(id, {
+                    ...{
+                        title: "Zone stop completed",
+                        description: "Irrigation stop command was completed successfully.",
+                        status: "success",
+                        zoneId: result.zoneId,
+                        nodeId: result.response?.node_id,
+                        mode: result.response?.mode,
+                        correlationId: result.response?.response?.correlation_id,
+                    },
+                    overlayId: id,
                 })
                 return
             }
 
             const nodeCount = Array.isArray(result.response?.nodes) ? result.response.nodes.length : 0
-            controlActionDialog.open("stop-action-result", {
-                title: "Stop all completed",
-                description: "Irrigation stop command was delivered to all target nodes.",
-                status: "success",
-                mode: result.response?.mode,
-                nodeCount,
-            })
+            {
+                const id = `stop-action-result-${Date.now()}`
+                openControlActionDialog(id, {
+                    ...{
+                        title: "Stop all completed",
+                        description: "Irrigation stop command was delivered to all target nodes.",
+                        status: "success",
+                        mode: result.response?.mode,
+                        nodeCount,
+                    },
+                    overlayId: id,
+                })
+            }
             return
         }
 
-        controlActionDialog.open("stop-action-result", {
-            title: "Stop action failed",
-            description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
-            status: "error",
-            zoneId: result.zoneId,
-            nodeId: result.error?.node_id,
-            code: result.error?.code,
-            retryable: result.error?.retryable,
-            correlationId: result.error?.correlation_id,
-        })
+        {
+            const id = `stop-action-result-${Date.now()}`
+            openControlActionDialog(id, {
+                ...{
+                    title: "Stop action failed",
+                    description: result.error?.message ?? "Unknown error occurred while stopping irrigation.",
+                    status: "error",
+                    zoneId: result.zoneId,
+                    nodeId: result.error?.node_id,
+                    code: result.error?.code,
+                    retryable: result.error?.retryable,
+                    correlationId: result.error?.correlation_id,
+                },
+                overlayId: id,
+            })
+        }
     }, [])
 
     const handleStopZoneWithNotification = useCallback(async (zoneId) => {
@@ -148,6 +178,19 @@ export default function MainDashboardPage() {
         const result = await handleStopAll()
         openStopActionDialog(result)
     }, [handleStopAll, openStopActionDialog])
+
+    if (selectedZone) {
+        return (
+            <RuntimeZoneDetailPage
+                zone={selectedZone}
+                liveData={liveData}
+                todayData={todayData}
+                currentTasks={liveData?.currentTasks ?? []}
+                todayTasks={todayData?.tasks ?? []}
+                onBack={() => setSelectedZoneId(null)}
+            />
+        )
+    }
 
     if (loading && !liveData) {
         return (
@@ -324,6 +367,7 @@ export default function MainDashboardPage() {
                     zones={liveData.zones}
                     stoppingZoneIds={stoppingZoneIds}
                     onStopZone={handleStopZoneWithNotification}
+                    onZoneClick={handleOpenZoneDetail}
                 />
 
                 {/* SECTION 6 - WEATHER FORECAST */}

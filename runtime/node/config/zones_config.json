@@ -1,22 +1,85 @@
 {
     "zones": [
         {
-            "id": 9,
-            "name": "Papriky skleník",
-            "relay_pin": 2,
+            "id": 10,
+            "name": "Okurky",
+            "relay_pin": 5,
             "enabled": true,
             "even_area_mode": true,
-            "target_mm": 10.0,
-            "zone_area_m2": 0.7,
+            "target_mm": 24.0,
+            "zone_area_m2": 1.5,
             "liters_per_minimum_dripper": null,
             "interval_days": 1,
+            "frequency_settings": {
+                "dynamic_interval": true,
+                "min_interval_days": 1,
+                "max_interval_days": 7,
+                "carry_over_volume": true,
+                "irrigation_volume_threshold_percent": 20
+            },
             "drippers_summary": {
-                "210": 1
+                "150": 1
             },
             "local_correction_factors": {
-                "solar": 0.2,
-                "rain": -0.9,
-                "temperature": 0.05
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            }
+        },
+        {
+            "id": 11,
+            "name": "Bylinky",
+            "relay_pin": 6,
+            "enabled": true,
+            "even_area_mode": false,
+            "target_mm": null,
+            "zone_area_m2": null,
+            "liters_per_minimum_dripper": 0.468,
+            "interval_days": 1,
+            "frequency_settings": {
+                "dynamic_interval": false,
+                "min_interval_days": 1,
+                "max_interval_days": 7,
+                "carry_over_volume": true,
+                "irrigation_volume_threshold_percent": 20
+            },
+            "drippers_summary": {
+                "4": 1,
+                "1": 1
+            },
+            "local_correction_factors": {
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            }
+        },
+        {
+            "id": 12,
+            "name": "U bazénu",
+            "relay_pin": 5,
+            "enabled": true,
+            "even_area_mode": false,
+            "target_mm": null,
+            "zone_area_m2": null,
+            "liters_per_minimum_dripper": 1.428,
+            "interval_days": 1,
+            "frequency_settings": {
+                "dynamic_interval": true,
+                "min_interval_days": 1,
+                "max_interval_days": 12,
+                "carry_over_volume": true,
+                "irrigation_volume_threshold_percent": 60
+            },
+            "drippers_summary": {
+                "4": 2,
+                "8": 2,
+                "2": 1,
+                "1": 1
+            },
+            "local_correction_factors": {
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
             }
         }
     ]

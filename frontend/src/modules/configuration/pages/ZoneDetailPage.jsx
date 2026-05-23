@@ -14,6 +14,11 @@ import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionB
 import DataUnavailableWarning from '../../../components/ui/DataUnavailableWarning'
 import EmitterOverviewCard from '../components/EmitterOverviewCard'
 import PerPlantAllocationCard from '../components/PerPlantAllocationCard'
+import {
+    ControlActionDialogViewport,
+    openControlActionConfirmDialog,
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 import { zoneDetailHelp } from "../../../help/zoneDetailHelp"
 
@@ -23,7 +28,71 @@ export default function ZoneDetailPage() {
     const navigate = useNavigate();
     const [zone, setZone] = useState(null);
     const [zoneError, setZoneError] = useState(false)
+    const [isDeletingZone, setIsDeletingZone] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+    const openDialog = (payload) => {
+        const id = `zone-detail-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
+    }
+
+    const getErrorMessage = (error, fallbackMessage) => {
+        const detail = error?.response?.data?.detail
+        if (typeof detail === "string") {
+            return detail
+        }
+        if (detail?.message) {
+            return detail.message
+        }
+        return error?.message ?? fallbackMessage
+    }
+
+    const handleDeleteZone = async () => {
+        if (!zone || isDeletingZone) {
+            return
+        }
+
+        const id = `zone-delete-confirm-${Date.now()}`
+        const confirmed = await openControlActionConfirmDialog(id, {
+            title: "Delete zone",
+            description: "Are you sure you want to delete this zone? This action cannot be undone.",
+            status: "error",
+            nodeId,
+            zoneId: zone.id,
+            confirmLabel: "Delete zone",
+            cancelLabel: "Cancel",
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        setIsDeletingZone(true)
+        try {
+            await deleteZone(nodeId, zone.id)
+            openDialog({
+                title: "Zone deleted",
+                description: "Zone was deleted successfully.",
+                status: "success",
+                nodeId,
+                zoneId: zone.id,
+            })
+
+            window.setTimeout(() => {
+                navigate(`/configuration/nodes/${nodeId}`)
+            }, 900)
+        } catch (error) {
+            openDialog({
+                title: "Delete zone failed",
+                description: getErrorMessage(error, "Failed to delete zone."),
+                status: "error",
+                nodeId,
+                zoneId: zone.id,
+            })
+        } finally {
+            setIsDeletingZone(false)
+        }
+    }
 
     useEffect(() => {
         setZoneError(false)
@@ -64,20 +133,26 @@ export default function ZoneDetailPage() {
 
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title={`Zone #${zone.id}`}
                 subtitle={zone.name || "Unnamed Zone"}
                 actions={
                     <HeaderActions>
                         <HeaderActionDanger
-                            onClick={() => {
-                                if (!confirm("Are you sure?")) return
-                                deleteZone(nodeId, zone.id)
-                                    .then(() => navigate("/configuration/nodes/" + nodeId))
-                            }}
+                            onClick={handleDeleteZone}
+                            disabled={isDeletingZone}
                         >
-                            Delete zone
+                            {isDeletingZone ? "Deleting..." : "Delete zone"}
                         </HeaderActionDanger>
+
+                        <HeaderAction
+                            as={Link}
+                            to={`/configuration/nodes/${nodeId}/zones/${zoneId}/edit`}
+                        >
+                            Edit zone
+                        </HeaderAction>
 
                         <HeaderAction
                             as={Link}

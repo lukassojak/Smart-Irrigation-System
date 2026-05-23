@@ -1,6 +1,6 @@
 {
     "standard_conditions": {
-        "solar_total": 5.4,
+        "solar_total": 6.0,
         "rain_mm": 0.0,
         "temperature_celsius": 20.0
     },
@@ -17,8 +17,8 @@
     "automation": {
         "enabled": true,
         "sequential": false,
-        "scheduled_hour": 18,
-        "scheduled_minute": 0,
+        "scheduled_hour": 12,
+        "scheduled_minute": 7,
         "max_flow_monitoring": false,
         "environment": "development",
         "use_weathersimulator": false

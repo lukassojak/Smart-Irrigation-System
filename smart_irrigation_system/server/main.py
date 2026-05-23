@@ -16,6 +16,8 @@ from smart_irrigation_system.server.api.routes import router as api_router
 from smart_irrigation_system.server.configuration.api.v1.routers import router as configuration_router
 from smart_irrigation_system.server.runtime.api.routes import router as runtime_router
 from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
+from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory  # noqa: F401
+from smart_irrigation_system.server.configuration.models.zone_lifecycle import ZoneLifecycle  # noqa: F401
 
 from smart_irrigation_system.server.db.session import engine
 from sqlmodel import SQLModel
@@ -50,6 +52,28 @@ app.include_router(configuration_router, prefix="/api/v1")
 app.include_router(runtime_router, prefix="/api/v1/runtime")
 
 SQLModel.metadata.create_all(bind=engine)
+
+
+def _ensure_irrigation_history_zone_deleted_column() -> None:
+    """Compatibility migration: add `zone_deleted` column to irrigationhistory if missing."""
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(irrigationhistory)"))
+        columns = {row[1] for row in rows}
+        if "zone_deleted" not in columns:
+            # SQLite uses INTEGER for booleans (0/1)
+            conn.execute(
+                text(
+                    "ALTER TABLE irrigationhistory ADD COLUMN zone_deleted INTEGER NOT NULL DEFAULT 0"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_irrigationhistory_zone_deleted ON irrigationhistory(zone_deleted)"
+                )
+            )
+
+
+_ensure_irrigation_history_zone_deleted_column()
 
 
 def _ensure_node_config_sync_status_column() -> None:

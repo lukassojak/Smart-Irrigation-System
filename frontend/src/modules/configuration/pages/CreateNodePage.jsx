@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom"
 import { For, SegmentGroup, Switch, Field, Text, Box, Heading, Input, Button, Stack, SimpleGrid, HStack, Badge } from "@chakra-ui/react"
-import { createNode } from "../../../api/nodes.api"
+import { createNode, pushNodeConfig } from "../../../api/nodes.api"
+import {
+    ControlActionDialogViewport,
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 import HelpSidebar from "../../../components/HelpSidebar"
 import HelpBox from "../../../components/HelpBox"
@@ -10,6 +14,48 @@ import GlassPageHeader, { HeaderActions } from '../../../components/layout/Glass
 import { HeaderAction } from '../../../components/ui/ActionButtons'
 
 import { createNodeHelp, createNodeAdvancedHelp } from "../../../help/createNodeHelp"
+
+const buildErrorDetail = (error, fallbackMessage) => {
+    const detail = error?.response?.data?.detail
+
+    if (typeof detail === "string") {
+        return {
+            message: detail,
+            retryable: false,
+            code: detail === "Push config timeout" ? "PUSH_TIMEOUT" : undefined,
+        }
+    }
+
+    if (detail && typeof detail === "object") {
+        return {
+            ...detail,
+            message: detail.message ?? fallbackMessage,
+            retryable: Boolean(detail.retryable),
+        }
+    }
+
+    return {
+        message: error?.message ?? fallbackMessage,
+        retryable: false,
+        code: error?.message === "Push config timeout" ? "PUSH_TIMEOUT" : undefined,
+    }
+}
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) => new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
+
+    promise
+        .then((value) => {
+            window.clearTimeout(timeoutId)
+            resolve(value)
+        })
+        .catch((error) => {
+            window.clearTimeout(timeoutId)
+            reject(error)
+        })
+})
+
+const SUCCESS_REDIRECT_DELAY_MS = 900
 
 
 export default function CreateNodePage() {
@@ -24,6 +70,7 @@ export default function CreateNodePage() {
     const [scheduledTime, setScheduledTime] = useState("18:00")
     const [automationEnabled, setAutomationEnabled] = useState(true)
     const [concurrentIrrigation, setConcurrentIrrigation] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     {/* Collapsed advanced settings by default */ }
     const [showAdvanced, setShowAdvanced] = useState(false)
@@ -43,7 +90,16 @@ export default function CreateNodePage() {
         setScheduledMinute(minute)
     }
 
-    const handleSubmit = () => {
+    const openControlDialog = (payload) => {
+        const id = `create-node-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
+    }
+
+    const handleSubmit = async () => {
+        if (isSubmitting) {
+            return
+        }
+
         const payload = {
             name,
             location,
@@ -76,19 +132,59 @@ export default function CreateNodePage() {
             },
         }
 
-        createNode(payload)
-            .then((response) => {
-                navigate(`/configuration/nodes/${response.data.id}`)
+        const PUSH_TIMEOUT_MS = 12000
+
+        try {
+            setIsSubmitting(true)
+
+            const response = await createNode(payload)
+            const createdNodeId = response?.data?.id
+
+            if (createdNodeId == null) {
+                throw new Error("Node was created but response did not include node ID")
+            }
+
+            const pushResponse = await withTimeout(
+                pushNodeConfig(createdNodeId),
+                PUSH_TIMEOUT_MS,
+                "Push config timeout",
+            )
+
+            openControlDialog({
+                title: "Node created",
+                description: "Node was created and configuration was pushed successfully.",
+                status: "success",
+                nodeId: createdNodeId,
+                mode: pushResponse?.data?.mode,
+                correlationId: pushResponse?.data?.response?.correlation_id,
             })
-            .catch((error) => {
-                console.error("Failed to create node", error)
+
+            window.setTimeout(() => {
+                navigate(`/configuration/nodes/${createdNodeId}`)
+            }, SUCCESS_REDIRECT_DELAY_MS)
+        } catch (error) {
+            const errorDetail = buildErrorDetail(error, "Failed to create node and push config")
+            openControlDialog({
+                title: "Create node failed",
+                description: errorDetail.message,
+                status: "error",
+                nodeId: errorDetail.node_id,
+                code: errorDetail.code,
+                retryable: errorDetail.retryable,
+                correlationId: errorDetail.correlation_id,
             })
+            console.error("Failed to create node and push config", error)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Create New Node"
                 subtitle="Configure settings for your new irrigation node"
@@ -435,7 +531,8 @@ export default function CreateNodePage() {
                                 alignSelf="flex-start"
                                 colorPalette="teal"
                                 onClick={handleSubmit}
-                                isDisabled={!name.trim()}
+                                isDisabled={!name.trim() || isSubmitting}
+                                loading={isSubmitting}
                             >
                                 Create Node
                             </Button>

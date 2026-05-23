@@ -11,6 +11,10 @@ import {
 } from "@chakra-ui/react"
 
 import { createZone, pushNodeConfig } from "../../../../api/nodes.api"
+import {
+    ControlActionDialogViewport,
+    openControlActionDialog,
+} from "../../../../components/ui/ControlActionDialogOverlay"
 
 import StepBasicInfo from "./steps/StepBasicInfo"
 import StepIrrigationMode from "./steps/StepIrrigationMode"
@@ -28,7 +32,9 @@ import HelpSidebar from "../../../../components/HelpSidebar"
 import { wizardHelp } from "../../../../help/WizardHelp"
 
 import GlassPageHeader, { HeaderActions } from '../../../../components/layout/GlassPageHeader'
-import { HeaderAction, HeaderActionDanger } from '../../../../components/ui/ActionButtons'
+import { HeaderAction } from '../../../../components/ui/ActionButtons'
+
+const SUCCESS_REDIRECT_DELAY_MS = 900
 
 export default function Wizard() {
     const { nodeId } = useParams()
@@ -38,6 +44,11 @@ export default function Wizard() {
     const [submitError, setSubmitError] = useState(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+    const openControlDialog = (payload) => {
+        const id = `create-zone-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
+    }
 
 
     /* --------------------------------------------
@@ -293,14 +304,45 @@ export default function Wizard() {
 
             if (pushAfterCreate) {
                 try {
-                    await pushNodeConfig(nodeId)
+                    const pushResponse = await pushNodeConfig(nodeId)
+                    openControlDialog({
+                        title: "Zone created",
+                        description: "Zone was created and node configuration was pushed successfully.",
+                        status: "success",
+                        zoneId: createdZoneId,
+                        nodeId,
+                        mode: pushResponse?.data?.mode,
+                        correlationId: pushResponse?.data?.response?.correlation_id,
+                    })
                 } catch (pushError) {
                     console.error("Push config failed after zone creation:", pushError)
-                    alert(`Zone created, but config push failed: ${getErrorMessage(pushError)}`)
+
+                    openControlDialog({
+                        title: "Zone created, push failed",
+                        description: getErrorMessage(pushError),
+                        status: "error",
+                        zoneId: createdZoneId,
+                        nodeId,
+                    })
+
+                    window.setTimeout(() => {
+                        navigate(`/configuration/nodes/${nodeId}/zones/${createdZoneId}`)
+                    }, SUCCESS_REDIRECT_DELAY_MS)
+                    return
                 }
+            } else {
+                openControlDialog({
+                    title: "Zone created",
+                    description: "Zone was created successfully.",
+                    status: "success",
+                    zoneId: createdZoneId,
+                    nodeId,
+                })
             }
 
-            navigate(`/configuration/nodes/${nodeId}/zones/${createdZoneId}`)
+            window.setTimeout(() => {
+                navigate(`/configuration/nodes/${nodeId}/zones/${createdZoneId}`)
+            }, SUCCESS_REDIRECT_DELAY_MS)
         } catch (error) {
             console.error("Create zone failed:", error)
 
@@ -346,6 +388,8 @@ export default function Wizard() {
 
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title="Create New Zone"
                 subtitle={`Node ID: ${nodeId}`}

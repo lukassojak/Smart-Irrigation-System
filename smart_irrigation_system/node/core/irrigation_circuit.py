@@ -43,7 +43,8 @@ class IrrigationCircuit:
                  enabled: bool, even_area_mode: bool, target_mm: float | None,
                  zone_area_m2: float | None, liters_per_minimum_dripper: float | None,
                  interval_days: int, drippers: Drippers,
-                 correction_factors: CorrectionFactors, calculation_model=None):
+                 correction_factors: CorrectionFactors, calculation_model=None,
+                 frequency_settings: dict | None = None):
         self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
         self.id: int = circuit_id
         self.name: str = name
@@ -54,6 +55,13 @@ class IrrigationCircuit:
         self.zone_area_m2: float | None = zone_area_m2
         self.liters_per_minimum_dripper: float | None = liters_per_minimum_dripper    # Base watering volume in liters per minimum dripper
         self.interval_days: int = interval_days
+        # Frequency/dynamic irrigation interval settings
+        fs = frequency_settings or {}
+        self.dynamic_interval: bool = bool(fs.get("dynamic_interval", False))
+        self.min_interval_days: int = int(fs.get("min_interval_days", self.interval_days or 1))
+        self.max_interval_days: int = int(fs.get("max_interval_days", self.min_interval_days))
+        self.carry_over_volume: bool = bool(fs.get("carry_over_volume", False))
+        self.irrigation_volume_threshold_percent: int = int(fs.get("irrigation_volume_threshold_percent", 100))
         self.drippers: Drippers = drippers
         self.local_correction_factors: CorrectionFactors = correction_factors
 
@@ -82,8 +90,21 @@ class IrrigationCircuit:
     def irrigate_auto(self, 
                       global_config: GlobalConfig,
                       global_conditions: GlobalConditions,
-                      stop_event: threading.Event) -> IrrigationResult:
+                      stop_event: threading.Event,
+                      precomputed_target_volume: float | None = None) -> IrrigationResult:
         """Starts the automatic irrigation process based on weather conditions using the configured calculation model."""
+        if precomputed_target_volume is not None:
+            if precomputed_target_volume <= 0:
+                return result_factory.create_skipped_due_to_conditions(
+                    circuit_id=self.id,
+                    start_time=time_utils.now(),
+                    target_duration=0,
+                    target_water_amount=0.0,
+                )
+
+            duration = self._volume_to_duration(precomputed_target_volume)
+            return self._irrigate(duration, stop_event, precomputed_target_volume)
+
         base_target_volume = self.base_target_volume
 
         # Compute adjusted water amount using weather model
@@ -118,7 +139,7 @@ class IrrigationCircuit:
             return result
         
         duration = self._volume_to_duration(model_result.final_volume)
-        return self._irrigate(duration, stop_event)
+        return self._irrigate(duration, stop_event, model_result.final_volume)
         
 
     def irrigate_man(self, target_volume: float, stop_event: threading.Event) -> IrrigationResult:
@@ -516,7 +537,67 @@ class IrrigationCircuit:
         # Measured in whole days, ignoring the time part
         time_difference = time_utils.now().date() - last_irrigation_time.date()
         # Check if the interval days have passed
-        return time_difference >= timedelta(days=self.interval_days)
+        effective_interval_days = self.min_interval_days if self.dynamic_interval else self.interval_days
+        return time_difference >= timedelta(days=effective_interval_days)
+
+    def evaluate_dynamic_interval(self,
+                                  state_manager: CircuitStateManager,
+                                  global_config: GlobalConfig,
+                                  global_conditions: GlobalConditions) -> tuple[bool, float, str | None]:
+        """Resolve dynamic interval watering decision and update carry-over volume if needed."""
+        if not self.dynamic_interval:
+            return True, self.base_target_volume, None
+
+        base_target_volume = self.base_target_volume
+        circuit_snapshot = state_manager.get_circuit_snapshot(self.id)
+        last_irrigation_time = circuit_snapshot.last_irrigation
+        days_since_last_irrigation = None if last_irrigation_time is None else (time_utils.now().date() - last_irrigation_time.date()).days
+        current_carry_over = state_manager.get_carry_over_volume_liters(self.id) if self.carry_over_volume else 0.0
+
+        model_result: weather_irrigation_model.WeatherModelResult = self.calculation_model.compute_weather_adjusted_volume(
+            base_volume=base_target_volume,
+            global_config=global_config,
+            global_conditions=global_conditions,
+            local_factors=self.local_correction_factors,
+        )
+
+        candidate_volume = round(max(model_result.final_volume, 0.0) + current_carry_over, 3)
+        threshold_volume = round(base_target_volume * (self.irrigation_volume_threshold_percent / 100.0), 3)
+
+        self.logger.debug(
+            f"Dynamic interval evaluation for circuit {self.id}: "
+            f"base_volume={base_target_volume} L, final_volume={model_result.final_volume} L, "
+            f"carry_over={current_carry_over} L, candidate_volume={candidate_volume} L, "
+            f"threshold_volume={threshold_volume} L, should_skip={model_result.should_skip}"
+        )
+
+        if days_since_last_irrigation is not None and days_since_last_irrigation < self.min_interval_days:
+            reason = (
+                f"Dynamic interval skip: only {days_since_last_irrigation} day(s) passed since last irrigation, "
+                f"minimum is {self.min_interval_days}."
+            )
+            self.logger.info(reason)
+            return False, 0.0, reason
+
+        if days_since_last_irrigation is not None and days_since_last_irrigation >= self.max_interval_days:
+            reason = (
+                f"Dynamic interval force-run: {days_since_last_irrigation} day(s) passed since last irrigation, "
+                f"maximum is {self.max_interval_days}."
+            )
+            self.logger.info(reason)
+            return True, candidate_volume, None
+
+        if candidate_volume < threshold_volume:
+            if self.carry_over_volume:
+                state_manager.set_carry_over_volume_liters(self.id, candidate_volume)
+            reason = (
+                f"Dynamic interval skip: candidate volume {candidate_volume} L is below threshold "
+                f"{threshold_volume} L (min_interval_days={self.min_interval_days})."
+            )
+            self.logger.info(reason)
+            return False, candidate_volume, reason
+
+        return True, candidate_volume, None
     
 
     def _handle_valve_failure(self, failed_state: RelayValveState, reason: str = None) -> None:

@@ -362,7 +362,8 @@ class IrrigationCLI:
         sys_table.add_row("", "")
         current_consumption = status['current_consumption']
         current_consumption_color = self.get_consumption_color(current_consumption, status['input_flow_capacity'])
-        cc_str = Text(f"{current_consumption:.2f} L/h", style=current_consumption_color)
+        cc_value = f"{current_consumption:.2f} L/h" if current_consumption is not None else "N/A"
+        cc_str = Text(cc_value, style=current_consumption_color)
         sys_table.add_row("Current consumption", cc_str)
         sys_table.add_row("Controller state", f"{state_icons.get(status['controller_state'], '?')} {status['controller_state']}")
         sys_table.add_row("Main loop state", f"{main_loop_state_icons.get('UNDEFINED')}")
@@ -390,7 +391,7 @@ class IrrigationCLI:
             icon = state_icons.get(z['state'], "?")
             base_volume: float = self.controller.get_circuit(z['id']).base_target_volume
             bv_str = f"{base_volume:.2f} L" if base_volume is not None else "N/A"
-            time: Optional[datetime] = zone_snapshot.last_irrigation
+            time: Optional[datetime.datetime] = zone_snapshot.last_irrigation
             if time is None:
                 t_str: Text = Text("N/A", style="dim")
             # if the date is today, show only time
@@ -542,11 +543,11 @@ class IrrigationCLI:
 
         return Panel(history_table, title="Irrigation History", expand=True)
 
-    def get_consumption_color(self, consumption: float, capacity: float) -> str:
+    def get_consumption_color(self, consumption: Optional[float], capacity: Optional[float]) -> str:
         """Get color based on consumption percentage."""
-        if consumption <= 0:
+        if consumption is None or consumption <= 0:
             return "dim"
-        elif capacity <= 0:
+        elif capacity is None or capacity <= 0:
             return "red"
         percentage = (consumption / capacity) * 100
         if percentage < 50:

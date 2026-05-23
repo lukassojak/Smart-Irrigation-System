@@ -8,6 +8,8 @@ from smart_irrigation_system.node.interfaces import CircuitExecutionLike
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 
 from smart_irrigation_system.node.utils.logger import get_logger
+import smart_irrigation_system.node.utils.result_factory as result_factory
+import smart_irrigation_system.node.utils.time_utils as time_utils
 
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
@@ -128,9 +130,29 @@ class IrrigationExecutor:
                         self.logger.warning(f"Circuit ID {circuit_id} is not safe to irrigate. Skipping.")
                         planner.mark_done(circuit_id)
                         continue
+
+                    if getattr(circuit, "dynamic_interval", False):
+                        should_irrigate, target_volume, reason = circuit.evaluate_dynamic_interval(
+                            state_manager=self.state_manager,
+                            global_config=global_config,
+                            global_conditions=current_conditions,
+                        )
+                        if not should_irrigate:
+                            self.logger.info(f"Circuit ID {circuit_id} skipped by dynamic interval logic: {reason}")
+                            skipped_result = result_factory.create_skipped_due_to_conditions(
+                                circuit_id=circuit_id,
+                                start_time=time_utils.now(),
+                                target_duration=0,
+                                target_water_amount=target_volume,
+                            )
+                            self.state_manager.irrigation_finished(circuit_id, skipped_result)
+                            planner.mark_done(circuit_id)
+                            continue
+                    else:
+                        target_volume = None
         
                     self.logger.info(f"Starting irrigation for Circuit ID {circuit_id}.")
-                    self._start_auto_irrigation(circuit_id, planner, global_config, current_conditions)
+                    self._start_auto_irrigation(circuit_id, planner, global_config, current_conditions, target_volume)
                     self._on_irrigation_start()
                 
                 # Wait for all circuits in the batch to complete
@@ -176,14 +198,16 @@ class IrrigationExecutor:
     # ==================================================================================================================
 
     def _start_auto_irrigation(self, circuit_id: int, planner: TaskPlanner,
-                          global_config: GlobalConfig, current_conditions: GlobalConditions) -> None:
+                          global_config: GlobalConfig, current_conditions: GlobalConditions,
+                          precomputed_target_volume: float | None = None) -> None:
         def worker():
             try:
                 self.state_manager.irrigation_started(circuit_id)
                 result: IrrigationResult = circuit.irrigate_auto(
                     global_config=global_config,
                     global_conditions=current_conditions,
-                    stop_event=self.stop_event
+                    stop_event=self.stop_event,
+                    precomputed_target_volume=precomputed_target_volume
                 )
                 self.state_manager.irrigation_finished(circuit_id, result)
                 self.logger.info(f"Irrigation for Circuit ID {circuit_id} finalized.")

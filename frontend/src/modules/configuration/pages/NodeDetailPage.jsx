@@ -18,6 +18,11 @@ import GlassPageHeader, { HeaderActions } from '../../../components/layout/Glass
 import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import ZoneCard from "../../../components/ui/cards/ZoneCard"
+import {
+    ControlActionDialogViewport,
+    openControlActionConfirmDialog,
+    openControlActionDialog,
+} from "../../../components/ui/ControlActionDialogOverlay"
 
 
 
@@ -27,7 +32,24 @@ export default function NodeDetailPage() {
     const [node, setNode] = useState(null)
     const [nodeError, setNodeError] = useState(false)
     const [isPushingConfig, setIsPushingConfig] = useState(false)
+    const [isDeletingNode, setIsDeletingNode] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+    const openDialog = (payload) => {
+        const id = `node-detail-action-result-${Date.now()}`
+        openControlActionDialog(id, payload)
+    }
+
+    const getErrorMessage = (error, fallbackMessage) => {
+        const detail = error?.response?.data?.detail
+        if (typeof detail === "string") {
+            return detail
+        }
+        if (detail?.message) {
+            return detail.message
+        }
+        return error?.message ?? fallbackMessage
+    }
 
     const loadNode = () => {
         setNodeError(false)
@@ -46,22 +68,73 @@ export default function NodeDetailPage() {
     }, [nodeId])
 
     const handlePushConfig = async () => {
+        if (!node || isPushingConfig) {
+            return
+        }
+
         setIsPushingConfig(true)
         try {
             await pushNodeConfig(node.id)
             await loadNode()
-            alert("Configuration was pushed successfully.")
+            openDialog({
+                title: "Configuration pushed",
+                description: "Node configuration was pushed successfully.",
+                status: "success",
+                nodeId: node.id,
+            })
         } catch (error) {
-            const detail = error?.response?.data?.detail
-            if (typeof detail === "string") {
-                alert(detail)
-            } else if (detail?.message) {
-                alert(detail.message)
-            } else {
-                alert("Configuration push failed.")
-            }
+            openDialog({
+                title: "Push failed",
+                description: getErrorMessage(error, "Configuration push failed."),
+                status: "error",
+                nodeId: node.id,
+            })
         } finally {
             setIsPushingConfig(false)
+        }
+    }
+
+    const handleDeleteNode = async () => {
+        if (!node || isDeletingNode) {
+            return
+        }
+
+        const id = `node-delete-confirm-${Date.now()}`
+        const confirmed = await openControlActionConfirmDialog(id, {
+            title: "Delete node",
+            description: "Are you sure you want to delete this node and all its zones? This action cannot be undone.",
+            status: "error",
+            nodeId: node.id,
+            confirmLabel: "Delete node",
+            cancelLabel: "Cancel",
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        setIsDeletingNode(true)
+        try {
+            await deleteNode(node.id)
+            openDialog({
+                title: "Node deleted",
+                description: "Node and all its zones were deleted successfully.",
+                status: "success",
+                nodeId: node.id,
+            })
+
+            window.setTimeout(() => {
+                navigate("/configuration/nodes")
+            }, 900)
+        } catch (error) {
+            openDialog({
+                title: "Delete node failed",
+                description: getErrorMessage(error, "Failed to delete node."),
+                status: "error",
+                nodeId: node.id,
+            })
+        } finally {
+            setIsDeletingNode(false)
         }
     }
 
@@ -81,21 +154,25 @@ export default function NodeDetailPage() {
 
     return (
         <>
+            <ControlActionDialogViewport />
+
             <GlassPageHeader
                 title={`Node #${node.id}`}
                 subtitle={node.name || "Unnamed Node"}
                 actions={
                     <HeaderActions>
                         <HeaderActionDanger
-                            onClick={() => {
-                                if (!confirm("Are you sure you want to delete this node and all its zones?")) return
-                                deleteNode(node.id)
-                                    .then(() => navigate("/configuration/nodes"))
-                                    .catch(() => alert("Failed to delete node"))
-                            }}
+                            onClick={handleDeleteNode}
+                            disabled={isDeletingNode}
                         >
-                            Delete node
+                            {isDeletingNode ? "Deleting..." : "Delete node"}
                         </HeaderActionDanger>
+                        <HeaderAction
+                            as={Link}
+                            to={`/configuration/nodes/${node.id}/edit`}
+                        >
+                            Edit node
+                        </HeaderAction>
                         <HeaderAction
                             as={Link}
                             to={`/configuration/nodes/${node.id}/zones/new`}

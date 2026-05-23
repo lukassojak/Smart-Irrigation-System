@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Runtime: `stop-irrigation` is now hybrid — synchronous wait for nodes with currently irrigating zones, asynchronous delivery for others (avoids global timeouts).
+
+
 ## [1.0.0] - 2026-04-26
 *Full architecture MVP completion: multi-node distributed system with server-side runtime projection, centralized configuration, node pairing, MQTT-based communication, and unified frontend. This release enables the core end-to-end functionality of the Smart Irrigation System.*
 
@@ -67,11 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added runtime discovery API:
   - Endpoints for listing and interacting with unpaired nodes.
   - Foundation for automated node onboarding.
+- Added server irrigation history database and API endpoints, enabling node to push irrigation records to the server for centralized storage and analytics.
 - Added UI support for new architecture features:
   - Node discovery page.
   - Global settings page.
   - Extended node creation flow with pairing.
   - Improved runtime dashboard and system overview.
+  - Irrigation history page.
 
 ### Changed
 - Refactored node MQTT layer:
@@ -101,6 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configuration is now managed centrally on server and pushed to nodes.
 - Refactored server core:
   - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
+- Updated node's CircuitStateManager to support irrigation record pushing to server after irrigation attempts.
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
@@ -112,6 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Improved stability of runtime live projection under continuous updates from node snapshots.
 - Reduced dependency on periodic polling for runtime updates.
+- Previously occurring CLI exceptions during active tasks fixed
 
 ### Known Issues
 - Legacy runtime config exporter is not fully reliable in all edge cases.

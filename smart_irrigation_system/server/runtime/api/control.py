@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from smart_irrigation_system.common.mqtt_contract import AckType, MessageType
 from smart_irrigation_system.server.core.server_core import IrrigationServer
+from smart_irrigation_system.server.runtime.schemas.live import ZoneStatus
 
 
 router = APIRouter()
@@ -85,6 +86,15 @@ def _handle_mqtt_failure(operation: str, exc: Exception, node_id: str | None = N
 	if node_id is not None:
 		detail["node_id"] = node_id
 	return HTTPException(status_code=503, detail=detail)
+
+
+def _get_irrigating_node_ids() -> set[str]:
+	snapshot = server.mqtt_manager.live_store.get_snapshot()
+	return {
+		str(zone.node_id)
+		for zone in snapshot.zones.values()
+		if zone.status == ZoneStatus.IRRIGATING
+	}
 
 
 @router.post(
@@ -194,10 +204,31 @@ def stop_irrigation(
 	timeout_seconds: int = Query(5, ge=1, le=60, description="Timeout for synchronous mode"),
 ) -> dict[str, Any]:
 	node_ids = list(server.node_topology_service.get_all_node_ids())
+	if wait_for_response:
+		irrigating_node_ids = _get_irrigating_node_ids()
+		sync_node_ids = [node_id for node_id in node_ids if node_id in irrigating_node_ids]
+		async_node_ids = [node_id for node_id in node_ids if node_id not in irrigating_node_ids]
+	else:
+		sync_node_ids = []
+		async_node_ids = node_ids
+
+	async_results: list[dict[str, Any]] = []
+	for node_id in async_node_ids:
+		try:
+			message_id = server.mqtt_manager.publish_stop_irrigation(node_id=node_id)
+		except Exception as exc:
+			raise _handle_mqtt_failure("stop irrigation", exc, node_id=node_id)
+		async_results.append(
+			{
+				"node_id": node_id,
+				"message_id": message_id,
+				"mode": "async",
+			}
+		)
 
 	if wait_for_response:
 		results: list[dict[str, Any]] = []
-		for node_id in node_ids:
+		for node_id in sync_node_ids:
 			try:
 				response = server.mqtt_manager.publish_stop_irrigation_and_wait(
 					node_id=node_id,
@@ -210,25 +241,23 @@ def stop_irrigation(
 			results.append(
 				{
 					"node_id": node_id,
+					"mode": "sync",
 					"response": _handle_terminal_response(response),
 				}
 			)
 
 		return {
 			"status": "COMPLETED",
-			"mode": "sync",
-			"nodes": results,
+			"mode": "hybrid",
+			"nodes": [*results, *async_results],
+			"sync_nodes": results,
+			"async_nodes": async_results,
 		}
 
-	message_ids = [
-		{
-			"node_id": node_id,
-			"message_id": server.mqtt_manager.publish_stop_irrigation(node_id=node_id),
-		}
-		for node_id in node_ids
-	]
 	return {
 		"status": "SENT",
 		"mode": "async",
-		"nodes": message_ids,
+		"nodes": async_results,
+		"sync_nodes": [],
+		"async_nodes": async_results,
 	}

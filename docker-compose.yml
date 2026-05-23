@@ -4,6 +4,8 @@ services:
 
   mqtt:
     image: eclipse-mosquitto
+    ports:
+      - "1883:1883"
 
   server:
     build:
@@ -13,7 +15,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: sqlite:////app/runtime/server/data/sis.db
-      MQTT_HOST: mqtt
+      MQTT_HOST: mqtt # 192.168.50.203
       TZ: Europe/Prague
     depends_on:
       - mqtt
@@ -28,6 +30,7 @@ services:
       dockerfile: docker/node.Dockerfile
     restart: unless-stopped
     environment:
+      SERVER_URL: http://server:8000
       MQTT_HOST: mqtt
       TZ: Europe/Prague
     depends_on:

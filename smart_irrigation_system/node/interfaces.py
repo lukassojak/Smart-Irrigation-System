@@ -44,7 +44,8 @@ class CircuitExecutionLike(Protocol):
     def irrigate_auto(self,
                       global_config: GlobalConfig,
                       global_conditions: GlobalConditions,
-                      stop_event: threading.Event) -> IrrigationResult:
+                      stop_event: threading.Event,
+                      precomputed_target_volume: float | None = None) -> IrrigationResult:
         ...
 
     def irrigate_man(self,

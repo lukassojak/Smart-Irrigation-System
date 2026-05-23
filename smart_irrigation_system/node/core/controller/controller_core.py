@@ -9,7 +9,9 @@ from typing import Optional
 from smart_irrigation_system.node.utils.logger import get_logger
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
+from smart_irrigation_system.node.config.identity import load_node_identity
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
+from smart_irrigation_system.node.core.history_sync import HistorySyncManager
 from smart_irrigation_system.node.core.enums import ControllerState, IrrigationState
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
 from smart_irrigation_system.node.core.status_models import CircuitStatus, CircuitRuntimeStatus, ControllerStatusSummary, ControllerFullStatus
@@ -44,6 +46,7 @@ CONFIG_GLOBAL_PATH = os.path.join(BASE_DIR, "runtime/node/config/config_global.j
 CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "runtime/node/config/zones_config.json")
 ZONE_STATE_PATH = os.path.join(BASE_DIR, "runtime/node/data/zones_state.json")
 IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "runtime/node/data/irrigation_log.json")
+HISTORY_SYNC_QUEUE_PATH = os.path.join(BASE_DIR, "runtime/node/data/history_sync_queue.json")
 
 
 class ControllerCore(LegacyControllerAPI):
@@ -63,8 +66,10 @@ class ControllerCore(LegacyControllerAPI):
         # Initialize components
         self.conditions_provider: RecentWeatherFetcher | WeatherSimulator = \
             self._init_global_conditions_provider()
+        self.history_sync = self._init_history_sync()
         self.state_manager = CircuitStateManager(ZONE_STATE_PATH,
-                                                 IRRIGATION_LOG_PATH)
+                                                 IRRIGATION_LOG_PATH,
+                                                 history_sync=self.history_sync)
         self.thread_manager = ThreadManager()
         self.batch_strategy = SimpleBatchStrategy()
         self.task_planner = TaskPlanner(self.batch_strategy)
@@ -315,6 +320,44 @@ class ControllerCore(LegacyControllerAPI):
         # TODO: Handle exceptions and validation
         circuit_list: list[IrrigationCircuit] = config_loader.load_zones_config(path)
         return {circuit.id: circuit for circuit in circuit_list}
+    
+    def _init_history_sync(self) -> Optional[HistorySyncManager]:
+        """Initialize the history sync manager for uploading records to the server."""
+        try:
+            # Load node identity to get node ID
+            identity = load_node_identity()
+            node_id_str = identity.assigned_node_id
+            
+            if not node_id_str:
+                self.logger.warning("Node ID not assigned, history sync disabled")
+                return None
+            
+            # Get node ID as integer
+            try:
+                node_id = int(node_id_str)
+            except (ValueError, TypeError):
+                self.logger.warning(f"Invalid node ID format: {node_id_str}, history sync disabled")
+                return None
+            
+            # Get server URL from environment or use default
+            server_url = os.getenv("SERVER_URL", "http://localhost:8000")
+            
+            # Create and start history sync manager
+            sync_manager = HistorySyncManager(
+                server_url=server_url,
+                node_id=node_id,
+                sync_queue_file=HISTORY_SYNC_QUEUE_PATH
+            )
+            
+            # Start background daemon for periodic sync
+            sync_manager.start_background_sync_daemon(interval_seconds=60.0)
+            
+            self.logger.info(f"HistorySyncManager initialized (server: {server_url}, node_id: {node_id})")
+            return sync_manager
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize HistorySyncManager: {e}")
+            return None
     
     def _init_global_conditions_provider(self) -> RecentWeatherFetcher | WeatherSimulator:
         """Initialize the global weather conditions provider based on configuration."""

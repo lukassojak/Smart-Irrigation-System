@@ -7,14 +7,17 @@ import NodesDashboardPage from "./modules/configuration/pages/DashboardPage"
 import NodeDiscoveryPage from "./modules/configuration/pages/NodeDiscoveryPage"
 import NodeDetailPage from "./modules/configuration/pages/NodeDetailPage"
 import CreateNodePage from "./modules/configuration/pages/CreateNodePage"
+import EditNodePage from "./modules/configuration/pages/EditNodePage"
 import ZoneDetailPage from "./modules/configuration/pages/ZoneDetailPage"
 import GlobalSettingsPage from "./modules/configuration/pages/GlobalSettingsPage"
 import Wizard from "./modules/configuration/pages/CreateZoneWizard/Wizard"
+import EditZoneWizard from "./modules/configuration/pages/EditZoneWizard/EditZoneWizard"
 import AppLayout from "./components/layout/AppLayout"
 
 import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
 import RuntimeNodeDetailPage from "./modules/runtime/pages/RuntimeNodeDetailPage"
 import StatisticsPage from "./modules/runtime/pages/StatisticsPage"
+import IrrigationHistoryPage from "./modules/history/pages/IrrigationHistoryPage"
 import HomePage from "./HomePage"
 
 const router = createBrowserRouter([
@@ -49,16 +52,24 @@ const router = createBrowserRouter([
                         element: <CreateNodePage />,
                     },
                     {
-                        path: "nodes/:nodeId",
-                        element: <NodeDetailPage />,
+                        path: "nodes/:nodeId/edit",
+                        element: <EditNodePage />,
+                    },
+                    {
+                        path: "nodes/:nodeId/zones/new",
+                        element: <Wizard />,
+                    },
+                    {
+                        path: "nodes/:nodeId/zones/:zoneId/edit",
+                        element: <EditZoneWizard />,
                     },
                     {
                         path: "nodes/:nodeId/zones/:zoneId",
                         element: <ZoneDetailPage />,
                     },
                     {
-                        path: "nodes/:nodeId/zones/new",
-                        element: <Wizard />,
+                        path: "nodes/:nodeId",
+                        element: <NodeDetailPage />,
                     },
                     {
                         path: "settings",
@@ -107,15 +118,7 @@ const router = createBrowserRouter([
 
             {
                 path: "irrigation-history",
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Irrigation History
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the irrigation history page placeholder.
-                    </Box>
-                </Box>
+                element: <IrrigationHistoryPage />
             },
 
             {

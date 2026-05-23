@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from smart_irrigation_system.server.configuration.api.v1.routers import router as api_router
+from smart_irrigation_system.server.configuration.models.zone_lifecycle import ZoneLifecycle  # noqa: F401
 from smart_irrigation_system.server.db.session import engine
 from sqlmodel import SQLModel
 
