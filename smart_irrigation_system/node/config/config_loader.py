@@ -187,17 +187,7 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     )
 
     circuit = IrrigationCircuit(
-        name=name,
-        circuit_id=number,
-        relay_pin=relay_pin,
-        enabled=enabled,
-        even_area_mode=even_area_mode,
-        base_volume_liters=round(float(base_volume_liters or 0.0), 3),
-        base_flow_lph=round(float(total_consumption or 0.0), 3),
-        interval_days=interval_days,
-        frequency_settings=frequency_settings,
         zone_config=zone_config,
-        correction_factors=correction_factors,
     )
 
     return circuit
@@ -327,7 +317,7 @@ def _is_valid_global_config(data: dict):
         raise ValueError("weather_api.history_url must be a string")
 
 
-# maybe useless
+# maybe useless, unused for now
 def circuits_to_config(circuits: list) -> dict:
     """
     Returns a JSON-compatible dictionary representation of a list of IrrigationCircuit objects.
@@ -343,15 +333,21 @@ def circuit_to_config(circuit: IrrigationCircuit) -> dict:
     Returns a JSON-compatible dictionary representation of an IrrigationCircuit object.
     """
     return {
-        "id": circuit.id,
-        "name": circuit.name,
-        "relay_pin": circuit.valve.relay_pin,
-        "enabled": circuit.enabled,
-        "even_area_mode": circuit.even_area_mode,
-        "base_volume_liters": getattr(circuit, "base_volume_liters", None),
-        "base_flow_lph": getattr(circuit, "base_flow_lph", None),
-        "interval_days": circuit.interval_days,
-        "local_correction_factors": {"solar": circuit.correction_factors.get_factor("solar"),
-                                     "rain": circuit.correction_factors.get_factor("rain"),
-                                     "temperature": circuit.correction_factors.get_factor("temperature")},
+        "id": circuit.zone_config.id,
+        "name": circuit.zone_config.name,
+        "relay_pin": circuit.zone_config.relay_pin,
+        "enabled": circuit.zone_config.enabled,
+        "even_area_mode": circuit.zone_config.even_area_mode,
+        "base_volume_liters": circuit.zone_config.base_volume_liters,
+        "base_flow_lph": circuit.zone_config.base_flow_lph,
+        "interval_days": circuit.zone_config.interval_days,
+        "local_correction_factors": {"solar": circuit.zone_config.local_correction_factors.solar,
+                                     "rain": circuit.zone_config.local_correction_factors.rain,
+                                     "temperature": circuit.zone_config.local_correction_factors.temperature},
+        "frequency_settings": {
+            "dynamic_interval": circuit.zone_config.frequency_settings.dynamic_interval,
+            "min_interval_days": circuit.zone_config.frequency_settings.min_interval_days,
+            "max_interval_days": circuit.zone_config.frequency_settings.max_interval_days,
+            "carry_over_volume": circuit.zone_config.frequency_settings.carry_over_volume,
+            "irrigation_volume_threshold_percent": circuit.zone_config.frequency_settings.irrigation_volume_threshold_percent},
     }

@@ -123,7 +123,7 @@ class IrrigationController:
         """Loads the zones configuration and initializes circuits."""
         try:
             self.circuits_list = load_zones_config(self.zones_config_path)
-            self.circuits: Dict[int, IrrigationCircuit] = {circuit.id: circuit for circuit in self.circuits_list}
+            self.circuits: Dict[int, IrrigationCircuit] = {circuit.zone_config.id: circuit for circuit in self.circuits_list}
             self.logger.debug("Zones configuration loaded successfully with %d circuits.", len(self.circuits))
         except FileNotFoundError as e:
             self.logger.error(f"Zones configuration file not found: {e}. Exiting initialization.")
@@ -135,7 +135,7 @@ class IrrigationController:
     def _initialize_global_conditions_provider(self) -> WeatherSimulator | RecentWeatherFetcher:
         """Initializes the global conditions provider as WeatherSimulator if API is not available, or RecentWeatherFetcher if it is available."""
         self.logger.debug("Initializing global conditions provider...")
-        max_interval_days = max((circuit.interval_days for circuit in self.circuits_list), default=1)
+        max_interval_days = max((circuit.zone_config.interval_days for circuit in self.circuits_list), default=1)
         use_recent_weather_fetcher = self.global_config.automation.environment == "production" or not self.global_config.automation.use_weathersimulator
         if use_recent_weather_fetcher:
             fetcher = RecentWeatherFetcher(global_config=self.global_config, max_interval_days=max_interval_days)
@@ -220,7 +220,7 @@ class IrrigationController:
         irrigating_zones = []
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
-                irrigating_zones.append(circuit.id)
+                irrigating_zones.append(circuit.zone_config.id)
         return irrigating_zones
 
     def get_status(self) -> dict:
@@ -236,10 +236,10 @@ class IrrigationController:
         zones_status = []
         for circuit in self.circuits.values():
             zones_status.append({
-                'id': circuit.id,
-                'name': circuit.name,
+                'id': circuit.zone_config.id,
+                'name': circuit.zone_config.name,
                 'state': circuit.state.name,
-                'pin': circuit.valve.pin,
+                'pin': circuit.zone_config.relay_pin,
             })
 
         scheduled_time = f"{self.global_config.automation.scheduled_hour:02}:{self.global_config.automation.scheduled_minute:02}"
@@ -357,11 +357,11 @@ class IrrigationController:
         """Starts the irrigation process for a specified circuit in a new thread. Returns the thread object."""
         def thread_target():
             # TODO: Handle exceptions within the thread and clean up & update state accordingly
-            self.state_manager.irrigation_started(circuit.id)
-            self.logger.debug(f"Starting irrigation for circuit {circuit.id}...")
+            self.state_manager.irrigation_started(circuit.zone_config.id)
+            self.logger.debug(f"Starting irrigation for circuit {circuit.zone_config.id}...")
             result = circuit.irrigate_auto(self.global_config, self.global_conditions_provider.get_current_conditions(), self.stop_event)
-            self.logger.info(f"Irrigation for circuit {circuit.id} completed with result: {result}.")
-            self.state_manager.irrigation_finished(circuit.id, result)
+            self.logger.info(f"Irrigation for circuit {circuit.zone_config.id} completed with result: {result}.")
+            self.state_manager.irrigation_finished(circuit.zone_config.id, result)
             # after the irrigation is done, OR after interruption, remove the thread from the list
             with self.threads_lock:
                 current = threading.current_thread()
@@ -398,10 +398,10 @@ class IrrigationController:
                             not self.stop_event.is_set():
                         if wait_time >= MAX_WAIT_TIME:
                             result = circuit.flow_overload_timeout_triggered(time_utils.now())
-                            self.state_manager.irrigation_finished(circuit.id, result)
-                            raise TimeoutError(f"Timeout: Skipping circuit {circuit.id} due to persistent flow overload.")
+                            self.state_manager.irrigation_finished(circuit.zone_config.id, result)
+                            raise TimeoutError(f"Timeout: Skipping circuit {circuit.zone_config.id} due to persistent flow overload.")
                         
-                        self.logger.debug(f"Waiting for flow capacity for circuit {circuit.id}...")
+                        self.logger.debug(f"Waiting for flow capacity for circuit {circuit.zone_config.id}...")
                         self.logger.info(f"Current consumption: {self.get_current_consumption()} L/h, Circuit consumption: {circuit.circuit_consumption} L/h")
                         time.sleep(WAIT_INTERVAL_SECONDS)  # Wait for 1 second before checking again
                         wait_time += WAIT_INTERVAL_SECONDS
@@ -438,15 +438,15 @@ class IrrigationController:
                     break
 
                 if not circuit.is_irrigation_allowed(self.state_manager):
-                    self.logger.info(f"Circuit {circuit.id} does not need irrigation at the moment.")
+                    self.logger.info(f"Circuit {circuit.zone_config.id} does not need irrigation at the moment.")
                     continue
 
                 # Check the current consumption against the main valve max flow limit
                 if self.global_config.automation.max_flow_monitoring and \
                 circuit.circuit_consumption > self.global_config.irrigation_limits.main_valve_max_flow:
-                    self.logger.warning(f"Circuit {circuit.id} has too high consumption ({circuit.circuit_consumption} L/h) to start irrigation, skipping it.")
+                    self.logger.warning(f"Circuit {circuit.zone_config.id} has too high consumption ({circuit.circuit_consumption} L/h) to start irrigation, skipping it.")
                     result = circuit.flow_overload_timeout_triggered(time_utils.now())
-                    self.state_manager.irrigation_finished(circuit.id, result)
+                    self.state_manager.irrigation_finished(circuit.zone_config.id, result)
                     continue
 
                 t = self.start_irrigation_circuit(circuit) # start irrigation in a new thread
@@ -496,20 +496,20 @@ class IrrigationController:
             raise RuntimeError("Cannot start manual irrigation while the controller is not in IDLE state.")
     
         if circuit.state != IrrigationState.IDLE:
-            self.logger.warning(f"Circuit {circuit.id} is not in IDLE state, current state: {circuit.state.name}. Cannot start manual irrigation.")
-            raise RuntimeError(f"Circuit {circuit.id} is not in IDLE state, cannot start manual irrigation.")
+            self.logger.warning(f"Circuit {circuit.zone_config.id} is not in IDLE state, current state: {circuit.state.name}. Cannot start manual irrigation.")
+            raise RuntimeError(f"Circuit {circuit.zone_config.id} is not in IDLE state, cannot start manual irrigation.")
 
-        self.logger.debug(f"Starting manual irrigation for circuit {circuit.id} with target {liter_amount} liters...")
+        self.logger.debug(f"Starting manual irrigation for circuit {circuit.zone_config.id} with target {liter_amount} liters...")
 
         def manual_irrigation_thread_func():
             try:
-                self.state_manager.irrigation_started(circuit.id)  # Update the state manager that irrigation has started
-                self.logger.info(f"Manual irrigation for circuit {circuit.id} started with target {liter_amount} liters...")
+                self.state_manager.irrigation_started(circuit.zone_config.id)  # Update the state manager that irrigation has started
+                self.logger.info(f"Manual irrigation for circuit {circuit.zone_config.id} started with target {liter_amount} liters...")
                 result = circuit.irrigate_man(liter_amount, self.stop_event)
-                self.logger.info(f"Manual irrigation for circuit {circuit.id} completed with result: {result}.")
-                self.state_manager.irrigation_finished(circuit.id, result)
+                self.logger.info(f"Manual irrigation for circuit {circuit.zone_config.id} completed with result: {result}.")
+                self.state_manager.irrigation_finished(circuit.zone_config.id, result)
             except Exception as e:
-                self.logger.error(f"Error during manual irrigation for circuit {circuit.id}: {e}")
+                self.logger.error(f"Error during manual irrigation for circuit {circuit.zone_config.id}: {e}")
             finally:
                 with self.threads_lock:
                     current = threading.current_thread()
@@ -518,7 +518,7 @@ class IrrigationController:
                     except ValueError:
                         self.logger.warning(f"Thread {current.name} not found in the threads list. It might have already been removed.")
                 self._update_controller_state()
-                self.logger.info(f"Manual irrigation thread for circuit {circuit.id} has finished.")
+                self.logger.info(f"Manual irrigation thread for circuit {circuit.zone_config.id} has finished.")
 
         manual_thread = threading.Thread(target=manual_irrigation_thread_func, daemon=True)
         with self.threads_lock:
@@ -541,7 +541,7 @@ class IrrigationController:
         # Check if all valves are closed
         for circuit in self.circuits.values():
             if circuit.state == IrrigationState.IRRIGATING:
-                self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to close valve.")
+                self.logger.warning(f"Circuit {circuit.zone_config.id} is still irrigating during cleanup, attempting to close valve.")
                 circuit.close_valve()
         self.state_manager.handle_clean_shutdown()
 

@@ -14,7 +14,6 @@ from smart_irrigation_system.node.core.enums import (
 import smart_irrigation_system.node.exceptions as exceptions
 
 from smart_irrigation_system.node.core.relay_valve import RelayValve
-from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.circuit_state_machine import is_allowed
 from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
@@ -22,7 +21,7 @@ from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.irrigation_models import weather_irrigation_model
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
-from smart_irrigation_system.node.config.zone_config import ZoneConfig
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, CorrectionFactors
 from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 
 import smart_irrigation_system.node.utils.result_factory as result_factory
@@ -39,16 +38,10 @@ class IrrigationStoppedException(Exception):
 
 
 class IrrigationCircuit:
-    def __init__(self, name: str, circuit_id: int, relay_pin: int,
-                 enabled: bool, even_area_mode: bool,
-                 base_volume_liters: float, base_flow_lph: float,
-                 interval_days: int,
-                 zone_config: ZoneConfig,
-                 correction_factors: CorrectionFactors, calculation_model=None,
-                 frequency_settings: dict | None = None,
-                 ):
-        self.logger = get_logger(f"IrrigationCircuit-{circuit_id}")
+    def __init__(self, zone_config: ZoneConfig, calculation_model=None):
+        self.logger = get_logger(f"IrrigationCircuit-{zone_config.id}")
         self.zone_config: ZoneConfig = zone_config
+        self.valve: RelayValve = RelayValve(zone_config.relay_pin)
 
         # Calculation model for weather adjustments
         self.calculation_model = calculation_model or weather_irrigation_model
@@ -295,7 +288,7 @@ class IrrigationCircuit:
 
     @property
     def circuit_consumption(self) -> float:
-        """Returns the total consumption of all drippers in liters per hour."""
+        """Returns the total consumption of the circuit in liters per hour."""
         return float(self.zone_config.base_flow_lph)
 
     @property
