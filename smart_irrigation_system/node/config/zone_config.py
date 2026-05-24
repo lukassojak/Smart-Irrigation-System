@@ -1,5 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional
+
+from smart_irrigation_system.node.config.global_config import CorrectionFactors
+
+
+@dataclass
+class FrequencySettings:
+    dynamic_interval: bool
+    min_interval_days: int
+    max_interval_days: int
+    carry_over_volume: bool
+    irrigation_volume_threshold_percent: int
 
 
 @dataclass
@@ -12,5 +22,5 @@ class ZoneConfig:
     base_volume_liters: float
     base_flow_lph: float
     interval_days: int
-    frequency_settings: dict | None = None
-    local_correction_factors: dict | None = None
+    frequency_settings: FrequencySettings
+    local_correction_factors: CorrectionFactors

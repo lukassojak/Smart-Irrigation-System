@@ -6,6 +6,7 @@ from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircu
 from smart_irrigation_system.node.exceptions import RelayValveError
 from smart_irrigation_system.node.core.enums import IrrigationState
 from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 
 
 # ---------------------- Fakes ----------------------
@@ -40,8 +41,27 @@ def _make_circuit(
     circuit_id: int = 1,
     frequency_settings: dict | None = None,
 ) -> IrrigationCircuit:
-    """Helper to create IrrigationCircuit with Phase 1 API."""
+    """Helper to create IrrigationCircuit with Phase 1+ API (ZoneConfig)."""
     with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve"):
+        freq_settings = FrequencySettings(
+            dynamic_interval=frequency_settings.get("dynamic_interval", False) if frequency_settings else False,
+            min_interval_days=frequency_settings.get("min_interval_days", interval_days) if frequency_settings else interval_days,
+            max_interval_days=frequency_settings.get("max_interval_days", interval_days) if frequency_settings else interval_days,
+            carry_over_volume=frequency_settings.get("carry_over_volume", False) if frequency_settings else False,
+            irrigation_volume_threshold_percent=frequency_settings.get("irrigation_volume_threshold_percent", 100) if frequency_settings else 100,
+        )
+        zone_config = ZoneConfig(
+            id=circuit_id,
+            name="TestCircuit",
+            relay_pin=1,
+            enabled=enabled,
+            even_area_mode=even_area_mode,
+            base_volume_liters=base_volume_liters,
+            base_flow_lph=base_flow_lph,
+            interval_days=interval_days,
+            frequency_settings=freq_settings,
+            local_correction_factors=FakeCorrectionFactors(),
+        )
         circuit = IrrigationCircuit(
             name="TestCircuit",
             circuit_id=circuit_id,
@@ -51,6 +71,7 @@ def _make_circuit(
             base_volume_liters=base_volume_liters,
             base_flow_lph=base_flow_lph,
             interval_days=interval_days,
+            zone_config=zone_config,
             correction_factors=FakeCorrectionFactors(),
             frequency_settings=frequency_settings,
         )

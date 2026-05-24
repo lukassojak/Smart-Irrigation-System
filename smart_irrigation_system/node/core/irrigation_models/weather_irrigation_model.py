@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
-from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.config.global_config import CorrectionFactors
 from smart_irrigation_system.node.utils.logger import get_logger
 
 
@@ -124,9 +124,9 @@ def _compute_total_adjustment(
     l_c = local_factors
 
     # Combined factors
-    solar_factor = g_c.solar + l_c.factors.get("solar", 0.0)
-    rain_factor = g_c.rain + l_c.factors.get("rain", 0.0)
-    temperature_factor = g_c.temperature + l_c.factors.get("temperature", 0.0)
+    solar_factor = g_c.solar + l_c.solar
+    rain_factor = g_c.rain + l_c.rain
+    temperature_factor = g_c.temperature + l_c.temperature
 
     solar_adjustment = delta_solar * solar_factor
     rain_adjustment = delta_rain * rain_factor

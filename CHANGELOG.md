@@ -7,15 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## Added
+### Added
+- New `zone_config.py` dataclass module for zone configuration with `ZoneConfig` and `FrequencySettings` dataclasses (mirrors server-side model structure).
 
-## Changed
+### Changed
+- Refactored `IrrigationCircuit` API: replaced individual zone parameters (`target_mm`, `zone_area_m2`, `liters_per_minimum_dripper`, `drippers`) with simplified `zone_config: ZoneConfig` parameter.
+- Node now requires only precomputed `base_volume_liters` and `base_flow_lph` instead of tracking drippers.
+- Updated `config_loader.py` to compute and pass `ZoneConfig` objects to `IrrigationCircuit`.
 
-## Removed
+### Removed
+- Deleted unused `Drippers` class (`drippers.py`).
 
-## Fixed
+### Fixed
 
-## Known Issues
+### Known Issues
+- Phase 1 backward compatibility: legacy JSON config fields computed as base fields at load time.
 
 ---
 

@@ -1,7 +1,7 @@
 import json
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
-from smart_irrigation_system.node.config.zone_config import ZoneConfig
+from smart_irrigation_system.node.config.global_config import CorrectionFactors
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.config.secrets import get_secret
@@ -159,12 +159,33 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     # Set local correction factors
     file_correction_factors = zone.get("local_correction_factors", {})
     correction_factors = CorrectionFactors(
-        solar=file_correction_factors.get("solar", 55.0),
-        rain=file_correction_factors.get("rain", 55.0),
-        temperature= file_correction_factors.get("temperature", 55.0)
+        solar=file_correction_factors.get("solar", 5.0),
+        rain=file_correction_factors.get("rain", 0.0),
+        temperature= file_correction_factors.get("temperature", 15.0)
     )
 
-    # Create the IrrigationCircuit object
+    # Create FrequencySettings object
+    frequency_settings = FrequencySettings(
+        dynamic_interval=frequency_settings.get("dynamic_interval", False),
+        min_interval_days=frequency_settings.get("min_interval_days", 1),
+        max_interval_days=frequency_settings.get("max_interval_days", 5),
+        carry_over_volume=frequency_settings.get("carry_over_volume", True),
+        irrigation_volume_threshold_percent=frequency_settings.get("irrigation_volume_threshold_percent", 50),
+    )
+
+    zone_config = ZoneConfig(
+        id=number,
+        name=name,
+        relay_pin=relay_pin,
+        enabled=enabled,
+        even_area_mode=even_area_mode,
+        base_volume_liters=round(float(base_volume_liters or 0.0), 3),
+        base_flow_lph=round(float(total_consumption or 0.0), 3),
+        interval_days=interval_days,
+        frequency_settings=frequency_settings,
+        local_correction_factors=correction_factors
+    )
+
     circuit = IrrigationCircuit(
         name=name,
         circuit_id=number,
@@ -175,7 +196,8 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
         base_flow_lph=round(float(total_consumption or 0.0), 3),
         interval_days=interval_days,
         frequency_settings=frequency_settings,
-        correction_factors=correction_factors
+        zone_config=zone_config,
+        correction_factors=correction_factors,
     )
 
     return circuit

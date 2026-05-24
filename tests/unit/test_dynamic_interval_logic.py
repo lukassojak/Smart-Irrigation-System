@@ -10,6 +10,7 @@ from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircu
 from smart_irrigation_system.node.core.irrigation_models.weather_irrigation_model import WeatherModelResult
 from smart_irrigation_system.node.core.status_models import CircuitSnapshot
 from smart_irrigation_system.node.utils import result_factory
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 
 
 class FakeCorrectionFactors:
@@ -45,6 +46,25 @@ def _make_circuit(
     interval_days: int = 3,
 ) -> IrrigationCircuit:
     with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve"):
+        freq_settings = FrequencySettings(
+            dynamic_interval=dynamic_interval,
+            min_interval_days=min_interval_days,
+            max_interval_days=max_interval_days,
+            carry_over_volume=carry_over_volume,
+            irrigation_volume_threshold_percent=threshold_percent,
+        )
+        zone_config = ZoneConfig(
+            id=1,
+            name="TestCircuit",
+            relay_pin=1,
+            enabled=True,
+            even_area_mode=True,
+            base_volume_liters=base_volume_liters,
+            base_flow_lph=base_flow_lph,
+            interval_days=interval_days,
+            frequency_settings=freq_settings,
+            local_correction_factors=FakeCorrectionFactors(),
+        )
         circuit = IrrigationCircuit(
             name="TestCircuit",
             circuit_id=1,
@@ -54,6 +74,7 @@ def _make_circuit(
             base_volume_liters=base_volume_liters,
             base_flow_lph=base_flow_lph,
             interval_days=interval_days,
+            zone_config=zone_config,
             correction_factors=FakeCorrectionFactors(),
             frequency_settings={
                 "dynamic_interval": dynamic_interval,
