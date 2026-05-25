@@ -17,11 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Deleted unused `Drippers` class (`drippers.py`).
+- Deleted unused `CorrectionFactors` class (`correction_factors.py`).
 
 ### Fixed
 
 ### Known Issues
 - Phase 1 backward compatibility: legacy JSON config fields computed as base fields at load time.
+- Multiple triggers in auto irrigation window by AutoIrrigationService.
+- ! Some circuits are not starting on auto irrigation trigger. Cause not identified yet.
 
 ---
 

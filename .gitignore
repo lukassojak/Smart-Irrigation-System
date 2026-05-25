@@ -175,20 +175,15 @@ cython_debug/
 .vscode/
 
 
+# Ignore node data & config files
+runtime/node/config/
+runtime/node/data/
+runtime/node/logs/
 
-# Ignore data files
-data/zones_state.json
-config_global.json
-zones_config.json
-irrigation_log*.json
-history_sync_queue.json
-
-runtime/node/data/irrigation_log.json
-runtime/node/data/zones_state.json
-runtime/node/logs/*.log*
-runtime/server/data/*
-runtime/server/logs/*.log*
-
+# Ignore server data & config files
+runtime/server/config/
+runtime/server/data/
+runtime/server/logs/
 
 # Weather API output (test files)
 recent_weather_data_*.json
