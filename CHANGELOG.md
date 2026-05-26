@@ -20,11 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deleted unused `CorrectionFactors` class (`correction_factors.py`).
 
 ### Fixed
+ - Fixed batch selection bug: `batch_strategy` now uses `zone_config.id` (post-refactor compatibility).
+ - Prevent planner crash: `TaskPlanner.plan` now isolates per-circuit `needs_irrigation()` errors and logs them instead of aborting planning.
+ - Controller planning is now protected: `start_auto_cycle` catches planning exceptions and logs them to avoid silent failures.
+ - Auto-irrigation trigger robustness: `AutoIrrigationService.tick` records the trigger timestamp before invoking the controller callback and logs callback exceptions to avoid repeated triggers within the time window.
 
 ### Known Issues
 - Phase 1 backward compatibility: legacy JSON config fields computed as base fields at load time.
-- Multiple triggers in auto irrigation window by AutoIrrigationService.
-- ! Some circuits are not starting on auto irrigation trigger. Cause not identified yet.
 
 ---
 

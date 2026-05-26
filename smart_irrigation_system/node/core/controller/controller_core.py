@@ -191,10 +191,13 @@ class ControllerCore(LegacyControllerAPI):
             self.logger.warning("Cannot start automatic irrigation cycle while controller is STOPPING.")
             return
 
-        self.logger.info("Starting automatic irrigation cycle...")
-        self.task_planner.plan(circuits=self.circuits,
-                               state_manager=self.state_manager)
+        try:
+            self.task_planner.plan(circuits=self.circuits, state_manager=self.state_manager)
+        except Exception as e:
+            self.logger.error(f"Error during planning phase of automatic irrigation cycle: {e}")
+            return
         
+        self.logger.info("Starting automatic irrigation cycle...")
         # The auto_irrigation_cycle worker name is fixed to ensure only one instance runs at a time
         # However, multiple manual_irrigation_circuit_{id} workers can run concurrently even during auto cycles
         try:

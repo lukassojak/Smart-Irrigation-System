@@ -173,7 +173,7 @@ class IrrigationCircuit:
         circuit_snapshot = state_manager.get_circuit_snapshot(self.zone_config.id)
         last_irrigation_time = circuit_snapshot.last_irrigation
         if not self._interval_days_passed(last_irrigation_time):
-            # TODO: removed logging here
+            # TODO: remove logging here
             self.logger.debug(f"Irrigation not needed: Interval days have not passed since the last irrigation. Last irrigation time: {last_irrigation_time}.")
             return False
         
