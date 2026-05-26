@@ -31,7 +31,7 @@ class LegacyControllerAPI:
         irrigating_zones = []
         for circuit in self.circuits.values():
             if circuit.is_currently_irrigating:
-                irrigating_zones.append(circuit.id)
+                irrigating_zones.append(circuit.zone_config.id)
         return irrigating_zones
     
 
@@ -59,10 +59,10 @@ class LegacyControllerAPI:
         zones_status = []
         for circuit in self.circuits.values():
             zones_status.append({
-                'id': circuit.id,
-                'name': circuit.name,
+                'id': circuit.zone_config.id,
+                'name': circuit.zone_config.name,
                 'state': circuit.state.name,
-                'pin': circuit.valve.pin,
+                'pin': circuit.zone_config.relay_pin,
             })
 
         scheduled_time = f"{self.global_config.automation.scheduled_hour:02}:{self.global_config.automation.scheduled_minute:02}"

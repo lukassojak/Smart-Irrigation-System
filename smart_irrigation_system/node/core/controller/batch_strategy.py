@@ -15,4 +15,4 @@ class SimpleBatchStrategy(BatchStrategyLike):
 
     def select_batches(self, circuits: list[CircuitPlanningLike]) -> list[list[int]]:
         """Select all circuit ids in a single batch."""
-        return [[c.id for c in circuits]]
+        return [[c.zone_config.id for c in circuits]]

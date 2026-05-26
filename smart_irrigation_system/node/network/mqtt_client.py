@@ -449,10 +449,10 @@ class MQTTClient(threading.Thread):
 
             zones_payload.append(
                 {
-                    "zone_id": circuit.id,
-                    "zone_name": circuit.name,
+                    "zone_id": circuit.zone_config.id,
+                    "zone_name": circuit.zone_config.name,
                     "status": zone_status,
-                    "enabled": circuit.enabled,
+                    "enabled": circuit.zone_config.enabled,
                     "progress_percent": runtime.progress_percentage,
                     "last_run": None,
                     "updated_at": now_iso,
@@ -467,9 +467,9 @@ class MQTTClient(threading.Thread):
 
                 tasks_payload.append(
                     {
-                        "task_id": int(circuit.id),
-                        "zone_id": int(circuit.id),
-                        "zone_name": circuit.name,
+                        "task_id": int(circuit.zone_config.id),
+                        "zone_id": int(circuit.zone_config.id),
+                        "zone_name": circuit.zone_config.name,
                         "progress_percent": float(runtime.progress_percentage or 0.0),
                         "current_volume": float(runtime.current_volume or 0.0),
                         "target_volume": float(runtime.target_volume or 0.0),

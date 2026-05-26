@@ -11,7 +11,13 @@ from logging.handlers import TimedRotatingFileHandler
 BASE_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../../..")
 )
-LOG_DIR  = os.path.join(BASE_DIR, "runtime", "node", "logs")
+# Allow overriding log directory via environment (useful for tests)
+_env_log_dir = os.getenv("SIS_LOG_DIR")
+if _env_log_dir:
+    LOG_DIR = _env_log_dir
+else:
+    LOG_DIR = os.path.join(BASE_DIR, "runtime", "node", "logs")
+
 LOG_FILE = os.path.join(LOG_DIR, "system_log.log")
 
 ROTATION_WHEN = 'midnight'  # Rotate logs at midnight

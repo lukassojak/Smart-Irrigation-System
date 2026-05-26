@@ -33,7 +33,7 @@ class StatusAggregator:
         snapshot: CircuitSnapshot = self.state_manager.get_circuit_snapshot(circuit_id)
         return CircuitStatus(
             circuit_id=circuit_id,
-            name=circuit.name,
+            name=circuit.zone_config.name,
             runtime_status=runtime_status,
             snapshot=snapshot
         )

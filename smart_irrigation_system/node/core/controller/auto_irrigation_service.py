@@ -56,8 +56,18 @@ class AutoIrrigationService:
         if self._is_time_to_irrigate():
             # Trigger irrigation demand to the controller
             self.logger.debug("Auto-irrigation time reached, triggering irrigation demand.")
-            self._on_auto_irrigation_demand()
+            # Set last trigger before invoking callback to avoid repeated triggers
+            # if the callback raises an exception. Keep the trigger recorded even
+            # if the callback fails to prevent repeated attempts within the same
+            # allowed time window.
             self._last_trigger = time_utils.now()
+            try:
+                self._on_auto_irrigation_demand()
+            except Exception as e:
+                # Log exception but do not clear _last_trigger to avoid
+                # repeated triggering; controller-side errors should be fixed
+                # there instead.
+                self.logger.error(f"Exception while handling auto irrigation demand: {e}")
 
 
     def enable_runtime(self) -> None:

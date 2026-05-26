@@ -191,10 +191,13 @@ class ControllerCore(LegacyControllerAPI):
             self.logger.warning("Cannot start automatic irrigation cycle while controller is STOPPING.")
             return
 
-        self.logger.info("Starting automatic irrigation cycle...")
-        self.task_planner.plan(circuits=self.circuits,
-                               state_manager=self.state_manager)
+        try:
+            self.task_planner.plan(circuits=self.circuits, state_manager=self.state_manager)
+        except Exception as e:
+            self.logger.error(f"Error during planning phase of automatic irrigation cycle: {e}")
+            return
         
+        self.logger.info("Starting automatic irrigation cycle...")
         # The auto_irrigation_cycle worker name is fixed to ensure only one instance runs at a time
         # However, multiple manual_irrigation_circuit_{id} workers can run concurrently even during auto cycles
         try:
@@ -319,7 +322,7 @@ class ControllerCore(LegacyControllerAPI):
         """Load zones configuration and initialize circuits."""
         # TODO: Handle exceptions and validation
         circuit_list: list[IrrigationCircuit] = config_loader.load_zones_config(path)
-        return {circuit.id: circuit for circuit in circuit_list}
+        return {circuit.zone_config.id: circuit for circuit in circuit_list}
     
     def _init_history_sync(self) -> Optional[HistorySyncManager]:
         """Initialize the history sync manager for uploading records to the server."""
@@ -366,7 +369,7 @@ class ControllerCore(LegacyControllerAPI):
             return WeatherSimulator(seed=WEATHER_SIMULATOR_SEED)
         else:
             self.logger.info("Using Recent Weather Fetcher as conditions provider.")
-            max_interval_days = max((circuit.interval_days for circuit in self.circuits.values()), default=1)
+            max_interval_days = max((circuit.zone_config.interval_days for circuit in self.circuits.values()), default=1)
             return RecentWeatherFetcher(self.global_config, max_interval_days)
         
     def _init_irrigation_executor(self) -> IrrigationExecutor:
@@ -541,7 +544,7 @@ class ControllerCore(LegacyControllerAPI):
         # Double check if all valves are closed
         for circuit in self.circuits.values():
             if circuit.state == IrrigationState.IRRIGATING:
-                self.logger.warning(f"Circuit {circuit.id} is still irrigating during cleanup, attempting to force-close valve.")	
+                self.logger.warning(f"Circuit {circuit.zone_config.id} is still irrigating during cleanup, attempting to force-close valve.")	
                 circuit.close_valve()
 
         self.state_manager.handle_clean_shutdown()

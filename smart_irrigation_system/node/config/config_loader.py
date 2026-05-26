@@ -1,7 +1,7 @@
 import json
 from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircuit
-from smart_irrigation_system.node.core.drippers import Drippers
-from smart_irrigation_system.node.core.correction_factors import CorrectionFactors
+from smart_irrigation_system.node.config.global_config import CorrectionFactors
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.utils.logger import get_logger
 from smart_irrigation_system.node.config.secrets import get_secret
@@ -135,36 +135,59 @@ def circuit_from_config(zone: dict) -> IrrigationCircuit:
     # not used in this version, but can be used for sensors
     # sensor_pins = zone.get("sensor_pins", [])  # expected to be a list of lists
 
-    drippers = Drippers()
-    # Add drippers to the drippers instance
-    drippers_dict = zone.get("drippers_summary", {})
-    for dripper_flow_str, count in drippers_dict.items():
-        for _ in range(count):
-            drippers.add_dripper(int(dripper_flow_str))
-        
+    # Compute base_volume_liters and base_flow_lph from legacy fields (temporary)
+    drippers_dict = zone.get("drippers_summary", {}) or {}
+    total_consumption = 0.0
+    min_dripper_flow = 0.0
+    if isinstance(drippers_dict, dict) and drippers_dict:
+        entries = [(int(k), int(v)) for k, v in drippers_dict.items()]
+        total_consumption = float(sum(flow * count for flow, count in entries))  # liters per hour
+        min_dripper_flow = float(min(flow for flow, _ in entries))
+
+    # Determine base target volume
+    if even_area_mode:
+        base_volume_liters = target_mm * zone_area_m2
+    else:
+        # Fallback: compute duration using liters_per_minimum_dripper and min dripper flow
+        if min_dripper_flow <= 0:
+            base_volume_liters = 0.0
+        else:
+            duration_hours = (liters_per_minimum_dripper or 0) / min_dripper_flow
+            base_volume_liters = total_consumption * duration_hours
+
 
     # Set local correction factors
     file_correction_factors = zone.get("local_correction_factors", {})
     correction_factors = CorrectionFactors(
-        solar=file_correction_factors.get("solar", 55.0),
-        rain=file_correction_factors.get("rain", 55.0),
-        temperature= file_correction_factors.get("temperature", 55.0)
+        solar=file_correction_factors.get("solar", 5.0),
+        rain=file_correction_factors.get("rain", 0.0),
+        temperature= file_correction_factors.get("temperature", 15.0)
     )
 
-    # Create the IrrigationCircuit object
-    circuit = IrrigationCircuit(
+    # Create FrequencySettings object
+    frequency_settings = FrequencySettings(
+        dynamic_interval=frequency_settings.get("dynamic_interval", False),
+        min_interval_days=frequency_settings.get("min_interval_days", 1),
+        max_interval_days=frequency_settings.get("max_interval_days", 5),
+        carry_over_volume=frequency_settings.get("carry_over_volume", True),
+        irrigation_volume_threshold_percent=frequency_settings.get("irrigation_volume_threshold_percent", 50),
+    )
+
+    zone_config = ZoneConfig(
+        id=number,
         name=name,
-        circuit_id=number,
         relay_pin=relay_pin,
         enabled=enabled,
         even_area_mode=even_area_mode,
-        target_mm=target_mm,
-        zone_area_m2=zone_area_m2,
-        liters_per_minimum_dripper=liters_per_minimum_dripper,
+        base_volume_liters=round(float(base_volume_liters or 0.0), 3),
+        base_flow_lph=round(float(total_consumption or 0.0), 3),
         interval_days=interval_days,
         frequency_settings=frequency_settings,
-        drippers=drippers,
-        correction_factors=correction_factors
+        local_correction_factors=correction_factors
+    )
+
+    circuit = IrrigationCircuit(
+        zone_config=zone_config,
     )
 
     return circuit
@@ -294,7 +317,7 @@ def _is_valid_global_config(data: dict):
         raise ValueError("weather_api.history_url must be a string")
 
 
-# maybe useless
+# maybe useless, unused for now
 def circuits_to_config(circuits: list) -> dict:
     """
     Returns a JSON-compatible dictionary representation of a list of IrrigationCircuit objects.
@@ -310,17 +333,21 @@ def circuit_to_config(circuit: IrrigationCircuit) -> dict:
     Returns a JSON-compatible dictionary representation of an IrrigationCircuit object.
     """
     return {
-        "id": circuit.id,
-        "name": circuit.name,
-        "relay_pin": circuit.valve.relay_pin,
-        "enabled": circuit.enabled,
-        "even_area_mode": circuit.even_area_mode,
-        "target_mm": circuit.target_mm,
-        "zone_area_m2": circuit.zone_area_m2,
-        "liters_per_minimum_dripper": circuit.liters_per_minimum_dripper,
-        "interval_days": circuit.interval_days,
-        "drippers_summary": {str(flow_rate): count for flow_rate, count in circuit.drippers.drippers.items()},
-        "local_correction_factors": {"solar": circuit.correction_factors.get_factor("solar"),
-                                     "rain": circuit.correction_factors.get_factor("rain"),
-                                     "temperature": circuit.correction_factors.get_factor("temperature")},
+        "id": circuit.zone_config.id,
+        "name": circuit.zone_config.name,
+        "relay_pin": circuit.zone_config.relay_pin,
+        "enabled": circuit.zone_config.enabled,
+        "even_area_mode": circuit.zone_config.even_area_mode,
+        "base_volume_liters": circuit.zone_config.base_volume_liters,
+        "base_flow_lph": circuit.zone_config.base_flow_lph,
+        "interval_days": circuit.zone_config.interval_days,
+        "local_correction_factors": {"solar": circuit.zone_config.local_correction_factors.solar,
+                                     "rain": circuit.zone_config.local_correction_factors.rain,
+                                     "temperature": circuit.zone_config.local_correction_factors.temperature},
+        "frequency_settings": {
+            "dynamic_interval": circuit.zone_config.frequency_settings.dynamic_interval,
+            "min_interval_days": circuit.zone_config.frequency_settings.min_interval_days,
+            "max_interval_days": circuit.zone_config.frequency_settings.max_interval_days,
+            "carry_over_volume": circuit.zone_config.frequency_settings.carry_over_volume,
+            "irrigation_volume_threshold_percent": circuit.zone_config.frequency_settings.irrigation_volume_threshold_percent},
     }

@@ -6,27 +6,10 @@ from smart_irrigation_system.node.core.irrigation_circuit import IrrigationCircu
 from smart_irrigation_system.node.exceptions import RelayValveError
 from smart_irrigation_system.node.core.enums import IrrigationState
 from smart_irrigation_system.node.core.status_models import CircuitSnapshot
+from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 
 
 # ---------------------- Fakes ----------------------
-
-class FakeDrippers:
-    def __init__(self):
-        self.total_consumption = 0
-        self.drippers = {}
-
-    def add_dripper(self, _):
-        pass
-
-    def remove_dripper(self, _):
-        pass
-
-    def get_consumption(self):
-        return self.total_consumption
-    
-    def get_minimum_dripper_flow(self):
-        return 0
-
 
 class FakeCorrectionFactors:
     def __init__(self, solar=0.0, rain=0.0, temperature=0.0):
@@ -46,6 +29,55 @@ class FakeCorrectionFactors:
         return self.factors.get(parameter)
 
 
+# ---------------------- Helpers ----------------------
+
+def _make_circuit(
+    *,
+    enabled: bool = True,
+    even_area_mode: bool = True,
+    base_volume_liters: float = 200.0,
+    base_flow_lph: float = 10.0,
+    interval_days: int = 2,
+    circuit_id: int = 1,
+    frequency_settings: dict | None = None,
+) -> IrrigationCircuit:
+    """Helper to create IrrigationCircuit with Phase 1+ API (ZoneConfig)."""
+    with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve"):
+        freq_settings = FrequencySettings(
+            dynamic_interval=frequency_settings.get("dynamic_interval", False) if frequency_settings else False,
+            min_interval_days=frequency_settings.get("min_interval_days", interval_days) if frequency_settings else interval_days,
+            max_interval_days=frequency_settings.get("max_interval_days", interval_days) if frequency_settings else interval_days,
+            carry_over_volume=frequency_settings.get("carry_over_volume", False) if frequency_settings else False,
+            irrigation_volume_threshold_percent=frequency_settings.get("irrigation_volume_threshold_percent", 100) if frequency_settings else 100,
+        )
+        zone_config = ZoneConfig(
+            id=circuit_id,
+            name="TestCircuit",
+            relay_pin=1,
+            enabled=enabled,
+            even_area_mode=even_area_mode,
+            base_volume_liters=base_volume_liters,
+            base_flow_lph=base_flow_lph,
+            interval_days=interval_days,
+            frequency_settings=freq_settings,
+            local_correction_factors=FakeCorrectionFactors(),
+        )
+        circuit = IrrigationCircuit(
+            name="TestCircuit",
+            circuit_id=circuit_id,
+            relay_pin=1,
+            enabled=enabled,
+            even_area_mode=even_area_mode,
+            base_volume_liters=base_volume_liters,
+            base_flow_lph=base_flow_lph,
+            interval_days=interval_days,
+            zone_config=zone_config,
+            correction_factors=FakeCorrectionFactors(),
+            frequency_settings=frequency_settings,
+        )
+    return circuit
+
+
 # ---------------------- Tests ----------------------
 
 @pytest.mark.parametrize(
@@ -57,35 +89,27 @@ class FakeCorrectionFactors:
 )
 def test_initial_state_and_fault_flags(enabled, expected_state):
     # Arrange & Act
-    with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve") as mock_relay_valve:
-        circuit = IrrigationCircuit(
-            name="TestCircuit", circuit_id=1, relay_pin=1, enabled=enabled, even_area_mode=True, target_mm=10, zone_area_m2=20,
-            liters_per_minimum_dripper=3, interval_days=2, drippers=FakeDrippers(), correction_factors=FakeCorrectionFactors(),
-        )
+    circuit = _make_circuit(enabled=enabled)
 
-        # Assert
-        assert circuit.state == expected_state
-        assert circuit.has_fault == False
-        assert circuit.last_fault_reason == None
+    # Assert
+    assert circuit.state == expected_state
+    assert circuit.has_fault == False
+    assert circuit.last_fault_reason == None
 
 @pytest.mark.parametrize(
-        ("area_m2", "target_mm", "expected_result_volume"),
+        ("base_volume_liters", "expected_result_volume"),
         [
-            (10, 5, 50),      # 10 m² area, 5 mm target -> 50 liters
-            (20, 10, 200),    # 20 m² area, 10 mm target -> 200 liters
-            (15.5, 7.2, 111.6), # 15.5 m² area, 7.2 mm target -> 111.6 liters
+            (50, 50),           # base_volume_liters=50 -> 50 liters
+            (200, 200),         # base_volume_liters=200 -> 200 liters
+            (111.6, 111.6),     # base_volume_liters=111.6 -> 111.6 liters
         ]
 )
-def test_base_target_volume_calculation_for_even_area_mode(area_m2, target_mm, expected_result_volume):
+def test_base_target_volume_returns_configured_base_volume(base_volume_liters, expected_result_volume):
     # Arrange & Act
-    with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve") as mock_relay_valve:
-        circuit = IrrigationCircuit(
-            name="TestCircuit", circuit_id=1, relay_pin=1, enabled=True, even_area_mode=True, target_mm=target_mm, zone_area_m2=area_m2,
-            liters_per_minimum_dripper=3, interval_days=2, drippers=FakeDrippers(), correction_factors=FakeCorrectionFactors(),
-        )
+    circuit = _make_circuit(base_volume_liters=base_volume_liters)
 
-        # Assert
-        assert circuit.base_target_volume == pytest.approx(expected_result_volume)
+    # Assert
+    assert circuit.base_target_volume == pytest.approx(expected_result_volume)
     
 
 @pytest.mark.parametrize(
@@ -103,20 +127,16 @@ def test_base_target_volume_calculation_for_even_area_mode(area_m2, target_mm, e
 )
 def test_is_safe_to_irrigate_returns_true_when_conditions_met(has_fault, circuit_state, expected_result):
     # Arrange
-    with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve") as mock_relay_valve:
-        circuit = IrrigationCircuit(
-            name="TestCircuit", circuit_id=1, relay_pin=1, enabled=True, even_area_mode=True, target_mm=10, zone_area_m2=20,
-            liters_per_minimum_dripper=3, interval_days=2, drippers=FakeDrippers(), correction_factors=FakeCorrectionFactors(),
-        )
+    circuit = _make_circuit()
 
-        circuit.has_fault = has_fault
-        circuit._state = circuit_state
+    circuit.has_fault = has_fault
+    circuit._state = circuit_state
 
-        # Act
-        result = circuit.is_safe_to_irrigate()
+    # Act
+    result = circuit.is_safe_to_irrigate()
 
-        # Assert
-        assert result == expected_result
+    # Assert
+    assert result == expected_result
 
 
 @pytest.mark.parametrize(
@@ -146,17 +166,14 @@ def test_needs_irrigation_respects_interval_and_last_irrigation(timedelta_days, 
     )
     mock_state_manager = MagicMock()
     mock_state_manager.get_circuit_snapshot.return_value = snapshot
-    with patch("smart_irrigation_system.node.core.irrigation_circuit.RelayValve") as mock_relay_valve:
-        circuit = IrrigationCircuit(
-            name="TestCircuit", circuit_id=1, relay_pin=1, enabled=True, even_area_mode=True, target_mm=10, zone_area_m2=20,
-            liters_per_minimum_dripper=3, interval_days=interval_days, drippers=FakeDrippers(), correction_factors=FakeCorrectionFactors(),
-        )
-        monkeypatch.setattr(
-            "smart_irrigation_system.node.core.irrigation_circuit.time_utils.now",
-            lambda: base_time
-        )
-        # Act
-        result = circuit.needs_irrigation(mock_state_manager)
+    
+    circuit = _make_circuit(interval_days=interval_days)
+    monkeypatch.setattr(
+        "smart_irrigation_system.node.core.irrigation_circuit.time_utils.now",
+        lambda: base_time
+    )
+    # Act
+    result = circuit.needs_irrigation(mock_state_manager)
 
-        # Assert
-        assert result == expected_result
+    # Assert
+    assert result == expected_result

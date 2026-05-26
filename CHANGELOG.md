@@ -7,9 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Runtime: `stop-irrigation` is now hybrid — synchronous wait for nodes with currently irrigating zones, asynchronous delivery for others (avoids global timeouts).
+### Added
+- New `zone_config.py` dataclass module for zone configuration with `ZoneConfig` and `FrequencySettings` dataclasses (mirrors server-side model structure).
 
+### Changed
+- Refactored `IrrigationCircuit` API: replaced individual zone parameters (`target_mm`, `zone_area_m2`, `liters_per_minimum_dripper`, `drippers`) with simplified `zone_config: ZoneConfig` parameter.
+- Node now requires only precomputed `base_volume_liters` and `base_flow_lph` instead of tracking drippers.
+- Updated `config_loader.py` to compute and pass `ZoneConfig` objects to `IrrigationCircuit`.
+
+### Removed
+- Deleted unused `Drippers` class (`drippers.py`).
+- Deleted unused `CorrectionFactors` class (`correction_factors.py`).
+
+### Fixed
+ - Fixed batch selection bug: `batch_strategy` now uses `zone_config.id` (post-refactor compatibility).
+ - Prevent planner crash: `TaskPlanner.plan` now isolates per-circuit `needs_irrigation()` errors and logs them instead of aborting planning.
+ - Controller planning is now protected: `start_auto_cycle` catches planning exceptions and logs them to avoid silent failures.
+ - Auto-irrigation trigger robustness: `AutoIrrigationService.tick` records the trigger timestamp before invoking the controller callback and logs callback exceptions to avoid repeated triggers within the time window.
+
+### Known Issues
+- Phase 1 backward compatibility: legacy JSON config fields computed as base fields at load time.
+
+---
 
 ## [1.0.0] - 2026-04-26
 *Full architecture MVP completion: multi-node distributed system with server-side runtime projection, centralized configuration, node pairing, MQTT-based communication, and unified frontend. This release enables the core end-to-end functionality of the Smart Irrigation System.*
@@ -110,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored server core:
   - Removed legacy `ZoneNodeMapper` in favor of topology-driven logic.
 - Updated node's CircuitStateManager to support irrigation record pushing to server after irrigation attempts.
+- Runtime: `stop-irrigation` is now hybrid — synchronous wait for nodes with currently irrigating zones, asynchronous delivery for others (avoids global timeouts).
 
 ### Deprecated
 - Legacy MQTT topics (`irrigation/{node_id}/...`) are still supported but marked for future removal.
