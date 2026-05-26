@@ -258,7 +258,14 @@ class ControllerCore(LegacyControllerAPI):
 
     def stop_circuit_irrigation(self, circuit_id: int, timeout: float = 10.0) -> None:
         """Stop irrigation for a specific circuit."""
-        raise NotImplementedError("stop_circuit_irrigation is not yet implemented in ControllerCore.")
+        self.logger.info(f"Stopping irrigation for Circuit ID {circuit_id}...")
+        try:
+            self.irrigation_executor.stop_circuit_irrigation(circuit_id=circuit_id, timeout=timeout)
+            self.logger.info(f"Irrigation for Circuit ID {circuit_id} stopped.")
+        except TimeoutError as e:
+            self.logger.error(f"Timeout while stopping irrigation for Circuit ID {circuit_id}: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error while stopping irrigation for Circuit ID {circuit_id}: {e}")
 
 
     # ==================================================================================================================
