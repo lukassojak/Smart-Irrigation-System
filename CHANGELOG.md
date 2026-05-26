@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - New `zone_config.py` dataclass module for zone configuration with `ZoneConfig` and `FrequencySettings` dataclasses (mirrors server-side model structure).
+- Implement per-zone (by zone/circuit id) stop command in `IrrigationExecutor` and expose it via `ControllerCore.stop_circuit_irrigation()`.
 
 ### Changed
 - Refactored `IrrigationCircuit` API: replaced individual zone parameters (`target_mm`, `zone_area_m2`, `liters_per_minimum_dripper`, `drippers`) with simplified `zone_config: ZoneConfig` parameter.
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Deleted unused `Drippers` class (`drippers.py`).
 - Deleted unused `CorrectionFactors` class (`correction_factors.py`).
+- Deleted legacy `IrrigationController` class and removed all references to it
 
 ### Fixed
  - Fixed batch selection bug: `batch_strategy` now uses `zone_config.id` (post-refactor compatibility).

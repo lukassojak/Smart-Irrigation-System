@@ -2,12 +2,7 @@
 import tracemalloc, time
 
 from smart_irrigation_system.__version__ import __version__ as version
-from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
-from smart_irrigation_system.node.core.enums import Environment
 from smart_irrigation_system.node.utils.logger import get_logger
-from smart_irrigation_system.node.interface.button import Button
-from smart_irrigation_system.node.interface.display_controller import DisplayController
-from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
 from smart_irrigation_system.node.config.identity import load_node_identity
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
@@ -15,26 +10,12 @@ from smart_irrigation_system.node.network.mqtt_client import MQTTClient
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
 
 
-# === Configuration ===
-I2C_SCL = 5  # GPIO pin for I2C SCL
-I2C_SDA = 4  # GPIO pin for I2C SDA
-
 # === Constants ===
 REFRESH_INTERVAL_IDLE = 0.5  # Refresh interval for the CLI in seconds when idle
 REFRESH_INTERVAL_ACTIVE = 0.1  # Refresh interval for the CLI in seconds when active
 
 # === Global Variables ===
 logger = get_logger("smart_irrigation_system.main")
-
-# Callback function to toggle pause state
-def toggle_pause(state):
-    global paused
-    paused = state
-    if paused:
-        logger.info("Irrigation system paused.")
-    else:
-        logger.info("Irrigation system resumed.")
-
 
 def main():
     """Main function to start the Smart Irrigation Node."""
@@ -45,13 +26,13 @@ def main():
     time.sleep(0.5)
     print(".", end="", flush=True)
 
-    # Initialize the Irrigation Controller
+    # Initialize the ControllerCore
     try:
         controller = ControllerCore()
         time.sleep(0.5)
         print(".", end="", flush=True)
     except Exception as e:
-        logger.error(f"Failed to initialize IrrigationController: {e}")
+        logger.error(f"Failed to initialize ControllerCore: {e}")
         return
 
     # Initialize network components

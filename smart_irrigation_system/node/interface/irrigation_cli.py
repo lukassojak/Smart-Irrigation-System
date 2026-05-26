@@ -8,7 +8,6 @@ import threading
 import time, logging, datetime
 from typing import Optional
 
-from smart_irrigation_system.node.core.irrigation_controller import IrrigationController
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
 from smart_irrigation_system.node.utils.logger import get_dashboard_log_handler
 from smart_irrigation_system.__version__ import __version__ as version

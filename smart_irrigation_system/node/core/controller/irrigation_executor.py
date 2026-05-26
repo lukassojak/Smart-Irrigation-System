@@ -2,6 +2,7 @@
 
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from smart_irrigation_system.node.interfaces import CircuitExecutionLike
 
@@ -24,6 +25,13 @@ from smart_irrigation_system.node.weather.global_conditions import GlobalConditi
 # Temporary constant for maximum irrigation time per batch for join timeout
 MAX_IRRIGATING_TIME_PER_BATCH_SECONDS = 2 * 60 * 60  # 2 hours
 
+
+@dataclass
+class RunningCircuitTask:
+    circuit_id: int
+    worker_handle: WorkerHandle
+    stop_event: threading.Event
+
 class IrrigationExecutor:
     def __init__(self,
                  circuits: dict[int, CircuitExecutionLike],
@@ -35,6 +43,8 @@ class IrrigationExecutor:
 
         self.logger = get_logger(self.__class__.__name__)
         self.stop_event = threading.Event()
+        self._running_tasks_lock = threading.Lock()
+        self._running_tasks: dict[int, RunningCircuitTask] = {}
 
         self.register_callbacks()   # Register default no-op callbacks
 
@@ -179,6 +189,7 @@ class IrrigationExecutor:
         """
 
         self.stop_event.set()
+        self._signal_all_running_tasks_stop()
         self._on_irrigation_stop_requested()
         try:
             self.thread_manager.join_all_workers(task_type=TaskType.IRRIGATION, timeout=timeout)
@@ -191,6 +202,43 @@ class IrrigationExecutor:
             raise e
         finally:
             self.stop_event.clear()
+            with self._running_tasks_lock:
+                self._running_tasks.clear()
+
+    def stop_circuit_irrigation(self, circuit_id: int, timeout: float = 10.0) -> None:
+        """
+        Signal irrigation task for a specific circuit to stop and wait for its termination.
+
+        :param circuit_id: Circuit ID to stop.
+        :param timeout: Maximum time to wait for the circuit task to stop.
+        :raises TimeoutError: if the task does not stop within timeout.
+        """
+
+        with self._running_tasks_lock:
+            running_task = self._running_tasks.get(circuit_id)
+
+        if running_task is None:
+            self.logger.warning(f"No running irrigation task found for Circuit ID {circuit_id}.")
+            return
+
+        running_task.stop_event.set()
+        self._on_irrigation_stop_requested()
+        try:
+            self.thread_manager.join_worker_handle(worker_handle=running_task.worker_handle, timeout=timeout)
+            self._on_irrigation_stopped()
+        except TimeoutError as e:
+            self._on_executor_error(circuit_id, e)
+            raise e
+        except Exception as e:
+            self._on_executor_error(circuit_id, e)
+            raise e
+
+    def _signal_all_running_tasks_stop(self) -> None:
+        with self._running_tasks_lock:
+            running_tasks = list(self._running_tasks.values())
+
+        for running_task in running_tasks:
+            running_task.stop_event.set()
 
 
     # ==================================================================================================================
@@ -200,13 +248,15 @@ class IrrigationExecutor:
     def _start_auto_irrigation(self, circuit_id: int, planner: TaskPlanner,
                           global_config: GlobalConfig, current_conditions: GlobalConditions,
                           precomputed_target_volume: float | None = None) -> None:
+        local_stop_event = threading.Event()
+
         def worker():
             try:
                 self.state_manager.irrigation_started(circuit_id)
                 result: IrrigationResult = circuit.irrigate_auto(
                     global_config=global_config,
                     global_conditions=current_conditions,
-                    stop_event=self.stop_event,
+                    stop_event=local_stop_event,
                     precomputed_target_volume=precomputed_target_volume
                 )
                 self.state_manager.irrigation_finished(circuit_id, result)
@@ -218,12 +268,20 @@ class IrrigationExecutor:
                 # TODO: implement irrigation failure handling in CircuitStateManager
                 # self.state_manager.irrigation_failed(circuit_id, str(e))
             finally:
+                with self._running_tasks_lock:
+                    self._running_tasks.pop(circuit_id, None)
                 planner.mark_done(circuit_id)
 
         circuit = self.circuits[circuit_id]
         planner.mark_running(circuit_id)
         try:
-            self.thread_manager.start_irrigation_worker(circuit_id, worker)
+            handle = self.thread_manager.start_irrigation_worker(circuit_id, worker)
+            with self._running_tasks_lock:
+                self._running_tasks[circuit_id] = RunningCircuitTask(
+                    circuit_id=circuit_id,
+                    worker_handle=handle,
+                    stop_event=local_stop_event,
+                )
         except ValueError as e:
             self.logger.warning(f"Failed to start irrigation worker for Circuit ID {circuit_id}: {e}")
             planner.mark_done(circuit_id)
@@ -237,18 +295,29 @@ class IrrigationExecutor:
         :raises ValueError: if the irrigation worker cannot be started.
         """
 
+        local_stop_event = threading.Event()
+
         def worker():
             try:
                 self.state_manager.irrigation_started(circuit_id)
                 result: IrrigationResult = circuit.irrigate_man(target_volume=volume,
-                                                                stop_event=self.stop_event
+                                                                stop_event=local_stop_event
                 )
                 self.state_manager.irrigation_finished(circuit_id, result)
                 self.logger.info(f"Manual irrigation for Circuit ID {circuit_id} completed successfully.")
             except Exception as e:
                 self.logger.error(f"Manual irrigation for Circuit ID {circuit_id} failed: {e}")
                 self._on_executor_error(circuit_id, e)
+            finally:
+                with self._running_tasks_lock:
+                    self._running_tasks.pop(circuit_id, None)
 
         circuit = self.circuits[circuit_id]
         handle: WorkerHandle = self.thread_manager.start_irrigation_worker(circuit_id, worker)
+        with self._running_tasks_lock:
+            self._running_tasks[circuit_id] = RunningCircuitTask(
+                circuit_id=circuit_id,
+                worker_handle=handle,
+                stop_event=local_stop_event,
+            )
         return handle
