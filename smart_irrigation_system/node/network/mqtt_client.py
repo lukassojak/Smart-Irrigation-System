@@ -438,23 +438,25 @@ class MQTTClient(threading.Thread):
             self.logger.debug("Skipping status snapshot until node is assigned an ID.")
             return
 
-        status = self.controller.get_status()
+        full_status = self.controller.get_controller_full_status()
+        summary = full_status.summary
         zones_payload: list[dict[str, Any]] = []
         tasks_payload: list[dict[str, Any]] = []
 
         now_iso = self._now_iso()
-        for circuit in self.controller.circuits.values():
+        for circuit in sorted(full_status.circuit_statuses.values(), key=lambda circuit_status: circuit_status.id):
             runtime = circuit.runtime_status
             zone_status = self._map_zone_state(runtime.state.value)
+            last_run = circuit.snapshot.last_irrigation
 
             zones_payload.append(
                 {
-                    "zone_id": circuit.zone_config.id,
-                    "zone_name": circuit.zone_config.name,
+                    "zone_id": circuit.id,
+                    "zone_name": circuit.name,
                     "status": zone_status,
-                    "enabled": circuit.zone_config.enabled,
+                    "enabled": self.controller.circuits[circuit.id].zone_config.enabled,
                     "progress_percent": runtime.progress_percentage,
-                    "last_run": None,
+                    "last_run": last_run.isoformat() if last_run else None,
                     "updated_at": now_iso,
                 }
             )
@@ -467,9 +469,9 @@ class MQTTClient(threading.Thread):
 
                 tasks_payload.append(
                     {
-                        "task_id": int(circuit.zone_config.id),
-                        "zone_id": int(circuit.zone_config.id),
-                        "zone_name": circuit.zone_config.name,
+                        "task_id": int(circuit.id),
+                        "zone_id": int(circuit.id),
+                        "zone_name": circuit.name,
                         "progress_percent": float(runtime.progress_percentage or 0.0),
                         "current_volume": float(runtime.current_volume or 0.0),
                         "target_volume": float(runtime.target_volume or 0.0),
@@ -482,9 +484,9 @@ class MQTTClient(threading.Thread):
             message_type=MessageType.NODE_STATUS_SNAPSHOT,
             node_id=node_id,
             payload={
-                "controller_state": str(status.get("controller_state", "IDLE")).lower(),
-                "auto_enabled": bool(status.get("auto_enabled", True)),
-                "auto_paused": bool(status.get("auto_paused", False)),
+                "controller_state": summary.controller_state.value,
+                "auto_enabled": bool(self.controller.global_config.automation.enabled),
+                "auto_paused": False,
                 "zones": zones_payload,
                 "current_tasks": tasks_payload,
                 "alerts": [] if include_alerts else [],
