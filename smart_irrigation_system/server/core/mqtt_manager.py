@@ -117,7 +117,8 @@ class MQTTManager(threading.Thread):
             zone_id = zone.get("zone_id")
             if zone_id is None:
                 continue
-
+            
+            self.logger.debug(f"Processing status for node {node_id_int} zone {zone_id}: {zone}")
             zone_status = self._to_zone_status(zone.get("status", "offline"))
             zone_updated_at = parse_iso_datetime(zone.get("updated_at")) or sent_at
             self.live_store.upsert_zone_state(

@@ -6,6 +6,27 @@ import {
     Badge
 } from "@chakra-ui/react"
 
+const formatDateTimeValue = (value) => {
+    if (!value) {
+        return "-"
+    }
+
+    const dateValue = new Date(value)
+
+    // Format to "YYYY-MM-DD HH:MM" in local timezone
+    if (Number.isNaN(dateValue.getTime())) {
+        return String(value)
+    }
+
+    const year = dateValue.getFullYear()
+    const month = String(dateValue.getMonth() + 1).padStart(2, "0")
+    const day = String(dateValue.getDate()).padStart(2, "0")
+    const hours = String(dateValue.getHours()).padStart(2, "0")
+    const minutes = String(dateValue.getMinutes()).padStart(2, "0")
+
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
 export default function SelectableZoneCard({
     zone,
     selected,
@@ -102,7 +123,7 @@ export default function SelectableZoneCard({
                     </Text>
 
                     <Text fontSize="xs" color="gray.500">
-                        Last run: {lastRunValue ? new Date(lastRunValue).toLocaleTimeString() : "-"}
+                        Last run: {formatDateTimeValue(lastRunValue)}
                     </Text>
                 </HStack>
             </VStack>

@@ -30,7 +30,6 @@ class NodeRegistry:
             }
             with open(self.file_path, "w") as f:
                 json.dump(self.nodes, f, indent=2)
-        self.logger.debug(f"Updated node {node_id} status.")
 
 
 def parse_node_status(raw_status: str) -> dict | None:

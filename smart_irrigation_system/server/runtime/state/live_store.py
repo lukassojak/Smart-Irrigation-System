@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 import threading
 
 from smart_irrigation_system.server.runtime.schemas.live import AlertType, ZoneStatus
+from smart_irrigation_system.server.utils.logger import get_logger
 
 
 def utcnow() -> datetime:
@@ -82,6 +83,7 @@ class RuntimeLiveStore:
     """Thread-safe in-memory runtime state used by live projection endpoints."""
 
     def __init__(self):
+        self.logger = get_logger(self.__class__.__name__)
         self._lock = threading.RLock()
         self.started_at = utcnow()
         self._last_update_at = self.started_at
@@ -227,6 +229,7 @@ class RuntimeLiveStore:
             zone_state.last_run = last_run
             zone_state.last_update_at = seen_at
             self._last_update_at = seen_at
+            self.logger.debug(f"Updated zone {zone_id} state: status={status}, progress={progress_percent}, last_run={last_run}, enabled={enabled}")
 
     def upsert_current_task(
         self,
