@@ -32,6 +32,10 @@ export function deleteNode(nodeId) {
     return http.delete(`/nodes/${nodeId}`)
 }
 
+export function forceDeleteNode(nodeId) {
+    return http.delete(`/nodes/${nodeId}/force`)
+}
+
 export function deleteZone(nodeId, zoneId) {
     return http.delete(`/nodes/${nodeId}/zones/${zoneId}`)
 }

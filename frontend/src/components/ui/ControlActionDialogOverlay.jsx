@@ -1,13 +1,16 @@
 import {
     Button,
     Dialog,
+    Group,
     HStack,
+    IconButton,
+    Menu,
     Portal,
     Stack,
     Text,
     createOverlay,
 } from "@chakra-ui/react"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, ChevronDown } from "lucide-react"
 import { useEffect } from "react"
 
 export const controlActionDialog = createOverlay((props) => {
@@ -24,6 +27,7 @@ export const controlActionDialog = createOverlay((props) => {
         correlationId,
         isConfirmation = false,
         confirmLabel = "Confirm",
+        confirmMenuItems = [],
         cancelLabel = "Cancel",
         closeLabel = "Close",
         overlayId,
@@ -119,13 +123,52 @@ export const controlActionDialog = createOverlay((props) => {
                                         >
                                             {cancelLabel}
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            colorPalette={status === "error" ? "red" : "teal"}
-                                            onClick={() => controlActionDialog.close(overlayId, true)}
-                                        >
-                                            {confirmLabel}
-                                        </Button>
+
+                                        {confirmMenuItems.length > 0 ? (
+                                            <Menu.Root positioning={{ placement: "bottom-end" }}>
+                                                <Group attached>
+                                                    <Button
+                                                        size="sm"
+                                                        colorPalette={status === "error" ? "red" : "teal"}
+                                                        onClick={() => controlActionDialog.close(overlayId, true)}
+                                                    >
+                                                        {confirmLabel}
+                                                    </Button>
+
+                                                    <Menu.Trigger asChild>
+                                                        <IconButton
+                                                            size="sm"
+                                                            colorPalette={status === "error" ? "red" : "teal"}
+                                                            aria-label={`${confirmLabel} options`}
+                                                        >
+                                                            <ChevronDown size={16} />
+                                                        </IconButton>
+                                                    </Menu.Trigger>
+                                                </Group>
+
+                                                <Menu.Positioner>
+                                                    <Menu.Content>
+                                                        {confirmMenuItems.map((item) => (
+                                                            <Menu.Item
+                                                                key={item.value}
+                                                                value={item.value}
+                                                                onClick={() => controlActionDialog.close(overlayId, item.value)}
+                                                            >
+                                                                {item.label}
+                                                            </Menu.Item>
+                                                        ))}
+                                                    </Menu.Content>
+                                                </Menu.Positioner>
+                                            </Menu.Root>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                colorPalette={status === "error" ? "red" : "teal"}
+                                                onClick={() => controlActionDialog.close(overlayId, true)}
+                                            >
+                                                {confirmLabel}
+                                            </Button>
+                                        )}
                                     </HStack>
                                 ) : (
                                     <Button
@@ -172,11 +215,11 @@ export const openControlActionDialog = (id, payload) => {
 }
 
 export const openControlActionConfirmDialog = async (id, payload) => {
-    const confirmed = await controlActionDialog.open(id, {
+    const result = await controlActionDialog.open(id, {
         ...payload,
         overlayId: id,
         isConfirmation: true,
     })
 
-    return Boolean(confirmed)
+    return result
 }

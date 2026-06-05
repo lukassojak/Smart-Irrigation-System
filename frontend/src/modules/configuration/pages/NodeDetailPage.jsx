@@ -10,7 +10,7 @@ import {
     Badge
 } from "@chakra-ui/react"
 
-import { fetchNodeById, deleteNode, pushNodeConfig } from "../../../api/nodes.api"
+import { fetchNodeById, deleteNode, forceDeleteNode, pushNodeConfig } from "../../../api/nodes.api"
 
 import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndicator"
 import PanelSection from "../../../components/layout/PanelSection"
@@ -100,25 +100,54 @@ export default function NodeDetailPage() {
         }
 
         const id = `node-delete-confirm-${Date.now()}`
-        const confirmed = await openControlActionConfirmDialog(id, {
+        const deleteAction = await openControlActionConfirmDialog(id, {
             title: "Delete node",
             description: "Are you sure you want to delete this node and all its zones? This action cannot be undone.",
             status: "error",
             nodeId: node.id,
             confirmLabel: "Delete node",
+            confirmMenuItems: [
+                { label: "Force delete", value: "force" },
+            ],
             cancelLabel: "Cancel",
         })
 
-        if (!confirmed) {
+        if (!deleteAction) {
             return
+        }
+
+        const isForceDelete = deleteAction === "force"
+
+        // If force delete was selected, show additional confirmation dialog with warning
+        if (isForceDelete) {
+            const forceConfirmId = `node-force-delete-confirm-${Date.now()}`
+            const forceConfirmed = await openControlActionConfirmDialog(forceConfirmId, {
+                title: "Force delete node",
+                description: "Warning: Force deleting will remove the node from server configuration immediately without coordinating with the device. This may result in configuration inconsistencies on the node. Only use this if the node is offline and cannot be deleted normally.",
+                status: "error",
+                nodeId: node.id,
+                confirmLabel: "Force delete",
+                cancelLabel: "Cancel",
+            })
+
+            if (!forceConfirmed) {
+                return
+            }
         }
 
         setIsDeletingNode(true)
         try {
-            await deleteNode(node.id)
+            if (isForceDelete) {
+                await forceDeleteNode(node.id)
+            } else {
+                await deleteNode(node.id)
+            }
+
             openDialog({
                 title: "Node deleted",
-                description: "Node and all its zones were deleted successfully.",
+                description: isForceDelete
+                    ? "Node was force deleted from server configuration."
+                    : "Node and all its zones were deleted successfully.",
                 status: "success",
                 nodeId: node.id,
             })

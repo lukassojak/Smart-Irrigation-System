@@ -234,6 +234,17 @@ class MQTTClient(threading.Thread):
         )
         self.client.publish(topic_ack(node_id), json.dumps(ack), qos=1)
 
+        # Clean up configuration files so node starts fresh after unpair + restart
+        try:
+            if os.path.exists(CONFIG_GLOBAL_PATH):
+                os.remove(CONFIG_GLOBAL_PATH)
+                self.logger.info("Deleted config_global.json during unpair.")
+            if os.path.exists(CONFIG_ZONES_PATH):
+                os.remove(CONFIG_ZONES_PATH)
+                self.logger.info("Deleted zones_config.json during unpair.")
+        except Exception as exc:
+            self.logger.warning("Failed to delete config files during unpair: %s", exc)
+
         with self._state_lock:
             previous_node_id = self.assigned_node_id
             self.assigned_node_id = None

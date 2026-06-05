@@ -128,42 +128,7 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
 
     server = IrrigationServer()
     if node.hardware_uid:
-        # First: attempt to push an updated (empty) runtime config to the node
-        # so that the node will remove any configured zones before we unpair it.
-        try:
-            global_config = GlobalConfigService(session).get_or_create()
-            legacy_runtime_config = export_node_legacy_runtime_config(node, global_config)
-            # Clear zones in the runtime config so node will remove them
-            if isinstance(legacy_runtime_config, dict):
-                legacy_runtime_config["zones"] = []
-
-            try:
-                response = server.mqtt_manager.publish_apply_config_and_wait(
-                    node_id=str(node.id),
-                    config_revision=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-                    legacy_runtime_config=legacy_runtime_config,
-                    apply_mode=ApplyMode.APPLY_NOW,
-                    requested_by="configuration-api-delete-node",
-                    timeout=5,
-                )
-
-                if response.get("message_type") == "NODE_ACK" and response.get("payload", {}).get("ack_type") == "applied":
-                    # mark pushed so server-side state stays consistent
-                    service.mark_config_pushed(node.id)
-                # ignore other responses and proceed to unpair; unpair may still succeed
-            except TimeoutError:
-                # No ACK from node - reject delete
-                raise HTTPException(
-                    status_code=504,
-                    detail="Node did not acknowledge config apply within 5 seconds. Delete was cancelled.",
-                )
-            except Exception:
-                raise HTTPException(status_code=503, detail="Failed to push config to node before delete. Delete was cancelled.")
-        except Exception:
-            # Reject delete if attempt to prepare node for deletion fails
-            raise HTTPException(status_code=503, detail="Failed to prepare node for deletion. Delete was cancelled.")
-
-        # Now unpair the node
+        # Send unpair command; node will clean up its config upon receiving unpair.
         try:
             response = server.mqtt_manager.publish_unpair_node_and_wait(
                 node_id=str(node.id),
@@ -173,10 +138,10 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
         except TimeoutError:
             raise HTTPException(
                 status_code=504,
-                detail="Node did not acknowledge unpair within 5 seconds. Delete was cancelled.",
+                detail="Node did not acknowledge unpair within 5 seconds.",
             )
         except Exception as exc:
-            raise HTTPException(status_code=503, detail=f"Failed to unpair node before delete: {str(exc)}")
+            raise HTTPException(status_code=503, detail=f"Failed to unpair node: {str(exc)}")
 
         if response.get("message_type") != MessageType.NODE_UNPAIR_ACK.value:
             raise HTTPException(
@@ -197,6 +162,27 @@ def delete_node(node_id: int, session: Session = Depends(get_session)):
 
     if node.hardware_uid:
         server.mqtt_manager.live_store.unclaim_discovered_device(node.hardware_uid)
+
+    _sync_runtime_topology(session)
+
+
+@router.delete(
+    "/{node_id}/force",
+    summary="Force delete node by ID without node ACK",
+    status_code=204,
+)
+def force_delete_node(node_id: int, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    success = service.delete_node(node_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    if node.hardware_uid:
+        IrrigationServer().mqtt_manager.live_store.unclaim_discovered_device(node.hardware_uid)
 
     _sync_runtime_topology(session)
 
