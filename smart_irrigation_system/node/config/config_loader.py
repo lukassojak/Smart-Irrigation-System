@@ -4,7 +4,6 @@ from smart_irrigation_system.node.config.global_config import CorrectionFactors
 from smart_irrigation_system.node.config.zone_config import ZoneConfig, FrequencySettings
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.utils.logger import get_logger
-from smart_irrigation_system.node.config.secrets import get_secret
 from typing import Any, Tuple, List
 
 # Initialize logger
@@ -92,25 +91,14 @@ def _global_config_from_dict(data: dict[str, Any], secrets_path: str) -> GlobalC
 
     _is_valid_global_config(data)  # if invalid, raises ValueError
     api_enabled = True
-    try:
-        api_key, application_key, device_mac = get_secret("api_key", secrets_path), get_secret("application_key", secrets_path), get_secret("device_mac", secrets_path)
-    except Exception as e:
-        if data.get("automation").get("environment") == "production":
-            logger.error("Weather API keys are required in production environment.")
-            logger.info("Empty file 'config_secrets.json' created, please fill it with your API keys.")
-            raise ValueError("Weather API keys are required in production environment") from e
-        else:
-            # In non-production environments, we can use dummy values
-            logger.warning("Using dummy weather API keys in non-production environment.")
-            api_key, application_key, device_mac = "dummy_api_key", "dummy_application_key", "00:00:00:00:00:00"
     
     data["weather_api"] = {
         "api_enabled": api_enabled,
         "realtime_url": data["weather_api"].get("realtime_url"),
         "history_url": data["weather_api"].get("history_url"),
-        "api_key": api_key,
-        "application_key": application_key,
-        "device_mac": device_mac
+        "api_key": data["weather_api"].get("api_key", ""),
+        "application_key": data["weather_api"].get("application_key", ""),
+        "device_mac": data["weather_api"].get("device_mac", "")
     }
 
     return GlobalConfig.from_dict(data)

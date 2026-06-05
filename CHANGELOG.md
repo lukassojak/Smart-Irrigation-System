@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated delete API endpoint (`DELETE /api/v1/nodes/{node_id}`) to not send to node clean configuration command before deletion, which led to race conditions.
 - Updated node's MQTT client unpairing logic to clean configuration before unpairing.
 
+### Fixed
+
+### Removed
+- `smart_irrigation_system.node.config.secrets` and all references to it, as secrets are provided in the global config from the server and no longer need to be fetched separately.
+
+### Known Issues
+
 ## [1.1.0] - 2026-05-26
 
 ### Added

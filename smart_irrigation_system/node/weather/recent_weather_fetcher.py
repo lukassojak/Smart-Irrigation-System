@@ -5,7 +5,6 @@ from typing import Optional
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 from smart_irrigation_system.node.utils.logger import get_logger
-from smart_irrigation_system.node.config.secrets import get_secret
 from smart_irrigation_system.node.weather.ecowitt_api import (
     temperature_api_call,
     rainfall_api_call_history,
