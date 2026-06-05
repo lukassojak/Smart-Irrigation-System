@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Node hard delete API endpoint (`DELETE /api/v1/nodes/{node_id}/force`) for removing nodes regardless of their active status.
+- Node no more requires configuration files (`zones_config.json` and `global_config.json`) to exist on disk at startup. If not found, the node will start with an empty configuration and log a warning.
+
+### Changed
+- Updated delete API endpoint (`DELETE /api/v1/nodes/{node_id}`) to not send to node clean configuration command before deletion, which led to race conditions.
+- Updated node's MQTT client unpairing logic to clean configuration before unpairing.
+
 ## [1.1.0] - 2026-05-26
 
 ### Added

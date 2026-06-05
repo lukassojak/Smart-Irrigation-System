@@ -180,7 +180,7 @@ export default function NodesDashboardPage() {
                                                 Solar Total
                                             </DataList.ItemLabel>
                                             <DataList.ItemValue fontSize="sm" fontWeight="500">
-                                                {globalConfig.standard_conditions.solar_total}
+                                                {globalConfig.standard_conditions.solar_total} kWh/m²/day
                                             </DataList.ItemValue>
                                         </DataList.Item>
                                         <DataList.Item>
@@ -196,7 +196,7 @@ export default function NodesDashboardPage() {
                                                 Temperature
                                             </DataList.ItemLabel>
                                             <DataList.ItemValue fontSize="sm" fontWeight="500">
-                                                {globalConfig.standard_conditions.temperature_celsius}°C
+                                                {globalConfig.standard_conditions.temperature_celsius} °C
                                             </DataList.ItemValue>
                                         </DataList.Item>
                                     </DataList.Root>

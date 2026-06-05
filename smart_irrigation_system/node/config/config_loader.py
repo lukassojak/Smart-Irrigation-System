@@ -11,10 +11,53 @@ from typing import Any, Tuple, List
 logger = get_logger("config_loader")
 
 
+
 def load_global_config(filepath: str, secrets_path: str) -> GlobalConfig:
     """Loads global configuration from JSON file and secrets from environment variables or secrets file."""
-    with open(filepath, "r") as f:
-        data = json.load(f)
+    try:
+        with open(filepath, "r") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        # Return a default config with API disabled if file is not found, but log a warning
+        logger.warning(f"Global config file not found at path: {filepath}. Using default config.")
+        data = {
+            "standard_conditions": {
+                "solar_total": 2000.0,
+                "rain_mm": 0.0,
+                "temperature_celsius": 15.0
+            },
+            "correction_factors": {
+                "solar": 0.0,
+                "rain": 0.0,
+                "temperature": 0.0
+            },
+            "irrigation_limits": {
+                "min_percent": 10,
+                "max_percent": 100,
+                "main_valve_max_flow": None
+            },
+            "automation": {
+                "enabled": False,
+                "sequential": True,
+                "scheduled_hour": 18,
+                "scheduled_minute": 0,
+                "max_flow_monitoring": False,
+                "environment": "development",
+                "use_weathersimulator": False
+            },
+            "logging": {
+                "enabled": True,
+                "log_level": "INFO"
+            },
+            "weather_api": {
+                "api_enabled": False,
+                "realtime_url": "",
+                "history_url": "",
+                "api_key": "",
+                "application_key": "",
+                "device_mac": ""
+            }
+        }
 
     return _global_config_from_dict(data, secrets_path)
 
@@ -77,8 +120,13 @@ def load_zones_config(filepath: str) -> list[IrrigationCircuit]:
     """
     Loads circuits configurations from JSON file and creates IrrigationCircuit objects for each circuit.
     """
-    with open(filepath, "r") as f:
-        config_data = json.load(f)
+    try:
+        with open(filepath, "r") as f:
+            config_data = json.load(f)
+    except FileNotFoundError:
+        # Log a warning and return an empty list if zones config file is not found, to allow runtime to start with no zones.
+        logger.warning(f"Zones config file not found at path: {filepath}. No irrigation circuits will be loaded.")
+        return []
 
     return _circuits_from_zones_dict(config_data, strict=False)
 

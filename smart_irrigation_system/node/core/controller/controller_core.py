@@ -322,12 +322,10 @@ class ControllerCore(LegacyControllerAPI):
 
     def _load_global_config(self, path: str) -> GlobalConfig:
         """Load global configuration from the specified path."""
-        # TODO: Handle exceptions and validation
         return config_loader.load_global_config(path, CONFIG_SECRETS_PATH)
 
     def _load_zones_config(self, path: str) -> dict[int, IrrigationCircuit]:
         """Load zones configuration and initialize circuits."""
-        # TODO: Handle exceptions and validation
         circuit_list: list[IrrigationCircuit] = config_loader.load_zones_config(path)
         return {circuit.zone_config.id: circuit for circuit in circuit_list}
     
