@@ -51,3 +51,7 @@ export function pushAllPendingNodeConfigs() {
 export function optimizePerPlant(payload) {
     return http.post("/optimization/per-plant", payload)
 }
+
+export function fetchNodeHeader(nodeId) {
+    return http.get(`/nodes/${nodeId}/header`)
+}

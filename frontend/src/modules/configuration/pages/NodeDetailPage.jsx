@@ -7,7 +7,9 @@ import {
     Text,
     SimpleGrid,
     DataList,
-    Badge
+    Badge,
+    Image,
+    Flex
 } from "@chakra-ui/react"
 
 import { fetchNodeById, deleteNode, forceDeleteNode, pushNodeConfig } from "../../../api/nodes.api"
@@ -227,35 +229,59 @@ export default function NodeDetailPage() {
             />
             <Box p={6}>
                 <Stack gap={10} mb={6}>
-                    {/* Node summary */}
-                    <PanelSection title="Node Summary">
-                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                            <DataList.Root orientation="horizontal">
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Node ID</DataList.ItemLabel>
-                                    <DataList.ItemValue>{node.id}</DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Location</DataList.ItemLabel>
-                                    <DataList.ItemValue>{node.location || "N/A"}</DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Last updated</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {node.last_updated ? new Date(node.last_updated).toLocaleString() : "N/A"}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Config sync</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        <Badge colorPalette={isPushed ? "green" : "orange"}>
-                                            {isPushed ? "PUSHED" : "PENDING"}
-                                        </Badge>
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                            </DataList.Root>
-                        </SimpleGrid>
-                    </PanelSection>
+                    {/* Node summary with board image */}
+                    <Flex gap={10} flexDirection={{ base: "column", md: "row" }} alignItems={{ base: "stretch", md: "flex-start" }}>
+                        <Box flex={{ base: "1", md: "2" }}>
+                            <PanelSection title="Node Summary">
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                    <DataList.Root orientation="horizontal">
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Node ID</DataList.ItemLabel>
+                                            <DataList.ItemValue>{node.id}</DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Location</DataList.ItemLabel>
+                                            <DataList.ItemValue>{node.location || "N/A"}</DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Last updated</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {node.last_updated ? new Date(node.last_updated).toLocaleString() : "N/A"}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Config sync</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                <Badge colorPalette={isPushed ? "green" : "orange"}>
+                                                    {isPushed ? "PUSHED" : "PENDING"}
+                                                </Badge>
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                    </DataList.Root>
+                                </SimpleGrid>
+
+
+                            </PanelSection>
+                        </Box>
+                        <Box display={{ base: "none", md: "block" }} flex="1">
+                            <PanelSection>
+                                <Stack>
+                                    <Image
+                                        src="/pi_zero_2w_board.webp"
+                                        alt="Raspberry Pi Zero 2W Board"
+                                        width="100%"
+                                        height="auto"
+                                    />
+                                    {/* Text with link to NodeHeaderDetailPage */}
+                                    <Text fontSize="sm" color="fg.muted">
+                                        <Link to={`/configuration/nodes/${node.id}/header`} style={{ color: "inherit", textDecoration: "underline" }}>View GPIO header configuration</Link>
+                                    </Text>
+                                </Stack>
+
+                            </PanelSection>
+                        </Box>
+                    </Flex>
 
                     <PanelSection title="Configuration Overview">
                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
@@ -293,16 +319,15 @@ export default function NodeDetailPage() {
                                         {node.batch_strategy.flow_control ? "Enabled" : "Disabled"}
                                     </DataList.ItemValue>
                                 </DataList.Item>
-                                {/*
-                        <DataList.Item>
-                            <DataList.ItemLabel>Input Pins</DataList.ItemLabel>
-                            <DataList.ItemValue>{node.hardware.input_pins.length}</DataList.ItemValue>
-                        </DataList.Item>
-                        <DataList.Item>
-                            <DataList.ItemLabel>Output Pins</DataList.ItemLabel>
-                            <DataList.ItemValue>{node.hardware.output_pins.length}</DataList.ItemValue>
-                        </DataList.Item>
-                        */}
+                                {/* On base views (mobile) when header details are not visible, show link to header details */}
+                                <DataList.Item display={{ base: "flex", md: "none" }}>
+                                    <DataList.ItemLabel>GPIO Header</DataList.ItemLabel>
+                                    <DataList.ItemValue>
+                                        <Link to={`/configuration/nodes/${node.id}/header`} style={{ color: "inherit", textDecoration: "underline" }}>
+                                            View header configuration
+                                        </Link>
+                                    </DataList.ItemValue>
+                                </DataList.Item>
                             </DataList.Root>
                         </SimpleGrid>
                     </PanelSection>

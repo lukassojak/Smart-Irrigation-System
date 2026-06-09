@@ -10,7 +10,7 @@ import {
     Button,
 } from "@chakra-ui/react"
 
-import { updateZone, fetchZoneById, pushNodeConfig } from "../../../../api/nodes.api"
+import { updateZone, fetchZoneById, pushNodeConfig, fetchNodeHeader } from "../../../../api/nodes.api"
 import {
     ControlActionDialogViewport,
     openControlActionDialog,
@@ -45,6 +45,7 @@ export default function EditZoneWizard() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [loadError, setLoadError] = useState(null)
+    const [headerPins, setHeaderPins] = useState([])
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openControlDialog = (payload) => {
@@ -134,7 +135,36 @@ export default function EditZoneWizard() {
     }, [nodeId, zoneId])
 
     /* --------------------------------------------
-         AutoOptimize state for per-plant emitter configuration
+        Load GPIO header details for pin selection step
+    -------------------------------------------- */
+
+    useEffect(() => {
+        fetchNodeHeader(nodeId)
+            .then((response) => {
+                const mappedPins = response.data.pins.map(pin => ({
+                    boardPinId: pin.board_pin,
+                    bcmPinId: pin.bcm,
+                    occupiedBy: pin.occupied_by,
+                    type:
+                        pin.type === "gpio"
+                            ? pin.occupied_by && pin.occupied_by !== zoneId
+                                ? "gpio_used"
+                                : "gpio_free"
+                            : pin.type,
+                    label:
+                        pin.type === "gpio"
+                            ? `GPIO ${pin.bcm}`
+                            : pin.type === "ground"
+                                ? "GND"
+                                : "POWER"
+                }))
+
+                setHeaderPins(mappedPins)
+            })
+    }, [nodeId])
+
+    /* --------------------------------------------
+        AutoOptimize state for per-plant emitter configuration
     -------------------------------------------- */
 
     const [autoOptimize, setAutoOptimize] = useState(true)
@@ -156,6 +186,7 @@ export default function EditZoneWizard() {
                     <StepBasicInfo
                         data={zoneDraft}
                         onChange={setZoneDraft}
+                        headerPins={headerPins}
                     />
                 ),
             },

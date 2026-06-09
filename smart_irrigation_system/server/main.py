@@ -51,57 +51,7 @@ app.include_router(api_router, prefix="/api/v1")
 app.include_router(configuration_router, prefix="/api/v1")
 app.include_router(runtime_router, prefix="/api/v1/runtime")
 
-SQLModel.metadata.create_all(bind=engine)
-
-
-def _ensure_irrigation_history_zone_deleted_column() -> None:
-    """Compatibility migration: add `zone_deleted` column to irrigationhistory if missing."""
-    with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(irrigationhistory)"))
-        columns = {row[1] for row in rows}
-        if "zone_deleted" not in columns:
-            # SQLite uses INTEGER for booleans (0/1)
-            conn.execute(
-                text(
-                    "ALTER TABLE irrigationhistory ADD COLUMN zone_deleted INTEGER NOT NULL DEFAULT 0"
-                )
-            )
-            conn.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS idx_irrigationhistory_zone_deleted ON irrigationhistory(zone_deleted)"
-                )
-            )
-
-
-_ensure_irrigation_history_zone_deleted_column()
-
-
-def _ensure_node_config_sync_status_column() -> None:
-    """MVP compatibility migration for existing SQLite databases."""
-    with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(node)"))
-        columns = {row[1] for row in rows}
-        if "config_sync_status" not in columns:
-            conn.execute(
-                text(
-                    "ALTER TABLE node ADD COLUMN config_sync_status TEXT NOT NULL DEFAULT 'PENDING'"
-                )
-            )
-
-
-def _ensure_node_hardware_uid_column() -> None:
-    """Compatibility migration for the node hardware_uid pairing column."""
-    with engine.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(node)"))
-        columns = {row[1] for row in rows}
-        if "hardware_uid" not in columns:
-            conn.execute(text("ALTER TABLE node ADD COLUMN hardware_uid TEXT"))
-
-        conn.execute(
-            text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_node_hardware_uid ON node(hardware_uid)"
-            )
-        )
+# SQLModel.metadata.create_all(bind=engine)
 
 
 # ------------------- Server Orchestrator ------------------- #
@@ -112,8 +62,6 @@ server = IrrigationServer()
 def on_startup():
     """Starts the orchestrator during FastAPI server startup."""
     app.logger = getattr(app, "logger", None)
-    _ensure_node_config_sync_status_column()
-    _ensure_node_hardware_uid_column()
     with Session(engine) as session:
         initialize_live_store_from_config(session)
 

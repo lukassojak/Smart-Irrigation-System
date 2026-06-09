@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from sqlmodel import Session
 
-from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeRead, NodeListRead, NodeUpdate
+from smart_irrigation_system.server.configuration.schemas.node import NodeCreate, NodeRead, NodeListRead, NodeUpdate, NodeHeaderRead
 from smart_irrigation_system.server.configuration.schemas.zone import ZoneCreate, ZoneRead, ZoneListRead, ZoneUpdate
 from smart_irrigation_system.server.configuration.models.node import Node
 from smart_irrigation_system.server.configuration.models.zone import Zone
@@ -98,6 +98,23 @@ def get_node(node_id: int, session: Session = Depends(get_session)):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     return NodeRead.model_validate(node)
+
+@router.get(
+    "/{node_id}/header",
+    summary="Get node GPIO header configuration",
+    response_model=NodeHeaderRead,
+    status_code=200,
+    )
+def get_node_header(node_id: int, session: Session = Depends(get_session)):
+    service = NodeService(session)
+    node = service.get_node(node_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    header_info = service.get_node_header(node_id)
+    if not header_info:
+        raise HTTPException(status_code=404, detail="Node header information not found")
+    return header_info
 
 
 @router.patch(
@@ -240,7 +257,10 @@ def get_zone(node_id: int, zone_id: int, session: Session = Depends(get_session)
 )
 def update_zone(node_id: int, zone_id: int, data: ZoneUpdate, session: Session = Depends(get_session)):
     service = NodeService(session)
-    zone = service.update_zone(node_id, zone_id, data)
+    try:
+        zone = service.update_zone(node_id, zone_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     if not zone:
         raise HTTPException(status_code=404, detail="Zone not found")
     _sync_runtime_topology(session)

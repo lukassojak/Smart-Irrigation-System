@@ -6,6 +6,7 @@ import ManualControlPage from "./modules/runtime/pages/ManualControlPage"
 import NodesDashboardPage from "./modules/configuration/pages/DashboardPage"
 import NodeDiscoveryPage from "./modules/configuration/pages/NodeDiscoveryPage"
 import NodeDetailPage from "./modules/configuration/pages/NodeDetailPage"
+import NodeHeaderDetailPage from "./modules/configuration/pages/NodeHeaderDetailPage"
 import CreateNodePage from "./modules/configuration/pages/CreateNodePage"
 import EditNodePage from "./modules/configuration/pages/EditNodePage"
 import ZoneDetailPage from "./modules/configuration/pages/ZoneDetailPage"
@@ -66,6 +67,10 @@ const router = createBrowserRouter([
                     {
                         path: "nodes/:nodeId/zones/:zoneId",
                         element: <ZoneDetailPage />,
+                    },
+                    {
+                        path: "nodes/:nodeId/header",
+                        element: <NodeHeaderDetailPage />,
                     },
                     {
                         path: "nodes/:nodeId",

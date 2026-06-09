@@ -8,7 +8,7 @@ class Zone(SQLModel, table=True):
     node_id: int = Field(foreign_key="node.id")
 
     name: str = Field(index=True)
-    relay_pin: int
+    relay_pin: int | None = None
     enabled: bool = True
 
     irrigation_mode: IrrigationMode

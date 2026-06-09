@@ -25,6 +25,9 @@ class Node(SQLModel, table=True):
     automation: dict | None = Field(default=None, sa_column=Column(JSON))
     batch_strategy: dict | None = Field(default=None, sa_column=Column(JSON))
     logging: dict | None = Field(default=None, sa_column=Column(JSON))
+    # Optional stored mapping of header pins for the hardware (board pin -> metadata)
+    # Example: {"1": {"type":"power","bcm":null,"occupied_by":null}, ...}
+    header_pins: dict | None = Field(default=None, sa_column=Column(JSON))
 
     zones: list[Zone] = Relationship(
         back_populates="node",

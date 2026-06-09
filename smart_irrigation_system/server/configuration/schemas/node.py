@@ -62,3 +62,17 @@ class NodeListRead(BaseModel):
     hardware_uid: str | None = None
     config_sync_status: str
     zones: list[ZoneRead] = Field(default_factory=list)
+
+
+class HeaderPin(BaseModel):
+    board_pin: int
+    bcm: int | None = None
+    type: str
+    occupied_by: int | None = None
+
+
+class NodeHeaderRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    node_id: int
+    pins: list[HeaderPin] = Field(default_factory=list)

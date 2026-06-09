@@ -10,7 +10,7 @@ import {
     Button,
 } from "@chakra-ui/react"
 
-import { createZone, pushNodeConfig } from "../../../../api/nodes.api"
+import { createZone, pushNodeConfig, fetchNodeHeader } from "../../../../api/nodes.api"
 import {
     ControlActionDialogViewport,
     openControlActionDialog,
@@ -43,6 +43,7 @@ export default function Wizard() {
     const [currentStep, setCurrentStep] = useState(0)
     const [submitError, setSubmitError] = useState(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [headerPins, setHeaderPins] = useState([])
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openControlDialog = (payload) => {
@@ -84,10 +85,43 @@ export default function Wizard() {
     })
 
     /* --------------------------------------------
-         AutoOptimize state for per-plant emitter configuration
+        AutoOptimize state for per-plant emitter configuration
     -------------------------------------------- */
 
     const [autoOptimize, setAutoOptimize] = useState(true)
+
+    /* --------------------------------------------
+        Node header fetching
+    -------------------------------------------- */
+
+    useEffect(() => {
+        fetchNodeHeader(nodeId)
+            .then((response) => {
+                const mappedPins = response.data.pins.map(pin => ({
+                    boardPinId: pin.board_pin,
+                    bcmPinId: pin.bcm,
+                    occupiedBy: pin.occupied_by,
+                    type:
+                        pin.type === "gpio"
+                            ? pin.occupied_by
+                                ? "gpio_used"
+                                : "gpio_free"
+                            : pin.type,
+                    label:
+                        pin.type === "gpio"
+                            ? `GPIO ${pin.bcm}`
+                            : pin.type === "ground"
+                                ? "GND"
+                                : "POWER"
+                }))
+
+                setHeaderPins(mappedPins)
+                console.log("mappedPins", mappedPins)
+            })
+            .catch((err) => {
+                console.error("Failed to load node header:", err)
+            })
+    }, [nodeId])
 
     /* --------------------------------------------
        Steps (DATA-DRIVEN)
@@ -106,6 +140,7 @@ export default function Wizard() {
                     <StepBasicInfo
                         data={zoneDraft}
                         onChange={setZoneDraft}
+                        headerPins={headerPins}
                     />
                 ),
             },
@@ -260,7 +295,7 @@ export default function Wizard() {
                 render: () => <StepReview data={zoneDraft} />,
             },
         ],
-        [zoneDraft, autoOptimize]
+        [zoneDraft, autoOptimize, headerPins]
     )
 
     const activeStep = steps[currentStep]

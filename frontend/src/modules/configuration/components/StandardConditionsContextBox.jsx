@@ -42,13 +42,13 @@ export default function StandardConditionsContextBox({
 
                 <SimpleGrid columns={{ base: 1, md: 3 }} gap={2}>
                     <Text fontSize="xs" color="fg.muted">
-                        Solar total: <Text as="span" color="fg" fontWeight="600">{standardConditions.solar_total}</Text>
+                        Solar total: <Text as="span" color="fg" fontWeight="600">{standardConditions.solar_total} kWh/m²/day</Text>
                     </Text>
                     <Text fontSize="xs" color="fg.muted">
-                        Rain: <Text as="span" color="fg" fontWeight="600">{standardConditions.rain_mm} mm</Text>
+                        Rain: <Text as="span" color="fg" fontWeight="600">{standardConditions.rain_mm} mm/day</Text>
                     </Text>
                     <Text fontSize="xs" color="fg.muted">
-                        Temperature: <Text as="span" color="fg" fontWeight="600">{standardConditions.temperature_celsius} C</Text>
+                        Temperature: <Text as="span" color="fg" fontWeight="600">{standardConditions.temperature_celsius} °C daily average</Text>
                     </Text>
                 </SimpleGrid>
             </Stack>

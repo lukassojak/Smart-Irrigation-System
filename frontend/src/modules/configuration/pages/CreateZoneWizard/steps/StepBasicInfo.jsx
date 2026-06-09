@@ -1,6 +1,5 @@
 import {
     Box,
-    Heading,
     Stack,
     Field,
     Input,
@@ -10,12 +9,15 @@ import {
 } from "@chakra-ui/react"
 
 import PanelSection from "../../../../../components/layout/PanelSection"
+import GPIOHeaderVisualizer from "../../../components/GPIOHeaderVisualizer"
 
-export default function StepBasicInfo({ data, onChange }) {
+
+export default function StepBasicInfo({ data, onChange, headerPins }) {
     const update = (patch) => {
         onChange({ ...data, ...patch })
     }
 
+    console.log("headerPins", headerPins)
     return (
         <PanelSection title="Basic Zone Information">
             <Stack gap={6}>
@@ -44,23 +46,21 @@ export default function StepBasicInfo({ data, onChange }) {
                         Relay valve pin <Field.RequiredIndicator />
                     </Field.Label>
 
+                    <GPIOHeaderVisualizer
+                        pins={headerPins}
+                        mode="select"
+                        selectedBoardPinId={data.relay_pin ?? null}
+                        onPinSelect={(pin) => update({ relay_pin: pin.boardPinId })}
+                    />
+
                     <Input
-                        type="number"
-                        min={0}
-                        placeholder="e.g. 3"
-                        value={data.relay_pin ?? ""}
-                        onChange={(e) =>
-                            update({
-                                relay_pin:
-                                    e.target.value === ""
-                                        ? null
-                                        : Number(e.target.value),
-                            })
-                        }
+                        type="text"
+                        value={data.relay_pin ? `Pin ${data.relay_pin}` : "No pin selected"}
+                        readOnly
                     />
 
                     <Field.HelperText>
-                        Hardware output pin controlling the valve for this zone.
+                        Select a free GPIO pin from the header visualization. Only available GPIO pins can be selected.
                     </Field.HelperText>
                 </Field.Root>
 
