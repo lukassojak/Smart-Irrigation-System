@@ -10,15 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Node hard delete API endpoint (`DELETE /api/v1/nodes/{node_id}/force`) for removing nodes regardless of their active status.
 - Node no more requires configuration files (`zones_config.json` and `global_config.json`) to exist on disk at startup. If not found, the node will start with an empty configuration and log a warning.
+- Alembic database migration framework.
+- Initial database schema migration.
+- GPIO header visualization component for Raspberry Pi nodes.
+- Dedicated GPIO Header Detail page for node hardware configuration.
+- Backend GPIO header metadata and pin occupancy tracking.
+- API endpoint for retrieving node GPIO header status and pin assignments.
+- Relay pin selection directly from interactive GPIO header visualization during zone creation and editing.
+- Raspberry Pi Zero 2 W board illustration to hardware configuration views.
+
 
 ### Changed
 - Updated delete API endpoint (`DELETE /api/v1/nodes/{node_id}`) to not send to node clean configuration command before deletion, which led to race conditions.
 - Updated node's MQTT client unpairing logic to clean configuration before unpairing.
+- Changed zone creation workflow to use real GPIO header state instead of static mock data.
+- Changed zone editing workflow to support GPIO header pin selection and occupancy awareness.
+- Updated node configuration models and schemas to include GPIO header information.
+- Updated node detail navigation to expose GPIO header configuration view.
+- Updated frontend routing to support GPIO header management pages.
 
 ### Fixed
+- Fixed validation of relay pin assignments by enforcing relay pin uniqueness within a node.
 
 ### Removed
 - `smart_irrigation_system.node.config.secrets` and all references to it, as secrets are provided in the global config from the server and no longer need to be fetched separately.
+- Removed unused Vite default asset (vite.svg).
 
 ### Known Issues
 
