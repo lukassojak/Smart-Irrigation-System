@@ -19,7 +19,7 @@ from smart_irrigation_system.node.weather.weather_config import (
 def perform_api_call(url: str, params: dict) -> dict:
     """Performs an API call to fetch temperature data."""
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=5)
     except requests.exceptions.ConnectionError as e:
         raise Exception(f"Internet connection error: {e}")
     except requests.exceptions.Timeout as e:
@@ -245,7 +245,7 @@ def test_api_secrets_valid(fetcher, global_config) -> bool:
     # Attempt to fetch some data from the API to validate the secrets
     url = global_config.weather_api.history_url
     fetcher.logger.debug(f"Testing API secrets validity with URL: {url}")
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=5)
 
     if response.status_code == 200:
         # get the response data code
