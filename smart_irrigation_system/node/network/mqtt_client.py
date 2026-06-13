@@ -66,6 +66,7 @@ class MQTTClient(threading.Thread):
         self._state_lock = threading.RLock()
 
         self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
         self.logger.info(
@@ -82,6 +83,12 @@ class MQTTClient(threading.Thread):
             self._subscribe_active_topics()
         else:
             self.logger.error("MQTT connection failed with code %s", rc)
+
+    def _on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            self.logger.warning("Unexpected MQTT disconnection. Will attempt to reconnect.")
+        else:
+            self.logger.info("MQTT client disconnected cleanly.")
 
     def _on_message(self, client, userdata, msg):
         payload_raw = msg.payload.decode("utf-8")
