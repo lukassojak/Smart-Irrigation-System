@@ -34,7 +34,6 @@ def perform_api_call(url: str, params: dict) -> dict:
     return response.json()
 
 
-
 def temperature_api_call(fetcher, start_date: datetime, end_date: datetime) -> dict[str, str]:
     """Performs an API call to fetch temperature data."""
     params = {
