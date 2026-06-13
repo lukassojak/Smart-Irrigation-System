@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { useParams } from "react-router-dom"
 import { useOutletContext } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { getNodeDetail } from "../api/live.api"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
@@ -30,40 +32,52 @@ import ResourceMetric from "../components/ResourceMetric"
 export default function RuntimeNodeDetailPage() {
 
     const { nodeId } = useParams()
+    const [node, setNode] = useState(null)
+    const [zones, setZones] = useState([])
 
-    // --- Fake Data ---
-    const node = {
-        id: nodeId,
-        name: "Garden Main Controller",
-        hardware: "Raspberry Pi Zero 2 W",
-        online: true,
-        ip: "192.168.1.25",
-        connection: "wifi",
-        signal: -58,
-        uptime: "3 days 12h",
-        cpu: 42,
-        memory: 63,
-        serviceStatus: "running", // running | stopped | error
-        controllerStatus: "running"
-    }
+    useEffect(() => {
+        let mounted = true
+        async function load() {
+            try {
+                const nid = Number(nodeId)
+                const data = await getNodeDetail(nid)
+                if (!mounted) return
 
-    const threads = [
-        { name: "scheduler-task-scheduler", type: "scheduler", alive: true, startedAt: "06:00:12", runtime: "13h 21m" },
-        { name: "scheduler-auto-irrigation-service", type: "scheduler", alive: true, startedAt: "19:20:03", runtime: "0h 1m" },
-        { name: "irrigation-1", type: "irrigation", alive: true, startedAt: "19:00:00", runtime: "0h 20m" },
-        { name: "irrigation-2", type: "irrigation", alive: true, startedAt: "19:00:00", runtime: "0h 20m" },
-        { name: "general-weather-fetcher", type: "general", alive: true, startedAt: "05:45:00", runtime: "14h 30m" },
-        { name: "general-flow-monitor", type: "general", alive: true, startedAt: "07:15:30", runtime: "12h 0m" },
-        { name: "general-mqtt-publisher", type: "general", alive: true, startedAt: "18:00:00", runtime: "26h 0m" },
-        { name: "general-ota-updater", type: "general", alive: false, startedAt: "18:00:00", runtime: "26h 0m" },
-        { name: "executor-auto_irrigation_cycle", type: "executor", alive: false, startedAt: "18:00:00", runtime: "26h 0m" },
-    ]
+                const n = data?.node
+                setNode(n ? {
+                    id: String(n.id),
+                    name: n.name || `Node ${n.id}`,
+                    hardware: null,
+                    online: !!n.online,
+                    ip: null,
+                    connection: "unknown",
+                    signal: null,
+                    uptime: null,
+                    cpu: null,
+                    memory: null,
+                    serviceStatus: n.online ? "running" : "stopped",
+                    controllerStatus: n.online ? "running" : "offline"
+                } : null)
 
-    const groupedThreads = threads.reduce((acc, t) => {
-        acc[t.type] = acc[t.type] || []
-        acc[t.type].push(t)
-        return acc
-    }, {})
+                const nodeZones = (data?.zones || []).map(z => ({
+                    name: z.name,
+                    alive: !!z.online,
+                    startedAt: z.last_run ? new Date(z.last_run).toLocaleString() : "-",
+                    runtime: z.progress_percent != null ? `${z.progress_percent}%` : "-"
+                }))
+                setZones(nodeZones)
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        load()
+        const iv = setInterval(load, 2500)
+        return () => {
+            mounted = false
+            clearInterval(iv)
+        }
+    }, [nodeId])
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
@@ -71,7 +85,7 @@ export default function RuntimeNodeDetailPage() {
         <Box>
 
             <GlassPageHeader
-                title={node.name}
+                title={node ? node.name : `Node ${nodeId}`}
                 subtitle="Node runtime detail"
                 showMobileMenuButton={isMobile}
                 onMobileMenuClick={openMobileSidebar}
@@ -95,26 +109,26 @@ export default function RuntimeNodeDetailPage() {
                             <VStack align="start" gap={2}>
                                 <HStack mb={2}>
                                     <Server size={16} />
-                                    <Text fontWeight="600">{node.hardware}</Text>
+                                    <Text fontWeight="600">{node ? node.hardware || "-" : "-"}</Text>
                                 </HStack>
                                 <HStack>
                                     <Network size={14} color="#319795" />
                                     <Text fontSize="sm" color="gray.600">
-                                        IP: {node.ip}
+                                        IP: {node ? node.ip || "-" : "-"}
                                     </Text>
                                 </HStack>
 
                                 <HStack>
                                     <ArrowUpFromDot size={14} color="#319795" />
                                     <Text fontSize="sm" color="gray.600">
-                                        Uptime: {node.uptime}
+                                        Uptime: {node ? node.uptime || "-" : "-"}
                                     </Text>
                                 </HStack>
 
                                 <HStack>
                                     <Wifi size={14} color="#319795" />
                                     <Text fontSize="sm" color="gray.600">
-                                        {node.connection} ({node.signal} dBm)
+                                        {node ? node.connection : "-"} {node && node.signal !== null ? `(${node.signal} dBm)` : ""}
                                     </Text>
                                 </HStack>
                             </VStack>
@@ -122,12 +136,12 @@ export default function RuntimeNodeDetailPage() {
                             <Stack gap={5}>
                                 <ResourceMetric
                                     label="CPU Usage"
-                                    value={node.cpu}
+                                    value={node ? node.cpu : null}
                                     color="teal.500"
                                 />
                                 <ResourceMetric
                                     label="Memory Usage"
-                                    value={node.memory}
+                                    value={node ? node.memory : null}
                                     color="orange.400"
                                 />
                             </Stack>
@@ -155,13 +169,13 @@ export default function RuntimeNodeDetailPage() {
                                 <Badge
                                     size="sm"
                                     colorPalette={
-                                        node.serviceStatus === "running"
+                                        node?.serviceStatus === "running"
                                             ? "green"
                                             : "red"
                                     }
                                     variant="subtle"
                                 >
-                                    {node.serviceStatus}
+                                    {node?.serviceStatus ?? "-"}
                                 </Badge>
                             </HStack>
 
@@ -171,20 +185,20 @@ export default function RuntimeNodeDetailPage() {
                                         Controller Status
                                     </Text>
                                     <Text fontWeight="600">
-                                        {node.controllerStatus}
+                                        {node?.controllerStatus ?? "-"}
                                     </Text>
                                 </VStack>
 
                                 <Badge
                                     size="sm"
                                     colorPalette={
-                                        node.controllerStatus === "running"
+                                        node?.controllerStatus === "running"
                                             ? "green"
                                             : "gray"
                                     }
                                     variant="subtle"
                                 >
-                                    active
+                                    {node?.controllerStatus ?? "-"}
                                 </Badge>
                             </HStack>
 
@@ -205,32 +219,18 @@ export default function RuntimeNodeDetailPage() {
 
                 {/* SECTION 3 – Active Threads */}
                 <GlassPanelSection
-                    title="Active Worker Threads"
-                    description="Processes and threads managed by the Smart Irrigation Node service"
+                    title="Zones"
+                    description="Zones assigned to this node"
                 >
                     <Stack gap={6}>
-                        {Object.entries(groupedThreads).map(([type, items]) => (
-                            <Box key={type}>
-                                <Text
-                                    fontSize="sm"
-                                    fontWeight="600"
-                                    color="teal.600"
-                                    mb={2}
-                                >
-                                    {type.toUpperCase()}
-                                </Text>
-
-                                <Grid
-                                    templateColumns={{ base: "1fr", md: "1fr 1fr" }}
-                                    gap={4}
-                                >
-                                    {items.map(thread => (
-                                        <ThreadCard key={thread.name} thread={thread} />
-                                    ))}
-                                </Grid>
-
-                            </Box>
-                        ))}
+                        <Grid
+                            templateColumns={{ base: "1fr", md: "1fr 1fr" }}
+                            gap={4}
+                        >
+                            {zones.map((z, idx) => (
+                                <ThreadCard key={`${z.name}-${idx}`} thread={z} />
+                            ))}
+                        </Grid>
                     </Stack>
                 </GlassPanelSection>
 
