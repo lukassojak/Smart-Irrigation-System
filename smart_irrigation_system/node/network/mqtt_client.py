@@ -586,11 +586,13 @@ class MQTTClient(threading.Thread):
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     def run(self):
-        try:
-            self.client.connect(self.broker_host, self.broker_port, keepalive=60)
-        except Exception as exc:
-            self.logger.error("Failed to connect to MQTT broker: %s", exc)
-            return
+        while not self._stop_event.is_set():
+            try:
+                self.client.connect(self.broker_host, self.broker_port, keepalive=60)
+                break
+            except Exception as exc:
+                self.logger.error("Failed to connect to MQTT broker: %s. Retrying in 10 seconds.", exc)
+                time.sleep(10)
 
         self.client.loop_start()
         self.logger.info("MQTT loop started.")

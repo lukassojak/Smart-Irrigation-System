@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relay pin selection directly from interactive GPIO header visualization during zone creation and editing.
 - Raspberry Pi Zero 2 W board illustration to hardware configuration views.
 - Node logging on mqtt disconnect events.
+- Node reconnect logic in MQTT client startup.
 
 
 ### Changed
