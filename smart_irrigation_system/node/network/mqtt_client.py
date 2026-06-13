@@ -223,6 +223,17 @@ class MQTTClient(threading.Thread):
             )
             return
 
+        # Check if irrigation is currently running; cannot unpair during active irrigation
+        if self.controller.controller_state != ControllerState.IDLE:
+            self._error(
+                envelope,
+                code="UNPAIR_BLOCKED",
+                message=f"Cannot unpair while controller is {self.controller.controller_state.value}. "
+                        f"Wait for ongoing irrigation tasks to complete.",
+                retryable=True,
+            )
+            return
+
         ack = make_envelope(
             message_type=MessageType.NODE_UNPAIR_ACK,
             node_id=node_id,
@@ -266,6 +277,13 @@ class MQTTClient(threading.Thread):
         self.client.subscribe(topic_discovery_command(self.hardware_uid), qos=1)
         self.publish_discovery_hello()
         self.logger.info("Node unpaired successfully. Switched back to discovery mode for hardware_uid=%s", self.hardware_uid)
+
+        # Restart the node process to ensure a clean state and configuration reload
+        self.logger.info("Gracefully shutting down node process for restart after unpairing...")
+        time.sleep(0.5)  # Allow MQTT message to be sent
+        self.controller.shutdown(force=False)
+        self._terminate_process_for_restart()
+
 
     def _handle_start_irrigation(self, envelope: dict[str, Any]) -> None:
         payload = envelope["payload"]
