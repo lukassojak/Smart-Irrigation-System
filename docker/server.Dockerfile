@@ -5,6 +5,9 @@ WORKDIR /app
 COPY smart_irrigation_system ./smart_irrigation_system
 COPY runtime ./runtime
 
+COPY migrations ./migrations
+COPY alembic.ini .
+
 COPY smart_irrigation_system/server/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
