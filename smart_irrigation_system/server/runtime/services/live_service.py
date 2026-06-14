@@ -6,6 +6,8 @@ from smart_irrigation_system.server.configuration.repositories.zone_repository i
 from smart_irrigation_system.server.runtime.schemas.live import (
     LiveResponse,
     ZoneLive,
+    NodeLive,
+    NodeDetail,
     Alert,
     CurrentTask,
     Overview,
@@ -53,6 +55,9 @@ class LiveService:
         snapshot = self.store.get_snapshot()
 
         zones: list[ZoneLive] = []
+        # track per-node zone counts
+        node_zone_total: dict[int, int] = {}
+        node_zone_online: dict[int, int] = {}
         for zone_state in sorted(snapshot.zones.values(), key=lambda z: z.zone_id):
             node_state = snapshot.nodes.get(zone_state.node_id)
             node_last_seen = node_state.last_seen_at if node_state else None
@@ -77,10 +82,15 @@ class LiveService:
                 status = zone_state.status
                 online = True
                 progress_percent = None if stale else zone_state.progress_percent
-
+            # update node zone counters
+            nid = zone_state.node_id
+            node_zone_total[nid] = node_zone_total.get(nid, 0) + 1
+            if online:
+                node_zone_online[nid] = node_zone_online.get(nid, 0) + 1
             zones.append(
                 ZoneLive(
                     id=zone_state.zone_id,
+                    node_id=zone_state.node_id,
                     name=zone_state.zone_name,
                     status=status,
                     enabled=zone_state.enabled,
@@ -133,6 +143,97 @@ class LiveService:
             last_update=snapshot.last_update_at,
         )
 
+    def get_nodes_snapshot(self) -> list[NodeLive]:
+        now = datetime.now(timezone.utc)
+        snapshot = self.store.get_snapshot()
+
+        node_zone_total: dict[int, int] = {}
+        node_zone_online: dict[int, int] = {}
+        for zone_state in snapshot.zones.values():
+            nid = zone_state.node_id
+            node_zone_total[nid] = node_zone_total.get(nid, 0) + 1
+            # determine online from zone
+            node_zone_online[nid] = node_zone_online.get(nid, 0) + (1 if zone_state.status != ZoneStatus.OFFLINE else 0)
+
+        nodes: list[NodeLive] = []
+        for node_state in sorted(snapshot.nodes.values(), key=lambda n: n.node_id):
+            nid = node_state.node_id
+            node_last_seen = node_state.last_seen_at
+            node_ever_seen = node_state.ever_seen
+            node_online = not self._is_offline(now=now, node_last_seen=node_last_seen)
+
+            nodes.append(
+                NodeLive(
+                    id=nid,
+                    name=node_state.node_name,
+                    online=node_online,
+                    last_seen_at=node_last_seen,
+                    first_seen_at=node_state.first_seen_at,
+                    ever_seen=node_ever_seen,
+                    total_zones=node_zone_total.get(nid, 0),
+                    zones_online=node_zone_online.get(nid, 0),
+                )
+            )
+
+        return nodes
+
+    def get_node_detail(self, node_id: int) -> NodeDetail | None:
+        now = datetime.now(timezone.utc)
+        snapshot = self.store.get_snapshot()
+
+        node_state = snapshot.nodes.get(node_id)
+        if node_state is None:
+            return None
+
+        node_last_seen = node_state.last_seen_at
+        node_ever_seen = node_state.ever_seen
+        node_online = not self._is_offline(now=now, node_last_seen=node_last_seen)
+
+        node_live = NodeLive(
+            id=node_state.node_id,
+            name=node_state.node_name,
+            online=node_online,
+            last_seen_at=node_last_seen,
+            first_seen_at=node_state.first_seen_at,
+            ever_seen=node_ever_seen,
+            total_zones=0,
+            zones_online=0,
+        )
+
+        zones: list[ZoneLive] = []
+        total = 0
+        online_count = 0
+        for zone_state in sorted(snapshot.zones.values(), key=lambda z: z.zone_id):
+            if zone_state.node_id != node_id:
+                continue
+            total += 1
+            z_online = zone_state.status != ZoneStatus.OFFLINE
+            if z_online:
+                online_count += 1
+
+            stale = self._is_stale(now=now, updated_at=zone_state.last_update_at)
+            connecting_to_node = self._is_connecting(started_at=snapshot.started_at, now=now, node_ever_seen=node_ever_seen)
+
+            zones.append(
+                ZoneLive(
+                    id=zone_state.zone_id,
+                    node_id=zone_state.node_id,
+                    name=zone_state.zone_name,
+                    status=zone_state.status if z_online else ZoneStatus.OFFLINE,
+                    enabled=zone_state.enabled,
+                    online=z_online,
+                    stale=stale,
+                    connecting_to_node=connecting_to_node,
+                    last_run=zone_state.last_run,
+                    progress_percent=zone_state.progress_percent,
+                )
+            )
+
+        node_live.total_zones = total
+        node_live.zones_online = online_count
+
+        return NodeDetail(node=node_live, zones=zones)
+
 
 _runtime_live_store = RuntimeLiveStore()
 _live_service = LiveService(store=_runtime_live_store)
@@ -173,3 +274,11 @@ def get_live_snapshot() -> LiveResponse:
 
 def get_discovered_devices() -> list[DiscoveredDeviceRead]:
     return [DiscoveredDeviceRead.model_validate(device) for device in _runtime_live_store.list_discovered_devices()]
+
+
+def get_nodes_snapshot() -> list[NodeLive]:
+    return _live_service.get_nodes_snapshot()
+
+
+def get_node_detail(node_id: int):
+    return _live_service.get_node_detail(node_id)

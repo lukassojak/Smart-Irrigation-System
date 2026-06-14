@@ -146,7 +146,6 @@ class HistorySyncManager:
             queue = self._read_queue()
             
             if not queue:
-                self.logger.debug("No records in sync queue")
                 return True
             
             self.logger.info(f"Starting sync: {len(queue)} records to upload")

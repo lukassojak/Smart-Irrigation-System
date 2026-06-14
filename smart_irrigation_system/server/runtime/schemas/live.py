@@ -27,6 +27,7 @@ class ZoneLive(BaseModel):
     # in future add "connecting" boolean flag to indicate if zone is in process of coming online (e.g. after a restart or network issue)
     # after restart, nodes will have startup grace period where they are considered in "connecting" state until they successfully check in with the server.
     id: int
+    node_id: int
     name: str
     status: ZoneStatus
     enabled: bool
@@ -51,6 +52,22 @@ class CurrentTask(BaseModel):
     target_volume: float
     remaining_minutes: int
     stale: bool = False
+
+
+class NodeLive(BaseModel):
+    id: int
+    name: str | None = None
+    online: bool = False
+    last_seen_at: datetime | None = None
+    first_seen_at: datetime | None = None
+    ever_seen: bool = False
+    total_zones: int = 0
+    zones_online: int = 0
+
+
+class NodeDetail(BaseModel):
+    node: NodeLive
+    zones: list[ZoneLive]
 
 class LiveResponse(BaseModel):
     overview: Overview

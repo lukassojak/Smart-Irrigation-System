@@ -66,6 +66,7 @@ class MQTTClient(threading.Thread):
         self._state_lock = threading.RLock()
 
         self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
         self.logger.info(
@@ -82,6 +83,12 @@ class MQTTClient(threading.Thread):
             self._subscribe_active_topics()
         else:
             self.logger.error("MQTT connection failed with code %s", rc)
+
+    def _on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            self.logger.warning("Unexpected MQTT disconnection. Will attempt to reconnect.")
+        else:
+            self.logger.info("MQTT client disconnected cleanly.")
 
     def _on_message(self, client, userdata, msg):
         payload_raw = msg.payload.decode("utf-8")
@@ -223,6 +230,17 @@ class MQTTClient(threading.Thread):
             )
             return
 
+        # Check if irrigation is currently running; cannot unpair during active irrigation
+        if self.controller.controller_state != ControllerState.IDLE:
+            self._error(
+                envelope,
+                code="UNPAIR_BLOCKED",
+                message=f"Cannot unpair while controller is {self.controller.controller_state.value}. "
+                        f"Wait for ongoing irrigation tasks to complete.",
+                retryable=True,
+            )
+            return
+
         ack = make_envelope(
             message_type=MessageType.NODE_UNPAIR_ACK,
             node_id=node_id,
@@ -266,6 +284,13 @@ class MQTTClient(threading.Thread):
         self.client.subscribe(topic_discovery_command(self.hardware_uid), qos=1)
         self.publish_discovery_hello()
         self.logger.info("Node unpaired successfully. Switched back to discovery mode for hardware_uid=%s", self.hardware_uid)
+
+        # Restart the node process to ensure a clean state and configuration reload
+        self.logger.info("Gracefully shutting down node process for restart after unpairing...")
+        time.sleep(0.5)  # Allow MQTT message to be sent
+        self.controller.shutdown(force=False)
+        self._terminate_process_for_restart()
+
 
     def _handle_start_irrigation(self, envelope: dict[str, Any]) -> None:
         payload = envelope["payload"]
@@ -561,11 +586,13 @@ class MQTTClient(threading.Thread):
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
     def run(self):
-        try:
-            self.client.connect(self.broker_host, self.broker_port, keepalive=60)
-        except Exception as exc:
-            self.logger.error("Failed to connect to MQTT broker: %s", exc)
-            return
+        while not self._stop_event.is_set():
+            try:
+                self.client.connect(self.broker_host, self.broker_port, keepalive=60)
+                break
+            except Exception as exc:
+                self.logger.error("Failed to connect to MQTT broker: %s. Retrying in 10 seconds.", exc)
+                time.sleep(10)
 
         self.client.loop_start()
         self.logger.info("MQTT loop started.")

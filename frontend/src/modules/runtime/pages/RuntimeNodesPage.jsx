@@ -18,6 +18,9 @@ import {
 
 import { useNavigate } from "react-router-dom"
 import { useOutletContext } from "react-router-dom"
+import { useEffect, useState } from "react"
+
+import { getNodesSnapshot } from "../api/live.api"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
@@ -29,51 +32,54 @@ export default function RuntimeNodesPage() {
 
     const navigate = useNavigate()
 
-    // --- Fake Runtime Data ---
-    const nodes = [
-        {
-            id: "node-1",
-            name: "Garden Main Controller",
-            online: true,
-            connection: "wifi", // wifi | ethernet
-            signal: -55, // dBm
-            zonesCount: 6,
-            controllerStatus: "running", // running | idle | error
-            warnings: 0,
-            errors: 0
-        },
-        {
-            id: "node-2",
-            name: "Greenhouse Node",
-            online: true,
-            connection: "ethernet",
-            signal: null,
-            zonesCount: 4,
-            controllerStatus: "running",
-            warnings: 1,
-            errors: 0
-        },
-        {
-            id: "node-3",
-            name: "Orchard Node",
-            online: false,
-            connection: "wifi",
-            signal: -82,
-            zonesCount: 5,
-            controllerStatus: "offline",
-            warnings: 0,
-            errors: 1
+    const [nodes, setNodes] = useState([])
+
+    useEffect(() => {
+        let mounted = true
+        async function load() {
+            try {
+                const data = await getNodesSnapshot()
+                if (!mounted) return
+                setNodes((data || []).map(n => ({
+                    id: String(n.id),
+                    name: n.name || `Node ${n.id}`,
+                    online: !!n.online,
+                    connection: "unknown",
+                    signal: null,
+                    zonesCount: n.total_zones || 0,
+                    controllerStatus: n.online ? "running" : "offline",
+                    warnings: 0,
+                    errors: 0,
+                    lastSeen: n.last_seen_at || null,
+                })))
+            } catch (e) {
+                // ignore for now
+            }
         }
-    ]
+
+        load()
+        const iv = setInterval(load, 2500)
+        return () => {
+            mounted = false
+            clearInterval(iv)
+        }
+    }, [])
 
     const onlineCount = nodes.filter(n => n.online).length
     const offlineCount = nodes.filter(n => !n.online).length
-    const errorCount = nodes.filter(n => n.errors > 0).length
-    const weakSignalCount = nodes.filter(
-        n => n.connection === "wifi" && n.signal !== null && n.signal < -75
-    ).length
+    const errorCount = 0
+    const weakSignalCount = 0
 
-    const lastHeartbeat = "12 seconds ago"
+    const lastHeartbeat = (() => {
+        if (!nodes || nodes.length === 0) return "-"
+        const dates = nodes
+            .map(n => n.lastSeen)
+            .filter(Boolean)
+            .map(d => new Date(d).getTime())
+        if (dates.length === 0) return "-"
+        const latest = Math.max(...dates)
+        return new Date(latest).toLocaleString()
+    })()
 
     const networkHealthData = {
         broker: {
