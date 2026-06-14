@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid"
 import { useState, useEffect, useRef } from "react"
 import {
     Box,
@@ -536,7 +537,7 @@ export default function StepEmittersPerPlantAuto({ data, onChange, onIrrigationC
                                     onClick={() => {
                                         setIsAccepted(true)
                                         const mappedPlants = proposal.plants.map((plant) => ({
-                                            id: crypto.randomUUID(),
+                                            id: uuidv4(),
                                             name: plant.plant_id,
                                             emitters: plant.assigned_drippers.map((d) => ({
                                                 type: "dripper",

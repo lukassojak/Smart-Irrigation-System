@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid"
 import { useState } from "react"
 import {
     Box,
@@ -48,7 +49,7 @@ export default function StepEmittersPerPlant({
         const nextPlants = [
             ...plants,
             {
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 name: "",
                 emitters: [],
             },
