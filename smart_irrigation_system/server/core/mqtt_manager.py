@@ -43,6 +43,7 @@ class MQTTManager(threading.Thread):
         self._response_lock = threading.Lock()
 
         self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
     def _on_connect(self, client, userdata, flags, rc):
@@ -58,6 +59,12 @@ class MQTTManager(threading.Thread):
             client.subscribe("irrigation/+/status", qos=1)
         else:
             self.logger.error("MQTT connection failed with code %s", rc)
+
+    def _on_disconnect(self, client, userdata, rc):
+        if rc != 0:
+            self.logger.warning("Unexpected MQTT disconnection (code %s). Will attempt to reconnect.", rc)
+        else:
+            self.logger.info("MQTT client disconnected cleanly.")
 
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
@@ -616,11 +623,13 @@ class MQTTManager(threading.Thread):
         self.logger.warning("Unknown legacy command action: %s", action)
 
     def run(self):
-        try:
-            self.client.connect(self.broker_host, self.broker_port, keepalive=60)
-        except Exception as exc:
-            self.logger.error("Failed to connect to MQTT broker: %s", exc)
-            return
+        while not self._stop_event.is_set():
+            try:
+                self.client.connect(self.broker_host, self.broker_port, keepalive=60)
+                break
+            except Exception as exc:
+                self.logger.error("Failed to connect to MQTT broker: %s", exc)
+                time.sleep(5)
 
         self.client.loop_start()
         self.logger.info("MQTT loop started.")
