@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-06-15
 
 ### Added
 - Node hard delete API endpoint (`DELETE /api/v1/nodes/{node_id}/force`) for removing nodes regardless of their active status.
@@ -19,7 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Relay pin selection directly from interactive GPIO header visualization during zone creation and editing.
 - Raspberry Pi Zero 2 W board illustration to hardware configuration views.
 - Node logging on mqtt disconnect events.
+- Server software version endpoint (`GET /api/v1/system/version`) for runtime compatibility checks.
 - Node reconnect logic in MQTT client startup.
+- Node software version reporting to server via MQTT status snapshots.
+- Server runtime store of node metadata (software version and serial number) and endpoint `GET /api/v1/system/nodes/{node_id}/metadata` for retrieval.
+- Display of node and server software versions on frontend.
 
 
 ### Changed
@@ -34,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed validation of relay pin assignments by enforcing relay pin uniqueness within a node.
 - Fixed node unpairing logic to ensure configuration is cleaned before unpairing, preventing orphaned configurations and potential conflicts with future nodes.
+- Fixed MQTT disconnect handling and reconnect logic on both node and server sides to improve stability and reliability of communication.
+- Fixed bug in `smart_irrigation_system.server.configuration.exporters.node_config_exporter` where `liters_per_minimum_dripper` was incorrectly calculated which led to incorrect base volume calculations in the node runtime.
 
 ### Removed
 - `smart_irrigation_system.node.config.secrets` and all references to it, as secrets are provided in the global config from the server and no longer need to be fetched separately.

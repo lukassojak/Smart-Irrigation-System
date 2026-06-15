@@ -173,12 +173,26 @@ def _to_legacy_zone_config(zone: Zone) -> dict:
         zone_area_m2 = _to_float_or_default(irrigation_configuration.get("zone_area_m2"), 0.0)
         liters_per_minimum_dripper = None
     else:
-        target_mm = None
-        zone_area_m2 = None
-        liters_per_minimum_dripper = _to_float_or_default(
+        # For non-even area mode, we calculate liters per minimum dripper based on the drippers summary and base target volume.
+        entries = [
+            (float(flow), count)
+            for flow, count in drippers_summary.items()
+        ]
+        total_consumption = sum(flow * count for flow, count in entries)
+        min_flow = min(flow for flow, _ in entries)
+        base_target_volume = _to_float_or_default(
             irrigation_configuration.get("base_target_volume_liters"),
             0.0,
         )
+        if total_consumption > 0 and min_flow > 0:
+            liters_per_minimum_dripper = (
+                base_target_volume * min_flow / total_consumption
+            )
+        else:
+            liters_per_minimum_dripper = 0.0
+
+        target_mm = None
+        zone_area_m2 = None
 
     return {
         "id": zone.id,
