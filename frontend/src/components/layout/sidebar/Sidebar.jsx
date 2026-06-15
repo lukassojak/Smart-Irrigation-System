@@ -1,12 +1,12 @@
 // components/layout/sidebar/Sidebar.jsx
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { Box, VStack, HStack, Text, Image } from "@chakra-ui/react"
 import SidebarSection from "./SidebarSection"
 import SidebarItem from "./SidebarItem"
 import { useNavigate } from "react-router-dom"
 import { fetchNodes } from "../../../api/nodes.api"
-
+import { fetchSystemVersion } from "../../../api/system.api"
 
 import {
     LayoutDashboard,
@@ -23,11 +23,22 @@ import {
     ChevronRight
 } from "lucide-react"
 
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || "0.0.0"
-
 export default function Sidebar({ isCollapsed = false, onToggle }) {
     const navigate = useNavigate()
     const [hasPendingSyncNodes, setHasPendingSyncNodes] = useState(false)
+    const [version, setVersion] = useState("-.-.-")
+
+    useEffect(() => {
+        fetchSystemVersion()
+            .then((response) => {
+                if (response.data && response.data.version) {
+                    setVersion(response.data.version)
+                }
+            })
+            .catch(() => {
+                setVersion("-.-.-")
+            })
+    }, [])
 
     useEffect(() => {
         let isMounted = true
@@ -83,7 +94,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
                             Smart Irrigation
                         </Text>
                         <Text fontSize="xs" color="gray.500">
-                            v{APP_VERSION}
+                            v{version}
                         </Text>
                     </VStack>
                 )}
