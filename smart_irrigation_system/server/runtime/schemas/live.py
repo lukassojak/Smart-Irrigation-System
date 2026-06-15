@@ -76,4 +76,7 @@ class LiveResponse(BaseModel):
     current_tasks: list[CurrentTask]
     last_update: datetime
 
-
+class NodeMetadata(BaseModel):
+    id: int
+    software_version: str | None = None
+    serial_number: str | None = None

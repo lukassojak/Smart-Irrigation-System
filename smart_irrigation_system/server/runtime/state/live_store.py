@@ -21,6 +21,15 @@ class NodeRuntimeState:
     last_seen_at: datetime | None = None
     first_seen_at: datetime | None = None
     ever_seen: bool = False
+    software_version: str | None = None
+    serial_number: str | None = None
+
+
+@dataclass
+class NodeMetadata:
+    id: int
+    software_version: str | None = None
+    serial_number: str | None = None
 
 
 @dataclass
@@ -179,7 +188,13 @@ class RuntimeLiveStore:
         with self._lock:
             return [deepcopy(device) for device in self._discovered_devices.values()]
 
-    def upsert_node_heartbeat(self, node_id: int, seen_at: datetime | None = None) -> None:
+    def upsert_node_heartbeat(
+            self, 
+            node_id: int, 
+            seen_at: datetime | None = None,
+            software_version: str | None = None,
+            serial_number: str | None = None
+            ) -> None:
         seen_at = seen_at or utcnow()
         with self._lock:
             node_state = self._nodes.get(node_id)
@@ -193,6 +208,13 @@ class RuntimeLiveStore:
                 node_state.ever_seen = True
 
             self._last_update_at = seen_at
+
+            if software_version is not None:
+                node_state.software_version = software_version
+
+            if serial_number is not None:
+                node_state.serial_number = serial_number
+                
 
     def upsert_zone_state(
         self,
@@ -305,3 +327,16 @@ class RuntimeLiveStore:
                 current_tasks=deepcopy(self._current_tasks),
                 alerts=deepcopy(self._alerts),
             )
+
+    def get_node_metadata_snapshot(self, node_id: int) -> NodeMetadata | None:
+        with self._lock:
+            node_state = self._nodes.get(node_id)
+            if node_state is None:
+                return None
+
+            return NodeMetadata(
+                id=node_id,
+                software_version=node_state.software_version,
+                serial_number=node_state.serial_number,
+            )
+        

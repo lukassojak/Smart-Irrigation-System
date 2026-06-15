@@ -28,6 +28,7 @@ from smart_irrigation_system.node.config import config_loader
 from smart_irrigation_system.node.core.controller.controller_core import ControllerCore
 from smart_irrigation_system.node.core.enums import ControllerState
 from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.__version__ import __version__ as version
 
 
 BASE_DIR = os.path.abspath(
@@ -526,6 +527,8 @@ class MQTTClient(threading.Thread):
                 "zones": zones_payload,
                 "current_tasks": tasks_payload,
                 "alerts": [] if include_alerts else [],
+                "software_version": version,
+                "serial_number": self.serial_number
             },
         )
         self.client.publish(topic_status(node_id), json.dumps(envelope), qos=1)

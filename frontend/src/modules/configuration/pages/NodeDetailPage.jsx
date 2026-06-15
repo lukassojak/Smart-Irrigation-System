@@ -13,6 +13,7 @@ import {
 } from "@chakra-ui/react"
 
 import { fetchNodeById, deleteNode, forceDeleteNode, pushNodeConfig } from "../../../api/nodes.api"
+import { fetchNodeMetadata } from "../../../api/system.api"
 
 import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndicator"
 import PanelSection from "../../../components/layout/PanelSection"
@@ -36,6 +37,17 @@ export default function NodeDetailPage() {
     const [isPushingConfig, setIsPushingConfig] = useState(false)
     const [isDeletingNode, setIsDeletingNode] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
+    const [nodeMetadata, setNodeMetadata] = useState(null)
+
+    useEffect(() => {
+        fetchNodeMetadata(nodeId)
+            .then((response) => {
+                setNodeMetadata(response.data)
+            })
+            .catch((error) => {
+                console.error("Failed to fetch node metadata:", error)
+            })
+    }, [nodeId])
 
     const openDialog = (payload) => {
         const id = `node-detail-action-result-${Date.now()}`
@@ -258,6 +270,19 @@ export default function NodeDetailPage() {
                                                 </Badge>
                                             </DataList.ItemValue>
                                         </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Software version</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {nodeMetadata?.software_version || "N/A"}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Serial number</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {nodeMetadata?.serial_number || "N/A"}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+
                                     </DataList.Root>
                                 </SimpleGrid>
 
