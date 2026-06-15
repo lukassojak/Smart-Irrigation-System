@@ -12,7 +12,8 @@ from smart_irrigation_system.server.runtime.schemas.live import (
     CurrentTask,
     Overview,
     ZoneStatus,
-    AlertType
+    AlertType,
+    NodeMetadata
 )
 from smart_irrigation_system.server.runtime.schemas.discovery import DiscoveredDeviceRead
 from smart_irrigation_system.server.runtime.state.live_store import RuntimeLiveStore
@@ -234,6 +235,17 @@ class LiveService:
 
         return NodeDetail(node=node_live, zones=zones)
 
+    def get_node_metadata(self, node_id: int) -> NodeMetadata | None:
+        metadata = self.store.get_node_metadata_snapshot(node_id=node_id)
+        if metadata is None:
+            return None
+        return NodeMetadata(
+            id=metadata.id,
+            software_version=metadata.software_version,
+            serial_number=metadata.serial_number,
+        )
+        
+
 
 _runtime_live_store = RuntimeLiveStore()
 _live_service = LiveService(store=_runtime_live_store)
@@ -282,3 +294,6 @@ def get_nodes_snapshot() -> list[NodeLive]:
 
 def get_node_detail(node_id: int):
     return _live_service.get_node_detail(node_id)
+
+def get_node_metadata(node_id: int):
+    return _live_service.get_node_metadata(node_id)

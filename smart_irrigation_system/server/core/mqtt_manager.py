@@ -117,7 +117,12 @@ class MQTTManager(threading.Thread):
             return
 
         sent_at = parse_iso_datetime(envelope.get("sent_at"))
-        self.live_store.upsert_node_heartbeat(node_id=node_id_int, seen_at=sent_at)
+        self.live_store.upsert_node_heartbeat(
+            node_id=node_id_int,
+            seen_at=sent_at,
+            software_version=payload.get("software_version"),
+            serial_number=payload.get("serial_number")
+            )
 
         zones = payload.get("zones", [])
         for zone in zones:
