@@ -398,6 +398,7 @@ export default function StepBehaviorSettings({ data, onChange }) {
 
                             <RadioGroup.Root
                                 value={fallback_strategy[key]}
+                                colorPalette="teal"
                                 onValueChange={(e) =>
                                     updateFallback({
                                         [key]: e.value,
