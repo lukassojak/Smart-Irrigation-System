@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added app startup loading indicator and spinner for improved UX during initial load.
+
+### Changed
+
+### Fixed
+- Fixed horizontal overflows on mobile viewports in Create Zone Wizard and Update Zone Wizard.
+
+### Removed
+- Removed deprecated `/web_ui` frontend module.
+
+### Known Issues
+
+---
+
 ## [1.2.0] - 2026-06-15
 
 ### Added
@@ -46,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused Vite default asset (vite.svg).
 
 ### Known Issues
+
+---
 
 ## [1.1.0] - 2026-05-26
 

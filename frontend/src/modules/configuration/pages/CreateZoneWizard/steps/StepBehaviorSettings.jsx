@@ -11,6 +11,7 @@ import {
     NumberInput,
     Slider,
     SegmentGroup,
+    RadioGroup,
     HStack,
 } from "@chakra-ui/react"
 
@@ -395,36 +396,24 @@ export default function StepBehaviorSettings({ data, onChange }) {
                                 {description}
                             </Text>
 
-                            <SegmentGroup.Root
+                            <RadioGroup.Root
                                 value={fallback_strategy[key]}
                                 onValueChange={(e) =>
                                     updateFallback({
                                         [key]: e.value,
                                     })
                                 }
-                                colorPalette="teal"
-                                css={{
-                                    "--segment-indicator-bg": "colors.white",
-                                    "--segment-indicator-shadow": "shadows.md",
-                                }}
                             >
-                                <SegmentGroup.Indicator />
-                                <For each={items.map((item) => item.value)}>
-                                    {(itemValue) => (
-                                        <SegmentGroup.Item key={itemValue} value={itemValue}>
-                                            <SegmentGroup.ItemText
-                                                _checked={{
-                                                    color: "colorPalette.fg",
-                                                    fontWeight: "medium",
-                                                }}
-                                            >
-                                                {items.find((item) => item.value === itemValue).label}
-                                            </SegmentGroup.ItemText>
-                                            <SegmentGroup.ItemHiddenInput />
-                                        </SegmentGroup.Item>
-                                    )}
-                                </For>
-                            </SegmentGroup.Root>
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                    {items.map((item) => (
+                                        <RadioGroup.Item key={item.value} value={item.value}>
+                                            <RadioGroup.ItemHiddenInput />
+                                            <RadioGroup.ItemIndicator />
+                                            <RadioGroup.ItemText>{item.label}</RadioGroup.ItemText>
+                                        </RadioGroup.Item>
+                                    ))}
+                                </SimpleGrid>
+                            </RadioGroup.Root>
                         </Box>
                     ))}
                 </Stack>

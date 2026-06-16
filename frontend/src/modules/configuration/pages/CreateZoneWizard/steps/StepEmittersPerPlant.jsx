@@ -156,7 +156,7 @@ export default function StepEmittersPerPlant({
                         </Field.Root>
 
                         {/* Add emitter buttons */}
-                        <HStack mb={4}>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={2} mb={4}>
                             {EMITTER_PRESETS.map((preset) => (
                                 <Button
                                     key={preset.type}
@@ -166,7 +166,7 @@ export default function StepEmittersPerPlant({
                                     {preset.icon} Add {preset.label}
                                 </Button>
                             ))}
-                        </HStack>
+                        </SimpleGrid>
 
                         {/* Emitters grid */}
                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>

@@ -33,7 +33,7 @@ export default function StepIrrigationPerPlant({ data, autoOptimize, onChange, o
                         value={autoOptimize ? "automatic" : "manual"}
                         onValueChange={(e) => handleAutoOptimizeChange(e.value)}
                     >
-                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={8} >
+                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={2} >
                             <RadioCard.Item value="automatic">
                                 <RadioCard.ItemHiddenInput />
                                 <RadioCard.ItemControl>
