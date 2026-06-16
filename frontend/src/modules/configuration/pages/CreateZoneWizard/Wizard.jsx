@@ -5,9 +5,9 @@ import {
     HStack,
     Stack,
     Box,
-    Heading,
     Text,
     Button,
+    Progress,
 } from "@chakra-ui/react"
 
 import { createZone, pushNodeConfig, fetchNodeHeader } from "../../../../api/nodes.api"
@@ -445,24 +445,41 @@ export default function Wizard() {
 
             <Box p={6} textAlign="left">
                 {/* Step indicator */}
-                <HStack mb={4} spacing={2}>
-                    {steps.map((step, index) => (
-                        <Box
-                            key={step.key}
-                            px={3}
-                            py={1}
-                            borderRadius="full"
-                            fontSize="sm"
-                            transition="all 0.15s ease"
-                            bg={index === currentStep ? "teal.100" : "bg.subtle"}
-                            color={index === currentStep ? "teal.700" : "fg.muted"}
-                            fontWeight={index === currentStep ? "semibold" : "normal"}
-                            transform={index === currentStep ? "scale(1.05)" : "scale(1)"}
+                {isMobile ? (
+                    <Box mb={4}>
+                        <Text fontSize="sm" color="fg.muted">
+                            Step {currentStep + 1} of {steps.length}
+                        </Text>
+
+                        <Progress.Root
+                            size="sm"
+                            value={((currentStep + 1) / steps.length) * 100}
                         >
-                            {index + 1}. {step.title}
-                        </Box>
-                    ))}
-                </HStack>
+                            <Progress.Track bg="gray.100">
+                                <Progress.Range bg="teal.400" />
+                            </Progress.Track>
+                        </Progress.Root>
+                    </Box>
+                ) : (
+                    <HStack mb={4} gap={2}>
+                        {steps.map((step, index) => (
+                            <Box
+                                key={step.key}
+                                px={3}
+                                py={1}
+                                borderRadius="full"
+                                fontSize="sm"
+                                transition="all 0.15s ease"
+                                bg={index === currentStep ? "teal.100" : "bg.subtle"}
+                                color={index === currentStep ? "teal.700" : "fg.muted"}
+                                fontWeight={index === currentStep ? "semibold" : "normal"}
+                                transform={index === currentStep ? "scale(1.05)" : "scale(1)"}
+                            >
+                                {index + 1}. {step.title}
+                            </Box>
+                        ))}
+                    </HStack>
+                )}
 
                 <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>
                     {/* Main column */}
@@ -525,27 +542,29 @@ export default function Wizard() {
                     </Stack>
 
                     {/* Sidebar */}
-                    <HelpSidebar
-                        sticky
-                        stickyTop="80px"
-                        maxHeight="calc(100vh - 120px)"
-                    >
-                        {wizardHelp.map(box => (
-                            <HelpBox
-                                key={box.step}
-                                title={box.title}
-                                active={box.step === activeStep.key}
-                                boxRef={el => {
-                                    helpBoxRefs.current[box.step] = el
-                                }}
-                            >
-                                {box.description}
-                            </HelpBox>
-                        ))}
-                    </HelpSidebar>
+                    {!isMobile && (
+                        <HelpSidebar
+                            sticky
+                            stickyTop="80px"
+                            maxHeight="calc(100vh - 120px)"
+                        >
+                            {wizardHelp.map(box => (
+                                <HelpBox
+                                    key={box.step}
+                                    title={box.title}
+                                    active={box.step === activeStep.key}
+                                    boxRef={el => {
+                                        helpBoxRefs.current[box.step] = el
+                                    }}
+                                >
+                                    {box.description}
+                                </HelpBox>
+                            ))}
+                        </HelpSidebar>
+                    )}
 
                 </SimpleGrid>
-            </Box>
+            </Box >
         </>
     )
 }

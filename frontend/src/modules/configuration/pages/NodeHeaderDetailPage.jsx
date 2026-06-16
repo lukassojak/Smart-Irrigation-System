@@ -8,6 +8,7 @@ import {
     SimpleGrid,
     Image,
     HStack,
+    VStack,
 } from "@chakra-ui/react"
 
 import PanelSection from "../../../components/layout/PanelSection"
@@ -80,7 +81,6 @@ export default function NodeHeaderDetailPage() {
 
             <Box p={6}>
                 <Stack gap={10}>
-
                     {/* Pin Statistics */}
                     <PanelSection title="Pin Statistics">
                         <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
@@ -133,30 +133,29 @@ export default function NodeHeaderDetailPage() {
 
                     {/* Board Image and GPIO Header Layout */}
                     <PanelSection title="GPIO Header Configuration" description="Hover on any pin to view details. Green pins are available, red pins are in use.">
-                        <HStack gap={6}>
-                            {/* GPIO Header Visualizer - 2/3 width */}
-                            <Stack gap={4}>
-                                <GPIOHeaderVisualizer pins={pins} />
-                                {/* Text with link to GPIO pinout guide */}
-                                <Text fontSize="sm" color="fg.muted">
-                                    <Link to="https://pinout.xyz/" target="_blank" style={{ color: "inherit", textDecoration: "underline" }}>
-                                        See GPIO pinout guide
-                                    </Link>.
-                                </Text>
-                            </Stack>
+                        <VStack gap={4} align="start">
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={6} alignItems="center">
+                                <GPIOHeaderVisualizer pins={pins} showImage={isMobile} />
 
-                            {/* Board Image - 1/3 width */}
-                            <Box display={{ base: "none", md: "block" }}>
-                                <Image
-                                    src="/pi_zero_2w_board.webp"
-                                    alt="Raspberry Pi Zero 2W Board"
-                                    maxW="70%"
-                                    h="auto"
-                                    borderRadius="md"
-                                    transform="rotate(90deg)"
-                                />
-                            </Box>
-                        </HStack>
+                                <Box display={{ base: "none", md: "flex" }}>
+                                    <Image
+                                        src="/pi_zero_2w_board.webp"
+                                        alt="Raspberry Pi Zero 2W Board"
+                                        maxW="70%"
+                                        h="auto"
+                                        borderRadius="md"
+                                        transform="rotate(90deg)"
+                                    />
+                                </Box>
+                            </SimpleGrid>
+
+                            {/* Text with link to GPIO pinout guide */}
+                            <Text fontSize="sm" color="fg.muted" textAlign="left">
+                                <Link to="https://pinout.xyz/" target="_blank" style={{ color: "inherit", textDecoration: "underline" }}>
+                                    See GPIO pinout guide
+                                </Link>.
+                            </Text>
+                        </VStack>
                     </PanelSection>
                 </Stack>
             </Box>

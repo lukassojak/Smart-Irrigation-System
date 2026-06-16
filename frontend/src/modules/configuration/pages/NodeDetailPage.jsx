@@ -11,6 +11,7 @@ import {
     Image,
     Flex
 } from "@chakra-ui/react"
+import { MemoryStick } from "lucide-react"
 
 import { fetchNodeById, deleteNode, forceDeleteNode, pushNodeConfig } from "../../../api/nodes.api"
 import { fetchNodeMetadata } from "../../../api/system.api"
@@ -18,7 +19,7 @@ import { fetchNodeMetadata } from "../../../api/system.api"
 import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndicator"
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
-import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
+import { HeaderAction, HeaderActionDanger, PanelButton } from '../../../components/ui/ActionButtons'
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import ZoneCard from "../../../components/ui/cards/ZoneCard"
 import {
@@ -282,11 +283,26 @@ export default function NodeDetailPage() {
                                                 {nodeMetadata?.serial_number || "N/A"}
                                             </DataList.ItemValue>
                                         </DataList.Item>
-
                                     </DataList.Root>
                                 </SimpleGrid>
 
-
+                                {/* Show PanelButton on mobile views to view header details */}
+                                {isMobile && (
+                                    <Box mt={4}>
+                                        <PanelButton
+                                            size="sm"
+                                            as={Link}
+                                            to={`/configuration/nodes/${node.id}/header`}
+                                            flexShrink={0}
+                                            width="100%"
+                                            variant="subtle"
+                                            colorPalette="gray"
+                                        >
+                                            <MemoryStick size={14} style={{ marginRight: "6px" }} />
+                                            View GPIO header configuration
+                                        </PanelButton>
+                                    </Box>
+                                )}
                             </PanelSection>
                         </Box>
                         <Box display={{ base: "none", md: "block" }} flex="1">
@@ -298,10 +314,17 @@ export default function NodeDetailPage() {
                                         width="100%"
                                         height="auto"
                                     />
-                                    {/* Text with link to NodeHeaderDetailPage */}
-                                    <Text fontSize="sm" color="fg.muted">
-                                        <Link to={`/configuration/nodes/${node.id}/header`} style={{ color: "inherit", textDecoration: "underline" }}>View GPIO header configuration</Link>
-                                    </Text>
+                                    <PanelButton
+                                        size="sm"
+                                        as={Link}
+                                        to={`/configuration/nodes/${node.id}/header`}
+                                        width="fit-content"
+                                        variant="subtle"
+                                        colorPalette="gray"
+                                    >
+                                        <MemoryStick size={14} style={{ marginRight: "6px" }} />
+                                        View GPIO header configuration
+                                    </PanelButton>
                                 </Stack>
 
                             </PanelSection>
@@ -342,15 +365,6 @@ export default function NodeDetailPage() {
                                     <DataList.ItemLabel>Flow Control</DataList.ItemLabel>
                                     <DataList.ItemValue>
                                         {node.batch_strategy.flow_control ? "Enabled" : "Disabled"}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                {/* On base views (mobile) when header details are not visible, show link to header details */}
-                                <DataList.Item display={{ base: "flex", md: "none" }}>
-                                    <DataList.ItemLabel>GPIO Header</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        <Link to={`/configuration/nodes/${node.id}/header`} style={{ color: "inherit", textDecoration: "underline" }}>
-                                            View header configuration
-                                        </Link>
                                     </DataList.ItemValue>
                                 </DataList.Item>
                             </DataList.Root>

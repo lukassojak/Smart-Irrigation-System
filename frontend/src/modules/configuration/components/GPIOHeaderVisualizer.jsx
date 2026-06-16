@@ -1,10 +1,11 @@
 import {
     Box,
-    Grid,
+    Stack,
     Heading,
     HStack,
     Text,
     VStack,
+    Image,
 } from "@chakra-ui/react"
 
 const PIN_TYPE_COLOR = {
@@ -87,6 +88,7 @@ export default function GPIOHeaderVisualizer({
     selectedBoardPinId = null,
     onPinSelect,
     showLegend = true,
+    showImage = false,
 }) {
     const rows = []
     for (let i = 0; i < pins.length; i += 2) {
@@ -101,6 +103,7 @@ export default function GPIOHeaderVisualizer({
                 borderColor="border.muted"
                 borderRadius="lg"
                 p={4}
+                flexShrink={0}
             >
                 <VStack gap={1}>
                     {rows.map((row, idx) => (
@@ -122,35 +125,86 @@ export default function GPIOHeaderVisualizer({
                 </VStack>
             </Box>
 
-            {showLegend && (
-                <Box w="100%" maxW="250px" alignSelf="flex-start">
-                    <Heading size="sm" mb={3}>
-                        Legend
-                    </Heading>
-                    <Grid templateColumns="repeat(auto-fit, minmax(170px, 1fr))" gap={2}>
-                        <HStack spacing={2}>
-                            <Box bg="green.500" w={4} h={4} borderRadius="sm" />
-                            <Text fontSize="sm">GPIO - Available</Text>
-                        </HStack>
-                        <HStack spacing={2}>
-                            <Box bg={mode === "select" ? "gray.500" : "red.500"} w={4} h={4} borderRadius="sm" />
-                            <Text fontSize="sm">GPIO - {mode === "select" ? "Unavailable" : "In Use"}</Text>
-                        </HStack>
-                        <HStack spacing={2}>
-                            <Box bg={mode === "select" ? "gray.500" : "cyan.500"} w={4} h={4} borderRadius="sm" />
-                            <Text fontSize="sm">Power (5V)</Text>
-                        </HStack>
-                        <HStack spacing={2}>
-                            <Box bg={mode === "select" ? "gray.500" : "blue.600"} w={4} h={4} borderRadius="sm" />
-                            <Text fontSize="sm">Ground (GND)</Text>
-                        </HStack>
-                        <HStack spacing={2}>
-                            <Box bg="gray.500" w={4} h={4} borderRadius="sm" />
-                            <Text fontSize="sm">Reserved</Text>
-                        </HStack>
-                    </Grid>
-                </Box>
-            )}
+            <VStack align="stretch" gap={8}>
+                {showLegend && (
+                    <Box
+                        minW={0}
+                        flex="1"
+                    >
+                        <Heading size="sm" mb={3}>
+                            Legend
+                        </Heading>
+                        <Stack gap={2}>
+                            <HStack gap={2} align="start">
+                                <Box bg="green.500" w={4} h={4} borderRadius="sm" flexShrink={0} mt="2px" />
+                                <Text
+                                    fontSize="sm"
+                                    minW={0}
+                                    whiteSpace="normal"
+                                    wordBreak="break-word"
+                                >
+                                    GPIO - Available</Text>
+                            </HStack>
+                            <HStack gap={2} align="start">
+                                <Box bg={mode === "select" ? "gray.500" : "red.500"} w={4} h={4} borderRadius="sm" flexShrink={0} mt="2px" />
+                                <Text
+                                    fontSize="sm"
+                                    minW={0}
+                                    whiteSpace="normal"
+                                    wordBreak="break-word"
+                                >
+                                    GPIO - {mode === "select" ? "Unavailable" : "In Use"}</Text>
+                            </HStack>
+                            <HStack gap={2} align="start">
+                                <Box bg={mode === "select" ? "gray.500" : "cyan.500"} w={4} h={4} borderRadius="sm" flexShrink={0} mt="2px" />
+                                <Text
+                                    fontSize="sm"
+                                    minW={0}
+                                    whiteSpace="normal"
+                                    wordBreak="break-word"
+                                >
+                                    Power (5V)</Text>
+                            </HStack>
+                            <HStack gap={2} align="start">
+                                <Box bg={mode === "select" ? "gray.500" : "blue.600"} w={4} h={4} borderRadius="sm" flexShrink={0} mt="2px" />
+                                <Text
+                                    fontSize="sm"
+                                    minW={0}
+                                    whiteSpace="normal"
+                                    wordBreak="break-word"
+                                >
+                                    Ground (GND)</Text>
+                            </HStack>
+                            <HStack gap={2} align="start">
+                                <Box bg="gray.500" w={4} h={4} borderRadius="sm" flexShrink={0} mt="2px" />
+                                <Text
+                                    fontSize="sm"
+                                    minW={0}
+                                    whiteSpace="normal"
+                                    wordBreak="break-word"
+                                >
+                                    Reserved</Text>
+                            </HStack>
+                        </Stack>
+                    </Box>
+                )}
+
+                {showImage && (
+                    <Box
+                        display="flex"
+                        justifyContent="center"
+                        overflow="hidden"
+                    >
+                        <Image
+                            src="/pi_zero_2w_board_vertical.jpg"
+                            maxW="100%"
+                            maxH="250px"
+                            objectFit="contain"
+                        />
+                    </Box>
+                )}
+
+            </VStack>
         </HStack>
     )
 }

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-06-16
+
+### Added
+- Added app startup loading indicator and spinner for improved UX during initial load.
+
+### Changed
+- `NodeDetailHeaderPage.jsx` now displays board image even for mobile viewports.
+
+### Fixed
+- Fixed horizontal overflows on mobile viewports in Create Zone Wizard and Update Zone Wizard.
+- Fixed horizontal overflow on mobile viewports in Configuration Dashboard page.
+- Fixed horizontal overflow on movile viewports in Header view page.
+
+### Removed
+- Removed deprecated `/web_ui` frontend module.
+
+### Known Issues
+
+---
+
 ## [1.2.0] - 2026-06-15
 
 ### Added
@@ -46,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused Vite default asset (vite.svg).
 
 ### Known Issues
+
+---
 
 ## [1.1.0] - 2026-05-26
 

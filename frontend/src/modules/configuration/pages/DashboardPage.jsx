@@ -142,16 +142,18 @@ export default function NodesDashboardPage() {
                                         </Text>
                                     </Stack>
                                 </HStack>
-                                <PanelButton
-                                    as={Link}
-                                    to="/configuration/settings"
-                                    size="sm"
-                                    flexShrink={0}
-                                    colorPalette="teal"
-                                >
-                                    <Settings size={16} style={{ marginRight: "6px" }} />
-                                    Edit
-                                </PanelButton>
+                                {!isMobile && (
+                                    <PanelButton
+                                        as={Link}
+                                        to="/configuration/settings"
+                                        size="sm"
+                                        flexShrink={0}
+                                        colorPalette="teal"
+                                    >
+                                        <Settings size={16} style={{ marginRight: "6px" }} />
+                                        Edit
+                                    </PanelButton>
+                                )}
                             </HStack>
 
                             {/* Three-column info cards */}
@@ -288,6 +290,18 @@ export default function NodesDashboardPage() {
                                     </DataList.Root>
                                 </Box>
                             </SimpleGrid>
+                            {isMobile && (
+                                <PanelButton
+                                    as={Link}
+                                    to="/configuration/settings"
+                                    size="sm"
+                                    flexShrink={0}
+                                    colorPalette="teal"
+                                >
+                                    <Settings size={16} style={{ marginRight: "6px" }} />
+                                    Edit Configuration
+                                </PanelButton>
+                            )}
                         </Stack>
                     ) : (
                         <DataUnavailableWarning message="System configuration is currently unavailable. Server may be disconnected." />
@@ -319,17 +333,19 @@ export default function NodesDashboardPage() {
                                     </Text>
                                 </Stack>
                             </HStack>
-                            <Button
-                                size="sm"
-                                colorPalette="teal"
-                                flexShrink={0}
-                                onClick={handleSyncAll}
-                                loading={isSyncingAll}
-                                isDisabled={pendingCount === 0 || isSyncingAll}
-                            >
-                                <RefreshCcw size={14} style={{ marginRight: "6px" }} />
-                                Sync all nodes
-                            </Button>
+                            {!isMobile && (
+                                <PanelButton
+                                    size="sm"
+                                    colorPalette="teal"
+                                    flexShrink={0}
+                                    onClick={handleSyncAll}
+                                    loading={isSyncingAll}
+                                    isDisabled={pendingCount === 0 || isSyncingAll || !hasNodes}
+                                >
+                                    <RefreshCcw size={14} style={{ marginRight: "6px" }} />
+                                    Sync all nodes
+                                </PanelButton>
+                            )}
                         </HStack>
 
                         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
@@ -409,6 +425,20 @@ export default function NodesDashboardPage() {
                                 </Text>
                             </Box>
                         </SimpleGrid>
+
+                        {isMobile && (
+                            <PanelButton
+                                size="sm"
+                                colorPalette="teal"
+                                flexShrink={0}
+                                onClick={handleSyncAll}
+                                loading={isSyncingAll}
+                                isDisabled={pendingCount === 0 || isSyncingAll || !hasNodes}
+                            >
+                                <RefreshCcw size={14} style={{ marginRight: "6px" }} />
+                                Sync all nodes
+                            </PanelButton>
+                        )}
                     </Stack>
                 </PanelSection>
 

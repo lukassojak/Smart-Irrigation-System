@@ -64,7 +64,7 @@ export default function StepEmittersEvenArea({ data, onChange }) {
             description="Define the emitters used across this zone. The system assumes these emitters are distributed evenly over the irrigated area."
         >
             {/* Add emitter buttons */}
-            <HStack mb={6}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={2} mb={4}>
                 {EMITTER_PRESETS.map((preset) => (
                     <Button
                         key={preset.type}
@@ -74,7 +74,7 @@ export default function StepEmittersEvenArea({ data, onChange }) {
                         {preset.icon} Add {preset.label}
                     </Button>
                 ))}
-            </HStack>
+            </SimpleGrid>
 
             {/* Emitters grid */}
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
