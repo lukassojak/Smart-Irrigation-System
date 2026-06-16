@@ -17,3 +17,15 @@ createRoot(document.getElementById('root')).render(
     </ChakraProvider>
   </StrictMode>,
 )
+
+// Remopve the app loader element after the app has rendered
+function removeAppLoader() {
+  const el = document.getElementById('app-loader')
+  if (!el) return
+  el.style.transition = 'opacity 240ms ease'
+  el.style.opacity = '0'
+  setTimeout(() => el.remove(), 300)
+}
+
+// Run removal on next paint to ensure app is visible
+requestAnimationFrame(() => requestAnimationFrame(removeAppLoader))
