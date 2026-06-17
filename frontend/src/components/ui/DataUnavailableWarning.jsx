@@ -3,7 +3,7 @@ import { CloudOff } from "lucide-react"
 
 
 export default function DataUnavailableWarning({
-    message = "Data is currently unavailable. Please try again.",
+    message = "Data is currently unavailable.",
     icon: Icon = CloudOff,
 }) {
     return (

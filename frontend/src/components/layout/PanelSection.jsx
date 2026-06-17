@@ -13,9 +13,9 @@ export default function PanelSection({
             borderWidth="1px"
             borderColor="rgba(56,178,172,0.06)"
             borderRadius="lg"
-            p={5}
             boxShadow="0 4px 16px rgba(15, 23, 42, 0.05)"
             textAlign="left"
+            p={{ base: 4, md: 6 }}
         >
             {(title || description) && (
                 <Stack mb={4}>
