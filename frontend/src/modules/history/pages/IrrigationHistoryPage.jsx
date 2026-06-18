@@ -15,9 +15,14 @@ import { useOutletContext } from "react-router-dom"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import PageContainer from "../../../components/layout/PageContainer"
+import DashboardPageSectionStack from "../../../components/layout/DashboardPageSectionStack"
 import HistoryRecordsTable from "../components/HistoryRecordsTable"
 import HistoryStats from "../components/HistoryStats"
-import { HeaderActionDanger } from "../../../components/ui/ActionButtons"
+
+import LoadingState from "../../../components/ui/LoadingState"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+import { HeaderActionDanger, PanelButton } from "../../../components/ui/ActionButtons"
 import {
     ControlActionDialogViewport,
     openControlActionConfirmDialog,
@@ -94,6 +99,7 @@ export default function IrrigationHistoryPage() {
     const [includeDeleted, setIncludeDeleted] = useState(true)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [recordLimit, setRecordLimit] = useState(30)
 
     const openDialog = (payload) => {
         const id = `history-action-result-${Date.now()}`
@@ -167,8 +173,8 @@ export default function IrrigationHistoryPage() {
         setError(null)
         try {
             const response = selectedNodeId === "all"
-                ? await fetchAllHistoryRecords(500)
-                : await fetchNodeHistory(selectedNodeId, 500)
+                ? await fetchAllHistoryRecords(recordLimit)
+                : await fetchNodeHistory(selectedNodeId, recordLimit)
             setHistoryRecords(response.data.records || [])
         } catch (err) {
             setError(`Failed to load history: ${err.message}`)
@@ -180,7 +186,7 @@ export default function IrrigationHistoryPage() {
 
     useEffect(() => {
         loadHistory()
-    }, [selectedNodeId])
+    }, [selectedNodeId, recordLimit])
 
     const visibleRecords = useMemo(() => {
         const filteredRecords = historyRecords.filter((record) => {
@@ -233,208 +239,214 @@ export default function IrrigationHistoryPage() {
     const visibleNodeCount = new Set(visibleRecords.map((record) => String(record.node_id))).size
     const visibleZoneCount = new Set(visibleRecords.map((record) => `${record.node_id}:${record.circuit_id}`)).size
 
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
     return (
-        <Box>
+        <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
                 title="Irrigation History"
-                subtitle="Search irrigation cycles across nodes, tune ordering, and inspect outcomes at a glance"
+                subtitle="Search irrigation cycles and it's outcomes across nodes"
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
                 actions={(
                     <>
-                        <HeaderActionDanger
-                            onClick={handleDeleteAllRecords}
-                        >
-                            Delete all records
-                        </HeaderActionDanger>
+                        {!error && (
+                            <HeaderActionDanger
+                                onClick={handleDeleteAllRecords}
+                            >
+                                Delete all records
+                            </HeaderActionDanger>
+                        )}
                     </>
                 )}
             />
-            <Stack
-                gap={8}
-                px={{ base: 4, md: 8 }}
-                py={{ base: 4, md: 8 }}
-            >
-                {error && (
-                    <Box
-                        p={4}
-                        borderRadius="xl"
-                        bg="rgba(245, 67, 54, 0.10)"
-                        backdropFilter="blur(16px) saturate(160%)"
-                        border="1px solid rgba(245, 67, 54, 0.25)"
-                    >
-                        <Text color="rgb(245, 67, 54)" fontWeight="600" mb={1}>
-                            History sync is unavailable
-                        </Text>
-                        <Text color="rgb(245, 67, 54)" fontSize="sm">
-                            {error}
-                        </Text>
-                    </Box>
-                )}
+            <PageContainer>
+                {error ? (
+                    <GlassPanelSection>
+                        <DataUnavailableWarning
+                            message="History data is unavailable. Server may be disconnected."
+                            error={error}
+                        />
+                    </GlassPanelSection>
+                ) : (
 
-                <GlassPanelSection title="Filters & Sorting">
-                    <Stack gap={6}>
-                        <Grid templateColumns={{ base: "1fr", lg: "repeat(3, minmax(0, 1fr))" }} gap={4}>
-                            <Box>
-                                <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
-                                    Node scope
-                                </Text>
-                                <NativeSelect.Root>
-                                    <NativeSelect.Field
-                                        value={selectedNodeId}
-                                        onChange={(event) => setSelectedNodeId(event.target.value)}
-                                        bg="rgba(255, 255, 255, 0.55)"
-                                        border="1px solid rgba(56,178,172,0.16)"
+                    <DashboardPageSectionStack>
+                        <GlassPanelSection title="Filters & Sorting">
+                            <Stack gap={6}>
+                                <Grid templateColumns={{ base: "1fr", lg: "repeat(3, minmax(0, 1fr))" }} gap={4}>
+                                    <Box>
+                                        <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
+                                            Node scope
+                                        </Text>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field
+                                                value={selectedNodeId}
+                                                onChange={(event) => setSelectedNodeId(event.target.value)}
+                                                bg="rgba(255, 255, 255, 0.55)"
+                                                border="1px solid rgba(56,178,172,0.16)"
+                                            >
+                                                <option value="all">All nodes</option>
+                                                {nodes.map((node) => (
+                                                    <option key={node.id} value={String(node.id)}>
+                                                        Node #{node.id} {node.name ? `- ${node.name}` : ""}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Box>
+
+                                    <Box>
+                                        <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
+                                            Outcome filter
+                                        </Text>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field
+                                                value={selectedOutcome}
+                                                onChange={(event) => setSelectedOutcome(event.target.value)}
+                                                bg="rgba(255, 255, 255, 0.55)"
+                                                border="1px solid rgba(56,178,172,0.16)"
+                                            >
+                                                {OUTCOME_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Box>
+
+                                    <Box>
+                                        <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
+                                            Sort order
+                                        </Text>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field
+                                                value={sortBy}
+                                                onChange={(event) => setSortBy(event.target.value)}
+                                                bg="rgba(255, 255, 255, 0.55)"
+                                                border="1px solid rgba(56,178,172,0.16)"
+                                            >
+                                                {SORT_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Box>
+                                </Grid>
+
+                                <Checkbox.Root
+                                    colorPalette="teal"
+                                    checked={includeDeleted}
+                                    onCheckedChange={(event) => setIncludeDeleted(Boolean(event.checked))}
+                                    mb={2}
+                                >
+                                    <Checkbox.HiddenInput />
+                                    <Checkbox.Control />
+                                    <Checkbox.Label>Include deleted zones</Checkbox.Label>
+                                </Checkbox.Root>
+
+                                <HStack justify="space-between" flexWrap="wrap" gap={3}>
+                                    <Stack direction={{ base: "column", md: "row" }} gap={2} align="center">
+                                        <HStack spacing={2} flexWrap="wrap">
+                                            <Text fontSize="sm" color="gray.600">
+                                                Displaying
+                                            </Text>
+                                            <Badge colorPalette="gray" variant="subtle">
+                                                {visibleRecords.length} records
+                                            </Badge>
+                                        </HStack>
+                                        <HStack spacing={2} flexWrap="wrap">
+                                            <Text fontSize="sm" color="gray.600">
+                                                across
+                                            </Text>
+                                            <Badge colorPalette="gray" variant="subtle">
+                                                {visibleZoneCount} zones
+                                            </Badge>
+                                            <Text fontSize="sm" color="gray.600">
+                                                and
+                                            </Text>
+                                            <Badge colorPalette="gray" variant="subtle">
+                                                {visibleNodeCount} nodes
+                                            </Badge>
+                                        </HStack>
+                                    </Stack>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        borderColor="rgba(56,178,172,0.18)"
+                                        onClick={() => {
+                                            setSelectedNodeId("all")
+                                            setSelectedOutcome("all")
+                                            setSortBy("start_time_desc")
+                                            setIncludeDeleted(true)
+                                        }}
                                     >
-                                        <option value="all">All nodes</option>
-                                        {nodes.map((node) => (
-                                            <option key={node.id} value={String(node.id)}>
-                                                Node #{node.id} {node.name ? `- ${node.name}` : ""}
-                                            </option>
-                                        ))}
-                                    </NativeSelect.Field>
-                                    <NativeSelect.Indicator />
-                                </NativeSelect.Root>
-                            </Box>
-
-                            <Box>
-                                <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
-                                    Outcome filter
-                                </Text>
-                                <NativeSelect.Root>
-                                    <NativeSelect.Field
-                                        value={selectedOutcome}
-                                        onChange={(event) => setSelectedOutcome(event.target.value)}
-                                        bg="rgba(255, 255, 255, 0.55)"
-                                        border="1px solid rgba(56,178,172,0.16)"
-                                    >
-                                        {OUTCOME_OPTIONS.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </NativeSelect.Field>
-                                    <NativeSelect.Indicator />
-                                </NativeSelect.Root>
-                            </Box>
-
-                            <Box>
-                                <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
-                                    Sort order
-                                </Text>
-                                <NativeSelect.Root>
-                                    <NativeSelect.Field
-                                        value={sortBy}
-                                        onChange={(event) => setSortBy(event.target.value)}
-                                        bg="rgba(255, 255, 255, 0.55)"
-                                        border="1px solid rgba(56,178,172,0.16)"
-                                    >
-                                        {SORT_OPTIONS.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </NativeSelect.Field>
-                                    <NativeSelect.Indicator />
-                                </NativeSelect.Root>
-                            </Box>
-                        </Grid>
-
-                        <Checkbox.Root
-                            colorPalette="teal"
-                            checked={includeDeleted}
-                            onCheckedChange={(event) => setIncludeDeleted(Boolean(event.checked))}
-                            mb={2}
-                        >
-                            <Checkbox.HiddenInput />
-                            <Checkbox.Control />
-                            <Checkbox.Label>Include deleted zones</Checkbox.Label>
-                        </Checkbox.Root>
-
-                        <HStack justify="space-between" flexWrap="wrap" gap={3}>
-                            <Stack direction={{ base: "column", md: "row" }} gap={2} align="center">
-                                <HStack spacing={2} flexWrap="wrap">
-                                    <Text fontSize="sm" color="gray.600">
-                                        Displaying
-                                    </Text>
-                                    <Badge colorPalette="gray" variant="subtle">
-                                        {visibleRecords.length} records
-                                    </Badge>
-                                </HStack>
-                                <HStack spacing={2} flexWrap="wrap">
-                                    <Text fontSize="sm" color="gray.600">
-                                        across
-                                    </Text>
-                                    <Badge colorPalette="gray" variant="subtle">
-                                        {visibleZoneCount} zones
-                                    </Badge>
-                                    <Text fontSize="sm" color="gray.600">
-                                        and
-                                    </Text>
-                                    <Badge colorPalette="gray" variant="subtle">
-                                        {visibleNodeCount} nodes
-                                    </Badge>
+                                        Reset view
+                                    </Button>
                                 </HStack>
                             </Stack>
+                        </GlassPanelSection>
 
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                borderColor="rgba(56,178,172,0.18)"
-                                onClick={() => {
-                                    setSelectedNodeId("all")
-                                    setSelectedOutcome("all")
-                                    setSortBy("start_time_desc")
-                                    setIncludeDeleted(true)
-                                }}
-                            >
-                                Reset view
-                            </Button>
-                        </HStack>
-                    </Stack>
-                </GlassPanelSection>
+                        {selectedNode && !loading && (
+                            <Box px={1}>
+                                <Text fontSize="sm" color="gray.600">
+                                    Currently scoped to node <strong>{selectedNode.name}</strong>.
+                                </Text>
+                            </Box>
+                        )}
 
-                {selectedNode && !loading && (
-                    <Box px={1}>
-                        <Text fontSize="sm" color="gray.600">
-                            Currently scoped to node <strong>{selectedNode.name}</strong>.
-                        </Text>
-                    </Box>
+                        <GlassPanelSection title="Summary">
+                            <HistoryStats records={visibleRecords} />
+                        </GlassPanelSection>
+
+                        <GlassPanelSection title="Irrigation Records">
+                            {loading && (
+                                <LoadingState
+                                    message="Loading irrigation history data..."
+                                />
+                            )}
+                            {!loading && visibleRecords.length === 0 && (
+                                <Box
+                                    py={12}
+                                    px={6}
+                                    borderRadius="xl"
+                                    bg="rgba(255,255,255,0.45)"
+                                    border="1px dashed rgba(56,178,172,0.22)"
+                                    textAlign="center"
+                                >
+                                    <Text fontWeight="600" color="gray.700" mb={2}>
+                                        No irrigation records match the current filters
+                                    </Text>
+                                    <Text fontSize="sm" color="gray.500">
+                                        Try switching the node scope, outcome filter, or sort order.
+                                    </Text>
+                                </Box>
+                            )}
+                            {!loading && visibleRecords.length > 0 && (
+                                <>
+                                    <HistoryRecordsTable records={visibleRecords} nodes={nodes} />
+                                    <Stack align="center" mt={6}>
+                                        <PanelButton
+                                            loading={loading}
+                                            onClick={() => setRecordLimit(prev => prev + 30)}
+                                        >
+                                            Load 30 More Records
+                                        </PanelButton>
+                                    </Stack>
+                                </>
+                            )}
+                        </GlassPanelSection>
+                    </DashboardPageSectionStack>
                 )}
-
-                <GlassPanelSection title="Summary">
-                    <HistoryStats records={visibleRecords} />
-                </GlassPanelSection>
-
-                <GlassPanelSection title="Irrigation Records">
-                    {loading && (
-                        <HStack justify="center" py={10} spacing={4}>
-                            <Spinner size="lg" color="teal.400" thickness="3px" />
-                            <Text color="gray.600">Loading irrigation history...</Text>
-                        </HStack>
-                    )}
-                    {!loading && visibleRecords.length === 0 && (
-                        <Box
-                            py={12}
-                            px={6}
-                            borderRadius="xl"
-                            bg="rgba(255,255,255,0.45)"
-                            border="1px dashed rgba(56,178,172,0.22)"
-                            textAlign="center"
-                        >
-                            <Text fontWeight="600" color="gray.700" mb={2}>
-                                No irrigation records match the current filters
-                            </Text>
-                            <Text fontSize="sm" color="gray.500">
-                                Try switching the node scope, outcome filter, or sort order.
-                            </Text>
-                        </Box>
-                    )}
-                    {!loading && visibleRecords.length > 0 && (
-                        <HistoryRecordsTable records={visibleRecords} nodes={nodes} />
-                    )}
-                </GlassPanelSection>
-            </Stack>
-        </Box>
+            </PageContainer>
+        </>
     )
 }

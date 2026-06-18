@@ -116,8 +116,30 @@ function getZoneLabel(record, nodes) {
     return zoneName ? `${zoneName} | Zone #${record.circuit_id}` : `Zone #${record.circuit_id}`
 }
 
+function getDateKey(isoString) {
+    const date = new Date(isoString)
+
+    return date.toLocaleDateString("cs-CZ", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    })
+}
+
 export default function HistoryRecordsTable({ records = [], nodes = [] }) {
     const isMobile = useBreakpointValue({ base: true, md: false })
+
+    const groupedRecords = records.reduce((acc, record) => {
+        const key = getDateKey(record.start_time)
+
+        if (!acc[key]) {
+            acc[key] = []
+        }
+
+        acc[key].push(record)
+
+        return acc
+    }, {})
 
     if (records.length === 0) {
         return (
@@ -140,164 +162,224 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
     }
 
     return (
-        <Stack spacing={3}>
-            {records.map((record, idx) => {
-                const outcomeMeta = getOutcomeMeta(record.outcome)
-                const dateStr = formatDateTime(record.start_time)
-                const duration = formatDuration(record.completed_duration)
-                const waterUsed = formatWater(record.actual_water_amount)
-
-                return (
-                    <Box
-                        key={`${record.node_id}-${record.circuit_id}-${record.start_time}-${idx}`}
-                        position="relative"
-                        overflow="hidden"
-                        borderRadius="2xl"
-                        bg="rgba(255,255,255,0.58)"
-                        backdropFilter="blur(18px) saturate(160%)"
-                        border="1px solid rgba(56,178,172,0.10)"
-                        boxShadow="0 10px 28px rgba(15,23,42,0.05)"
-                        transition="transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease"
-                        _hover={{
-                            transform: "translateY(-1px)",
-                            borderColor: "rgba(56,178,172,0.20)",
-                            boxShadow: "0 16px 34px rgba(15,23,42,0.08)",
-                        }}
-                    >
-                        <Box
-                            position="absolute"
-                            insetY={0}
-                            left={0}
-                            w="6px"
-                            bg={outcomeMeta.accent}
-                        />
-
-                        <Grid
-                            templateColumns={{ base: "1fr", xl: "minmax(0, 1.4fr) minmax(280px, 0.9fr)" }}
-                            gap={4}
-                            p={{ base: 4, md: 5 }}
-                            pl={{ base: 6, md: 7 }}
-                            alignItems="start"
+        <Stack gap={8}>
+            {Object.entries(groupedRecords).map(([date, dayRecords]) => (
+                <Box key={date}>
+                    <HStack mb={4}>
+                        <Heading
+                            size="sm"
+                            color="gray.700"
+                            flexShrink={0}
                         >
-                            <Stack spacing={3} minW={0}>
-                                <HStack spacing={2} flexWrap="wrap">
-                                    <Badge colorPalette={outcomeMeta.palette} variant="subtle">
-                                        {outcomeMeta.label}
-                                    </Badge>
-                                    {record.zone_deleted && (
-                                        <Badge colorPalette="gray" variant="solid">
-                                            Deleted zone
-                                        </Badge>
-                                    )}
-                                </HStack>
+                            {date}
+                        </Heading>
 
-                                <Stack spacing={1}>
-                                    <Heading size="sm" fontWeight="600" color="gray.800">
-                                        {getZoneLabel(record, nodes)}
-                                    </Heading>
-                                    <HStack spacing={2} color="gray.600" fontSize="sm" flexWrap="wrap">
-                                        <HStack spacing={1.5}>
-                                            <Clock size={15} />
-                                            <Text>{dateStr}</Text>
-                                        </HStack>
-                                        <Text color="gray.400">•</Text>
-                                        <HStack spacing={1.5}>
-                                            <MapPinned size={15} />
-                                            <Text>Node {record.node_id}</Text>
-                                        </HStack>
-                                    </HStack>
-                                </Stack>
+                        <Badge
+                            colorPalette="gray"
+                            variant="subtle"
+                        >
+                            {dayRecords.length} records
+                        </Badge>
 
-                                {record.reason && (
+                        <Box
+                            flex="1"
+                            h="1px"
+                            bg="rgba(56,178,172,0.12)"
+                        />
+                    </HStack>
+
+                    <Stack gap={3}>
+                        {dayRecords.map((record, idx) => {
+                            const outcomeMeta = getOutcomeMeta(record.outcome)
+                            const dateStr = formatDateTime(record.start_time)
+                            const duration = formatDuration(record.completed_duration)
+                            const waterUsed = formatWater(record.actual_water_amount)
+                            const zoneName = getZoneName(record, nodes)
+
+                            return (
+                                <Box
+                                    key={`${record.node_id}-${record.circuit_id}-${record.start_time}-${idx}`}
+                                    position="relative"
+                                    overflow="hidden"
+                                    borderRadius="2xl"
+                                    bg="rgba(255,255,255,0.58)"
+                                    backdropFilter="blur(18px) saturate(160%)"
+                                    border="1px solid rgba(56,178,172,0.10)"
+                                    boxShadow="0 10px 28px rgba(15,23,42,0.05)"
+                                    transition="transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease"
+                                    _hover={{
+                                        transform: "translateY(-1px)",
+                                        borderColor: "rgba(56,178,172,0.20)",
+                                        boxShadow: "0 16px 34px rgba(15,23,42,0.08)",
+                                    }}
+                                >
                                     <Box
-                                        mt={1}
-                                        px={3}
-                                        py={2}
-                                        borderRadius="lg"
-                                        bg="rgba(245,101,101,0.08)"
-                                        border="1px solid rgba(245,101,101,0.16)"
-                                    >
-                                        <HStack spacing={2} color="red.500" fontSize="sm" align="start">
-                                            <AlertCircle size={15} style={{ marginTop: 2 }} />
-                                            <Text lineHeight="1.45">{record.reason}</Text>
-                                        </HStack>
-                                    </Box>
-                                )}
-                            </Stack>
+                                        position="absolute"
+                                        insetY={0}
+                                        left={0}
+                                        w="6px"
+                                        bg={outcomeMeta.accent}
+                                    />
 
-                            {isMobile ? (
-                                <Stack spacing={1} fontSize="sm" color="gray.600">
-                                    <Text>
-                                        <Text as="span" fontWeight="600" color="gray.700">
-                                            Duration:
-                                        </Text>{" "}
-                                        {duration}
-                                    </Text>
-                                    <Text>
-                                        <Text as="span" fontWeight="600" color="gray.700">
-                                            Water used:
-                                        </Text>{" "}
-                                        {waterUsed}
-                                    </Text>
-                                    <Text>
-                                        <Text as="span" fontWeight="600" color="gray.700">
-                                            Target water:
-                                        </Text>{" "}
-                                        {formatWater(record.target_water_amount)}
-                                    </Text>
-                                </Stack>
-                            ) : (
-                                <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }} gap={3}>
-                                    <Box
-                                        p={3}
-                                        borderRadius="xl"
-                                        bg="rgba(56,178,172,0.03)"
-                                        border="1px solid rgba(56,178,172,0.08)"
+                                    <Grid
+                                        templateColumns={{ base: "1fr", xl: "minmax(0, 1.4fr) minmax(280px, 0.9fr)" }}
+                                        gap={4}
+                                        p={{ base: 4, md: 5 }}
+                                        pl={{ base: 6, md: 7 }}
+                                        alignItems="start"
                                     >
-                                        <Text fontSize="xs" color="gray.500" mb={1}>
-                                            Duration
-                                        </Text>
-                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                            {duration}
-                                        </Text>
-                                    </Box>
+                                        <Stack gap={3} minW={0}>
+                                            <HStack gap={2} flexWrap="wrap">
+                                                <Badge colorPalette={outcomeMeta.palette} variant="subtle">
+                                                    {outcomeMeta.label}
+                                                </Badge>
+                                                {record.zone_deleted && (
+                                                    <Badge colorPalette="gray" variant="solid">
+                                                        Deleted zone
+                                                    </Badge>
+                                                )}
+                                            </HStack>
 
-                                    <Box
-                                        p={3}
-                                        borderRadius="xl"
-                                        bg="rgba(56,178,172,0.03)"
-                                        border="1px solid rgba(56,178,172,0.08)"
-                                    >
-                                        <Text fontSize="xs" color="gray.500" mb={1}>
-                                            Water used
-                                        </Text>
-                                        <HStack spacing={1.5} align="center">
-                                            <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                                {waterUsed}
-                                            </Text>
-                                        </HStack>
-                                    </Box>
+                                            <Stack gap={2}>
+                                                <HStack gap={3} minW={0}>
+                                                    <Box
+                                                        px={1}
+                                                        py={2}
+                                                        borderRadius="md"
+                                                        bg="rgba(56,178,172,0.08)"
+                                                        border="1px solid rgba(56,178,172,0.12)"
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        flexShrink={0}
+                                                    >
+                                                        <Text
+                                                            fontSize="xs"
+                                                            fontWeight="700"
+                                                            color="gray.700"
+                                                            lineHeight="1"
+                                                        >
+                                                            {record.circuit_id}
+                                                        </Text>
+                                                    </Box>
 
-                                    <Box
-                                        p={3}
-                                        borderRadius="xl"
-                                        bg="rgba(56,178,172,0.03)"
-                                        border="1px solid rgba(56,178,172,0.08)"
-                                        gridColumn={{ base: "span 2", md: "auto" }}
-                                    >
-                                        <Text fontSize="xs" color="gray.500" mb={1}>
-                                            Target water
-                                        </Text>
-                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                            {formatWater(record.target_water_amount)}
-                                        </Text>
-                                    </Box>
-                                </Grid>
-                            )}
-                        </Grid>
-                    </Box>
-                )
-            })}
-        </Stack>
+                                                    <Heading
+                                                        size="sm"
+                                                        fontWeight="600"
+                                                        color="gray.800"
+                                                        minW={0}
+                                                    >
+                                                        {record.zone_deleted
+                                                            ? "Deleted Zone"
+                                                            : (zoneName || `Zone ${record.circuit_id}`)}
+                                                    </Heading>
+                                                </HStack>
+                                                <HStack gap={2} color="gray.600" fontSize="sm" flexWrap="wrap">
+                                                    <HStack gap={1.5}>
+                                                        <Clock size={15} />
+                                                        <Text>{dateStr}</Text>
+                                                    </HStack>
+                                                    <Text color="gray.400">•</Text>
+                                                    <HStack gap={1.5}>
+                                                        <MapPinned size={15} />
+                                                        <Text>Node {record.node_id}</Text>
+                                                    </HStack>
+                                                </HStack>
+                                            </Stack>
+
+                                            {record.reason && (
+                                                <Box
+                                                    mt={1}
+                                                    px={3}
+                                                    py={2}
+                                                    borderRadius="lg"
+                                                    bg="rgba(245,101,101,0.08)"
+                                                    border="1px solid rgba(245,101,101,0.16)"
+                                                >
+                                                    <HStack gap={2} color="red.500" fontSize="sm" align="start">
+                                                        <AlertCircle size={15} style={{ marginTop: 2 }} />
+                                                        <Text lineHeight="1.45">{record.reason}</Text>
+                                                    </HStack>
+                                                </Box>
+                                            )}
+                                        </Stack>
+
+                                        {isMobile ? (
+                                            <Stack gap={1} fontSize="sm" color="gray.600">
+                                                <Text>
+                                                    <Text as="span" fontWeight="600" color="gray.700">
+                                                        Duration:
+                                                    </Text>{" "}
+                                                    {duration}
+                                                </Text>
+                                                <Text>
+                                                    <Text as="span" fontWeight="600" color="gray.700">
+                                                        Water used:
+                                                    </Text>{" "}
+                                                    {waterUsed}
+                                                </Text>
+                                                <Text>
+                                                    <Text as="span" fontWeight="600" color="gray.700">
+                                                        Target water:
+                                                    </Text>{" "}
+                                                    {formatWater(record.target_water_amount)}
+                                                </Text>
+                                            </Stack>
+                                        ) : (
+                                            <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }} gap={3}>
+                                                <Box
+                                                    p={3}
+                                                    borderRadius="xl"
+                                                    bg="rgba(56,178,172,0.03)"
+                                                    border="1px solid rgba(56,178,172,0.08)"
+                                                >
+                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                        Duration
+                                                    </Text>
+                                                    <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                        {duration}
+                                                    </Text>
+                                                </Box>
+
+                                                <Box
+                                                    p={3}
+                                                    borderRadius="xl"
+                                                    bg="rgba(56,178,172,0.03)"
+                                                    border="1px solid rgba(56,178,172,0.08)"
+                                                >
+                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                        Water used
+                                                    </Text>
+                                                    <HStack spacing={1.5} align="center">
+                                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                            {waterUsed}
+                                                        </Text>
+                                                    </HStack>
+                                                </Box>
+
+                                                <Box
+                                                    p={3}
+                                                    borderRadius="xl"
+                                                    bg="rgba(56,178,172,0.03)"
+                                                    border="1px solid rgba(56,178,172,0.08)"
+                                                    gridColumn={{ base: "span 2", md: "auto" }}
+                                                >
+                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                        Target water
+                                                    </Text>
+                                                    <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                        {formatWater(record.target_water_amount)}
+                                                    </Text>
+                                                </Box>
+                                            </Grid>
+                                        )}
+                                    </Grid>
+                                </Box>
+                            )
+                        })}
+                    </Stack>
+                </Box>
+            ))}
+        </Stack >
     )
 }
