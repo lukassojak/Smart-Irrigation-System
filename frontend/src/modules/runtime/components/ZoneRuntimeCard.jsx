@@ -115,7 +115,7 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop, onClick }) {
                                     colorPalette="red"
                                     aria-label="Stop irrigation"
                                     p={1}
-                                    isDisabled={zoneState?.isStopDisabled}
+                                    disabled={zoneState?.isStopDisabled}
                                     onClick={(event) => {
                                         event.stopPropagation()
                                         onStop?.(zone.id)

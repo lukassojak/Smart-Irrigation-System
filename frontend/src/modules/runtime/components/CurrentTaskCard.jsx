@@ -3,10 +3,12 @@ import {
     VStack,
     HStack,
     Text,
-    Badge
+    Badge,
+    Button
 } from "@chakra-ui/react"
-import { Droplets } from "lucide-react"
+import { Droplets, Square } from "lucide-react"
 import { Progress } from "@chakra-ui/react"
+import { useBreakpointValue } from "@chakra-ui/react"
 
 import { PanelButtonDanger } from "../../../components/ui/ActionButtons"
 import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
@@ -17,6 +19,11 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
     } = useRuntimeControlState({
         task,
         isStopping,
+    })
+
+    const isMobile = useBreakpointValue({
+        base: true,
+        md: false,
     })
 
     const progressValue = taskState?.progressValue ?? 0
@@ -43,40 +50,59 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
                             <Droplets size={18} color="#319795" />
                         </Box>
 
-                        <HStack gap={4}>
-                            <Text fontWeight="600">
-                                {task.zoneName}
-                            </Text>
-                            {isStale ? (
-                                <Badge
-                                    size="sm"
-                                    colorPalette={taskState?.statusColorPalette ?? "gray"}
-                                    variant="subtle"
-                                >
-                                    {taskState?.statusLabel ?? "Stopped"}
-                                </Badge>
-                            ) : (
-                                <Badge
-                                    size="sm"
-                                    colorPalette="blue"
-                                    variant="subtle"
-                                >
-                                    Irrigating
-                                </Badge>
-                            )}
-                        </HStack>
+                        <Text fontWeight="600">
+                            {task.zoneName}
+                        </Text>
+
                     </HStack>
-                    {!task.stale && (
-                        <PanelButtonDanger
-                            size="sm"
-                            variant="subtle"
-                            onClick={() => onStop?.(task.id)}
-                            isDisabled={taskState?.isStopDisabled}
-                            loading={taskState?.isStopLoading}
-                        >
-                            Stop
-                        </PanelButtonDanger>
-                    )}
+                    <HStack gap={4}>
+                        {isStale ? (
+                            <Badge
+                                size="sm"
+                                colorPalette={taskState?.statusColorPalette ?? "gray"}
+                                variant="subtle"
+                            >
+                                {taskState?.statusLabel ?? "Stopped"}
+                            </Badge>
+                        ) : (
+                            <Badge
+                                size="sm"
+                                colorPalette="blue"
+                                variant="subtle"
+                            >
+                                Irrigating
+                            </Badge>
+                        )}
+
+                        {!task.stale && (
+                            <>
+                                {!isMobile ? (
+                                    <PanelButtonDanger
+                                        size="sm"
+                                        variant="subtle"
+                                        onClick={() => onStop?.(task.id)}
+                                        disabled={taskState?.isStopDisabled}
+                                        loading={taskState?.isStopLoading}
+                                    >
+                                        Stop
+                                    </PanelButtonDanger>
+                                ) : (
+                                    <Button
+                                        size="xs"
+                                        variant="subtle"
+                                        colorPalette="red"
+                                        aria-label="Stop irrigation"
+                                        p={1}
+                                        disabled={taskState?.isStopDisabled}
+                                        onClick={() => onStop?.(task.id)}
+                                        loading={taskState?.isStopLoading}
+                                    >
+                                        <Square size={14} />
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                    </HStack>
                 </HStack>
 
                 <Progress.Root

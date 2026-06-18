@@ -34,7 +34,8 @@ export default function WeatherWaterSummaryCard({ data }) {
                     bg="rgba(255,255,255,0.75)"
                     border="1px solid rgba(56,178,172,0.06)"
                     borderRadius="lg"
-                    p={2}
+                    py={4}
+                    px={0}
                 >
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={data.data}>
