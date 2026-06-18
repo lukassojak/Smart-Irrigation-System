@@ -173,7 +173,7 @@ export default function MainDashboardPage() {
 
     if (loading && !liveData) {
         return (
-            <Box>
+            <>
                 <GlassPageHeader
                     title="Dashboard"
                     subtitle="Live system overview"
@@ -185,13 +185,13 @@ export default function MainDashboardPage() {
                         message="Loading live data..."
                     />
                 </PageContainer>
-            </Box >
+            </>
         )
     }
 
     if (error) {
         return (
-            <Box>
+            <>
                 <GlassPageHeader
                     title="Dashboard"
                     subtitle="Live system overview"
@@ -205,12 +205,12 @@ export default function MainDashboardPage() {
                         />
                     </GlassPanelSection>
                 </PageContainer>
-            </Box>
+            </>
         )
     }
 
     return (
-        <Box>
+        <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
@@ -347,6 +347,6 @@ export default function MainDashboardPage() {
 
                 </DashboardPageSectionStack>
             </PageContainer>
-        </Box >
+        </>
     )
 }
