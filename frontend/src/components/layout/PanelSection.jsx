@@ -5,6 +5,7 @@ export default function PanelSection({
     description,
     children,
     borderColor = "border", // Default border color
+    ...props
 }) {
     return (
         // Reactive Edge Glass visual style - Solid Surface variant
@@ -16,6 +17,7 @@ export default function PanelSection({
             boxShadow="0 4px 16px rgba(15, 23, 42, 0.05)"
             textAlign="left"
             p={{ base: 4, md: 6 }}
+            {...props}
         >
             {(title || description) && (
                 <Stack mb={4}>
