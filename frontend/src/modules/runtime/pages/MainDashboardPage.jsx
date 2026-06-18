@@ -276,7 +276,7 @@ export default function MainDashboardPage() {
                     </GlassPanelSection>
 
 
-                    {/* SECTION 2 - CURRENT IRRIGATION (visible only when there are active tasks) */}
+                    {/* SECTION 2 - CURRENT IRRIGATION */}
                     {liveData.currentTasks.length > 0 && (
                         <GlassPanelSection
                             title="Current Irrigation"
@@ -308,19 +308,28 @@ export default function MainDashboardPage() {
                     )}
 
                     {/* SECTION 3 - ALERTS */}
-                    <GlassPanelSection
-                        title="Alerts"
-                        description="Recent system notifications requiring attention"
-                        collapsible
-                    >
-                        <Stack gap={2}>
-                            {liveData.alerts.map(alert => (
-                                <AlertItem key={alert.id} alert={alert} />
-                            ))}
-                        </Stack>
-                    </GlassPanelSection>
+                    {liveData.alerts.length > 0 && (
+                        <GlassPanelSection
+                            title="Alerts"
+                            description="Recent system notifications requiring attention"
+                            collapsible
+                        >
+                            <Stack gap={2}>
+                                {liveData.alerts.map(alert => (
+                                    <AlertItem key={alert.id} alert={alert} />
+                                ))}
+                            </Stack>
+                        </GlassPanelSection>
+                    )}
 
-                    {/* SECTION 4 - UPCOMING TASKS */}
+                    {/* SECTION 4 - ZONES STATUS */}
+                    <ZonesGridSection
+                        zones={liveData.zones}
+                        stoppingZoneIds={stoppingZoneIds}
+                        onStopZone={handleStopZoneWithNotification}
+                    />
+
+                    {/* SECTION 5 - UPCOMING TASKS */}
                     <Grid
                         templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
                         gap={8}
@@ -334,16 +343,8 @@ export default function MainDashboardPage() {
                         <WeatherWaterSummaryCard data={weatherWaterData} />
                     </Grid>
 
-                    {/* SECTION 5 - ZONES STATUS */}
-                    <ZonesGridSection
-                        zones={liveData.zones}
-                        stoppingZoneIds={stoppingZoneIds}
-                        onStopZone={handleStopZoneWithNotification}
-                    />
-
                     {/* SECTION 6 - WEATHER FORECAST */}
-                    <WeatherForecastSection data={weatherForecastData} />
-
+                    {/* <WeatherForecastSection data={weatherForecastData} /> */}
 
                 </DashboardPageSectionStack>
             </PageContainer>

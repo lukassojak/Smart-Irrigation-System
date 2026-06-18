@@ -8,18 +8,23 @@ import {
     Input,
     Button,
     VStack,
-    Spinner,
 } from "@chakra-ui/react"
 
 import { useOutletContext } from "react-router-dom"
 
-import GlassPageHeader from "../../../components/layout/GlassPageHeader"
-import GlassPanelSection from "../../../components/layout/GlassPanelSection"
-import CurrentTaskCard from "../components/CurrentTaskCard"
-import SelectableZoneCard from "../components/SelectableZoneCard"
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 import { startIrrigation as startIrrigationApi } from "../../../api/runtime.api"
+
+import GlassPageHeader from "../../../components/layout/GlassPageHeader"
+import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import PageContainer from "../../../components/layout/PageContainer"
+import DashboardPageSectionStack from "../../../components/layout/DashboardPageSectionStack"
+
+import CurrentTaskCard from "../components/CurrentTaskCard"
+import SelectableZoneCard from "../components/SelectableZoneCard"
+
+import LoadingState from "../../../components/ui/LoadingState"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import {
     ControlActionDialogViewport,
@@ -211,7 +216,7 @@ export default function ManualControlPage() {
 
     if (loading && !liveData) {
         return (
-            <Box>
+            <>
                 <GlassPageHeader
                     title="Manual Control"
                     subtitle="Override automatic irrigation"
@@ -219,13 +224,12 @@ export default function ManualControlPage() {
                     onMobileMenuClick={openMobileSidebar}
                 />
 
-                <Stack align="center" gap={4} py={20}>
-                    <Spinner color="teal.500" size="lg" />
-                    <Text fontSize="md" fontWeight="medium" color="teal.700">
-                        Loading live data...
-                    </Text>
-                </Stack>
-            </Box>
+                <PageContainer>
+                    <LoadingState
+                        message="Loading live data..."
+                    />
+                </PageContainer>
+            </>
         )
     }
 
@@ -238,15 +242,17 @@ export default function ManualControlPage() {
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-                <Box p={8}>
-                    <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
-                </Box>
+                <PageContainer>
+                    <GlassPanelSection>
+                        <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
+                    </GlassPanelSection>
+                </PageContainer>
             </Box>
         )
     }
 
     return (
-        <Box>
+        <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
@@ -256,130 +262,131 @@ export default function ManualControlPage() {
                 onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack
-                gap={8}
-                px={{ base: 4, md: 8 }}
-                py={8}
-            >
-
-                {/* SECTION 1 – Start Manual */}
-                <GlassPanelSection
-                    title="Start Manual Irrigation"
-                    description="Select zone and parameters to start immediate irrigation"
-                >
-                    <Grid
-                        templateColumns={{ base: "1fr", xl: "2fr 1fr" }}
-                        gap={{ base: 4, md: 8 }}
+            <PageContainer>
+                <DashboardPageSectionStack>
+                    {/* SECTION 1 – Start Manual */}
+                    <GlassPanelSection
+                        title="Start Manual Irrigation"
+                        description="Select zone and parameters to start immediate irrigation"
                     >
-
-                        {/* Zone Selection */}
                         <Grid
-                            templateColumns={{
-                                base: "1fr",
-                                md: "1fr 1fr"
-                            }}
-                            gap={4}
+                            templateColumns={{ base: "1fr", xl: "2fr 1fr" }}
+                            gap={{ base: 4, md: 8 }}
                         >
-                            {zones.map(zone => (
-                                <SelectableZoneCard
-                                    key={zone.id}
-                                    zone={zone}
-                                    selected={selectedZone === zone.id}
-                                    onClick={() =>
-                                        zone.online && zone.status !== "error" &&
-                                        setSelectedZone(zone.id)
-                                    }
+
+                            {/* Zone Selection */}
+                            <Grid
+                                templateColumns={{
+                                    base: "1fr",
+                                    md: "1fr 1fr"
+                                }}
+                                gap={4}
+                            >
+                                {zones.map(zone => (
+                                    <SelectableZoneCard
+                                        key={zone.id}
+                                        zone={zone}
+                                        selected={selectedZone === zone.id}
+                                        onClick={() =>
+                                            zone.online && zone.status !== "error" &&
+                                            setSelectedZone(zone.id)
+                                        }
+                                    />
+                                ))}
+                            </Grid>
+
+                            {/* Parameters */}
+                            <VStack align="stretch" gap={4}>
+
+                                <Text fontSize="sm" color="gray.600">
+                                    Mode
+                                </Text>
+
+                                <NativeSelect.Root>
+                                    <NativeSelect.Field
+                                        value={mode}
+                                        onChange={(event) => setMode(event.target.value)}
+                                    >
+                                        <option value="volume">By Volume (L)</option>
+                                    </NativeSelect.Field>
+                                    <NativeSelect.Indicator />
+                                </NativeSelect.Root>
+
+                                <Text fontSize="sm" color="gray.600">
+                                    Value
+                                </Text>
+
+                                <Input
+                                    placeholder="Enter value"
+                                    type="number"
+                                    value={valueInput}
+                                    onChange={(event) => setValueInput(event.target.value)}
+                                    disabled={!selectedZoneData || isStarting}
                                 />
-                            ))}
+
+                                <Button
+                                    colorPalette="orange"
+                                    variant="solid"
+                                    disabled={startDisabled}
+                                    loading={isStarting}
+                                    onClick={handleStartManual}
+                                >
+                                    Start Manual Irrigation
+                                </Button>
+
+                                <Text fontSize="xs" color="gray.500">
+                                    Manual irrigation overrides scheduled automation.
+                                </Text>
+
+                            </VStack>
+
                         </Grid>
 
-                        {/* Parameters */}
-                        <VStack align="stretch" gap={4}>
 
-                            <Text fontSize="sm" color="gray.600">
-                                Mode
-                            </Text>
+                    </GlassPanelSection>
 
-                            <NativeSelect.Root>
-                                <NativeSelect.Field
-                                    value={mode}
-                                    onChange={(event) => setMode(event.target.value)}
-                                >
-                                    <option value="volume">By Volume (L)</option>
-                                </NativeSelect.Field>
-                                <NativeSelect.Indicator />
-                            </NativeSelect.Root>
+                    {/* SECTION 2 – Active Irrigation */}
+                    <GlassPanelSection
+                        title="Active Irrigation Tasks"
+                        description="Currently running irrigation sessions"
+                        actions={
+                            <>
+                                {hasActiveTasks && (
+                                    <Button
+                                        size="xs"
+                                        variant="ghost"
+                                        colorPalette="red"
+                                        onClick={handleStopAllWithNotification}
+                                        disabled={!hasActiveTasks || isStoppingAll}
+                                        loading={isStoppingAll}
+                                    >
+                                        Stop All
+                                    </Button>
+                                )}
+                            </>
+                        }
+                    >
+                        <Stack gap={2}>
+                            {activeTasks.map(task => (
+                                <Box key={task.id}>
+                                    <CurrentTaskCard
+                                        task={task}
+                                        isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
+                                        onStop={() => handleStopZoneWithNotification(task.id)}
+                                    />
+                                </Box>
+                            ))}
 
-                            <Text fontSize="sm" color="gray.600">
-                                Value
-                            </Text>
+                            {activeTasks.length === 0 && (
+                                <Text fontSize="sm" color="gray.500" textAlign="center" py={6}>
+                                    No active irrigation tasks.
+                                </Text>
+                            )}
+                        </Stack>
+                    </GlassPanelSection>
+                </DashboardPageSectionStack>
+            </PageContainer >
 
-                            <Input
-                                placeholder="Enter value"
-                                type="number"
-                                value={valueInput}
-                                onChange={(event) => setValueInput(event.target.value)}
-                                isDisabled={!selectedZoneData || isStarting}
-                            />
-
-                            <Button
-                                colorPalette="orange"
-                                variant="solid"
-                                isDisabled={startDisabled}
-                                loading={isStarting}
-                                onClick={handleStartManual}
-                            >
-                                Start Manual Irrigation
-                            </Button>
-
-                            <Text fontSize="xs" color="gray.500">
-                                Manual irrigation overrides scheduled automation.
-                            </Text>
-
-                        </VStack>
-
-                    </Grid>
-
-
-                </GlassPanelSection>
-
-                {/* SECTION 2 – Active Irrigation */}
-                <GlassPanelSection
-                    title="Active Irrigation Tasks"
-                    description="Currently running irrigation sessions"
-                    actions={
-                        <Button
-                            size="xs"
-                            variant="ghost"
-                            colorPalette="red"
-                            onClick={handleStopAllWithNotification}
-                            isDisabled={!hasActiveTasks || isStoppingAll}
-                            loading={isStoppingAll}
-                        >
-                            Stop All
-                        </Button>
-                    }
-                >
-                    <Stack gap={2}>
-                        {activeTasks.map(task => (
-                            <Box key={task.id}>
-                                <CurrentTaskCard
-                                    task={task}
-                                    isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
-                                    onStop={() => handleStopZoneWithNotification(task.id)}
-                                />
-                            </Box>
-                        ))}
-
-                        {activeTasks.length === 0 && (
-                            <Text fontSize="sm" color="gray.500" textAlign="center" py={6}>
-                                No active irrigation tasks.
-                            </Text>
-                        )}
-                    </Stack>
-                </GlassPanelSection>
-            </Stack>
-
-        </Box>
+        </>
     )
 }
