@@ -24,6 +24,12 @@ import { getNodesSnapshot } from "../api/live.api"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import PageContainer from "../../../components/layout/PageContainer"
+import DashboardPageSectionStack from "../../../components/layout/DashboardPageSectionStack"
+
+import LoadingState from "../../../components/ui/LoadingState"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+
 import RuntimeNodeCard from "../components/RuntimeNodeCard"
 import InfrastructureOverviewCard from "../components/InfrastructureOverviewCard"
 import NetworkHealthSection from "../components/NetworkHealthSection"
@@ -33,6 +39,8 @@ export default function RuntimeNodesPage() {
     const navigate = useNavigate()
 
     const [nodes, setNodes] = useState([])
+    const [nodesError, setNodesError] = useState(false)
+    const [nodesLoading, setNodesLoading] = useState(true)
 
     useEffect(() => {
         let mounted = true
@@ -53,7 +61,9 @@ export default function RuntimeNodesPage() {
                     lastSeen: n.last_seen_at || null,
                 })))
             } catch (e) {
-                // ignore for now
+                setNodesError(true)
+            } finally {
+                setNodesLoading(false)
             }
         }
 
@@ -104,94 +114,97 @@ export default function RuntimeNodesPage() {
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     return (
-        <Box>
-
+        <>
             <GlassPageHeader
-                title="Runtime Nodes"
-                subtitle="Live status of irrigation nodes"
+                title="Monitoring"
+                subtitle="Live system and nodes status"
                 showMobileMenuButton={isMobile}
                 onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack
-                gap={8}
-                px={{ base: 4, md: 8 }}
-                py={8}
-            >
-                {/* SECTION – Infrastructure Overview */}
-                {/* SECTION – Infrastructure Overview */}
-                <GlassPanelSection
-                    title="Infrastructure Overview"
-                    description="Fleet-level health and connectivity status"
-                >
-                    <Grid
-                        templateColumns={{
-                            base: "1fr",
-                            md: "1fr 1fr",
-                            xl: "1fr 1fr 1fr 1fr"
-                        }}
-                        gap={6}
-                    >
-                        <InfrastructureOverviewCard
-                            icon={Server}
-                            title="Nodes Online"
-                            value={`${onlineCount} / ${nodes.length}`}
-                            description={`${offlineCount} offline`}
-                            accentColor="green.500"
-                        />
+            <PageContainer>
+                {nodesError ? (
+                    <GlassPanelSection>
+                        <DataUnavailableWarning message="Monitoring data is unavailable. Server may be disconnected." />
+                    </GlassPanelSection>
+                ) : nodesLoading ? (
+                    <LoadingState
+                        message="Loading monitoring data..."
+                    />
+                ) : (
 
-                        <InfrastructureOverviewCard
-                            icon={AlertTriangle}
-                            title="Nodes with Errors"
-                            value={errorCount}
-                            description="Require attention"
-                            accentColor="red.500"
-                        />
+                    <DashboardPageSectionStack>
+                        {/* SECTION – Infrastructure Overview */}
+                        <GlassPanelSection
+                            title="Infrastructure Overview"
+                            description="Fleet-level health and connectivity status"
+                        >
+                            <Grid
+                                templateColumns={{
+                                    base: "1fr",
+                                    md: "1fr 1fr",
+                                    xl: "1fr 1fr 1fr 1fr"
+                                }}
+                                gap={6}
+                            >
+                                <InfrastructureOverviewCard
+                                    icon={Server}
+                                    title="Nodes Online"
+                                    value={`${onlineCount} / ${nodes.length}`}
+                                    description={`${offlineCount} offline`}
+                                    accentColor="green.500"
+                                />
+                                <InfrastructureOverviewCard
+                                    icon={AlertTriangle}
+                                    title="Nodes with Errors"
+                                    value={errorCount}
+                                    description="Require attention"
+                                    accentColor="red.500"
+                                />
+                                <InfrastructureOverviewCard
+                                    icon={Wifi}
+                                    title="Weak Signal"
+                                    value={weakSignalCount}
+                                    description="WiFi nodes below -75 dBm"
+                                    accentColor="orange.500"
+                                />
+                                <InfrastructureOverviewCard
+                                    icon={Signal}
+                                    title="Last Heartbeat"
+                                    value={lastHeartbeat}
+                                    description="Most recent node activity"
+                                    accentColor="teal.500"
+                                />
+                            </Grid>
+                        </GlassPanelSection>
 
-                        <InfrastructureOverviewCard
-                            icon={Wifi}
-                            title="Weak Signal"
-                            value={weakSignalCount}
-                            description="WiFi nodes below -75 dBm"
-                            accentColor="orange.500"
-                        />
+                        <GlassPanelSection
+                            title="Nodes Overview"
+                            description={`${onlineCount} / ${nodes.length} nodes online`}
+                        >
+                            <Grid
+                                templateColumns={{
+                                    base: "1fr",
+                                    md: "1fr 1fr",
+                                    xl: "1fr 1fr 1fr"
+                                }}
+                                gap={6}
+                            >
+                                {nodes.map(node => (
+                                    <RuntimeNodeCard
+                                        key={node.id}
+                                        node={node}
+                                    /* onClick={() => navigate(`/runtime/nodes/${node.id}`)} */
+                                    />
+                                ))}
+                            </Grid>
+                        </GlassPanelSection>
 
-                        <InfrastructureOverviewCard
-                            icon={Signal}
-                            title="Last Heartbeat"
-                            value={lastHeartbeat}
-                            description="Most recent node activity"
-                            accentColor="teal.500"
-                        />
-                    </Grid>
-                </GlassPanelSection>
+                        {/* <NetworkHealthSection data={networkHealthData} /> */}
+                    </DashboardPageSectionStack>
+                )}
+            </PageContainer>
 
-                <GlassPanelSection
-                    title="Nodes Overview"
-                    description={`${onlineCount} / ${nodes.length} nodes online`}
-                >
-                    <Grid
-                        templateColumns={{
-                            base: "1fr",
-                            md: "1fr 1fr",
-                            xl: "1fr 1fr 1fr"
-                        }}
-                        gap={6}
-                    >
-                        {nodes.map(node => (
-                            <RuntimeNodeCard
-                                key={node.id}
-                                node={node}
-                                onClick={() => navigate(`/runtime/nodes/${node.id}`)}
-                            />
-                        ))}
-                    </Grid>
-                </GlassPanelSection>
-
-                <NetworkHealthSection data={networkHealthData} />
-
-            </Stack>
-
-        </Box>
+        </>
     )
 }

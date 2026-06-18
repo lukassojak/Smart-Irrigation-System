@@ -97,9 +97,13 @@ export default function IrrigationHistoryPage() {
     const [sortBy, setSortBy] = useState("start_time_desc")
     const [historyRecords, setHistoryRecords] = useState([])
     const [includeDeleted, setIncludeDeleted] = useState(true)
+
     const [loading, setLoading] = useState(false)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [error, setError] = useState(null)
-    const [recordLimit, setRecordLimit] = useState(30)
+    const [recordLimit, setRecordLimit] = useState(10)
+    const [hasMoreRecords, setHasMoreRecords] = useState(true)
+
 
     const openDialog = (payload) => {
         const id = `history-action-result-${Date.now()}`
@@ -166,21 +170,38 @@ export default function IrrigationHistoryPage() {
         loadNodes()
     }, [])
 
+    const handleLoadMore = async () => {
+        setIsLoadingMore(true)
+        setRecordLimit(prev => prev + 10)
+    }
+
     // Load history records when node selection changes (exposed as function so we can
     // reload after deleting all records)
     const loadHistory = async () => {
-        setLoading(true)
+        if (!isLoadingMore) {
+            setLoading(true)
+        }
         setError(null)
+        const previousCount = historyRecords.length
+
         try {
             const response = selectedNodeId === "all"
                 ? await fetchAllHistoryRecords(recordLimit)
                 : await fetchNodeHistory(selectedNodeId, recordLimit)
-            setHistoryRecords(response.data.records || [])
+            const records = response.data.records || []
+            setHistoryRecords(records)
+            if (
+                recordLimit > 10 &&
+                records.length === previousCount
+            ) {
+                setHasMoreRecords(false)
+            }
         } catch (err) {
             setError(`Failed to load history: ${err.message}`)
             setHistoryRecords([])
         } finally {
             setLoading(false)
+            setIsLoadingMore(false)
         }
     }
 
@@ -434,12 +455,19 @@ export default function IrrigationHistoryPage() {
                                 <>
                                     <HistoryRecordsTable records={visibleRecords} nodes={nodes} />
                                     <Stack align="center" mt={6}>
-                                        <PanelButton
-                                            loading={loading}
-                                            onClick={() => setRecordLimit(prev => prev + 30)}
-                                        >
-                                            Load 30 More Records
-                                        </PanelButton>
+                                        {hasMoreRecords ? (
+                                            <PanelButton
+                                                loading={isLoadingMore}
+                                                onClick={handleLoadMore}
+                                                colorPalette="teal"
+                                            >
+                                                Load 10 More Records
+                                            </PanelButton>
+                                        ) : (
+                                            <Text fontWeight="600" color="gray.700">
+                                                No more records.
+                                            </Text>
+                                        )}
                                     </Stack>
                                 </>
                             )}

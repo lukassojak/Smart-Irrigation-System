@@ -24,6 +24,12 @@ import { useOutletContext } from "react-router-dom"
 
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import PageContainer from "../../../components/layout/PageContainer"
+import DashboardPageSectionStack from "../../../components/layout/DashboardPageSectionStack"
+
+import LoadingState from "../../../components/ui/LoadingState"
+import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+
 import StatisticsOverviewCard from "../components/StatisticsOverviewCard"
 import AnomalyHeatmapSection from "../components/AnomalyHeatmapSection"
 
@@ -187,8 +193,7 @@ export default function StatisticsPage() {
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     return (
-        <Box>
-
+        <>
             <GlassPageHeader
                 title="Statistics"
                 subtitle="Irrigation analytics and performance overview"
@@ -196,138 +201,139 @@ export default function StatisticsPage() {
                 onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack gap={8} p={8}>
+            <PageContainer>
 
-                {/* KPI OVERVIEW */}
-                <GlassPanelSection
-                    title="Overview"
-                    description="Aggregate performance metrics for the last 30 days"
-                >
-                    <Grid
-                        templateColumns={{
-                            base: "1fr",
-                            md: "1fr 1fr",
-                            xl: "1fr 1fr 1fr 1fr"
-                        }}
-                        gap={6}
+                <DashboardPageSectionStack>
+                    {/* KPI OVERVIEW */}
+                    <GlassPanelSection
+                        title="Overview"
+                        description="Aggregate performance metrics for the last 30 days"
                     >
-                        <StatisticsOverviewCard
-                            label="Total Water"
-                            value={`${statsData.kpis.totalWater} L`}
-                            description="Total water used in the last 30 days"
-                        />
-                        <StatisticsOverviewCard
-                            label="Avg Daily"
-                            value={`${statsData.kpis.avgDailyWater} L`}
-                            description="Over the last 30 days"
-                            footer={<Badge colorPalette="teal">+5% vs previous month</Badge>}
-                        />
-                        <StatisticsOverviewCard
-                            label="Irrigation Runs"
-                            value={statsData.kpis.irrigationRuns}
-                            description="Total irrigation runs executed within all zones"
-                        />
-                        <StatisticsOverviewCard
-                            label="Water Saved"
-                            value={`${statsData.kpis.waterSavedVsStatic}%`}
-                            description="Compared to a static schedule without adjustments"
-                        />
-                        <StatisticsOverviewCard label="Auto Runs" value={statsData.kpis.autoRuns} />
-                        <StatisticsOverviewCard label="Manual Runs" value={statsData.kpis.manualRuns} />
-                        <StatisticsOverviewCard label="Skipped" value={statsData.kpis.skippedRuns} />
-                        <StatisticsOverviewCard label="Interrupted" value={statsData.kpis.interruptedRuns} />
+                        <Grid
+                            templateColumns={{
+                                base: "1fr",
+                                md: "1fr 1fr",
+                                xl: "1fr 1fr 1fr 1fr"
+                            }}
+                            gap={6}
+                        >
+                            <StatisticsOverviewCard
+                                label="Total Water"
+                                value={`${statsData.kpis.totalWater} L`}
+                                description="Total water used in the last 30 days"
+                            />
+                            <StatisticsOverviewCard
+                                label="Avg Daily"
+                                value={`${statsData.kpis.avgDailyWater} L`}
+                                description="Over the last 30 days"
+                                footer={<Badge colorPalette="teal">+5% vs previous month</Badge>}
+                            />
+                            <StatisticsOverviewCard
+                                label="Irrigation Runs"
+                                value={statsData.kpis.irrigationRuns}
+                                description="Total irrigation runs executed within all zones"
+                            />
+                            <StatisticsOverviewCard
+                                label="Water Saved"
+                                value={`${statsData.kpis.waterSavedVsStatic}%`}
+                                description="Compared to a static schedule without adjustments"
+                            />
+                            <StatisticsOverviewCard label="Auto Runs" value={statsData.kpis.autoRuns} />
+                            <StatisticsOverviewCard label="Manual Runs" value={statsData.kpis.manualRuns} />
+                            <StatisticsOverviewCard label="Skipped" value={statsData.kpis.skippedRuns} />
+                            <StatisticsOverviewCard label="Interrupted" value={statsData.kpis.interruptedRuns} />
+                        </Grid>
+                    </GlassPanelSection>
+
+                    {/* WATER TREND */}
+                    <GlassPanelSection
+                        title="Water Usage Trend"
+                        description="Daily water consumption (7-day rolling window)"
+                    >
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={statsData.waterTrend}>
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip />
+                                <Line
+                                    type="monotone"
+                                    dataKey="water"
+                                    stroke="#319795"
+                                    strokeWidth={2}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </GlassPanelSection>
+
+                    <Grid
+                        templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
+                        gap={8}
+                    >
+                        {/* CORRELATION */}
+                        <GlassPanelSection
+                            title="Weather vs Irrigation"
+                            description="Correlation between weather index and water usage"
+                        >
+                            <ResponsiveContainer width="100%" height={300}>
+                                <AreaChart data={statsData.correlation}>
+                                    <XAxis dataKey="date" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="water"
+                                        stroke="#3182CE"
+                                        fill="#BEE3F8"
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="weather"
+                                        stroke="#DD6B20"
+                                        fill="#FBD38D"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </GlassPanelSection>
+
+                        {/* ZONE DISTRIBUTION */}
+                        <GlassPanelSection
+                            title="Zone Water Distribution"
+                            description="Water usage per zone"
+                        >
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={statsData.zoneUsage}>
+                                    <XAxis dataKey="zone" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="water" fill="#319795" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </GlassPanelSection>
+
+                        <GlassPanelSection
+                            title="Hourly Irrigation Heatmap"
+                            description="Water usage distribution across hours (7-day window)"
+                        >
+                            <ResponsiveContainer width="100%" height={350}>
+                                <BarChart data={statsData.heatmap}>
+                                    <XAxis dataKey="hour" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Bar dataKey="Mon" stackId="a" fill="#319795" />
+                                    <Bar dataKey="Tue" stackId="a" fill="#2C7A7B" />
+                                    <Bar dataKey="Wed" stackId="a" fill="#285E61" />
+                                    <Bar dataKey="Thu" stackId="a" fill="#81E6D9" />
+                                    <Bar dataKey="Fri" stackId="a" fill="#38B2AC" />
+                                    <Bar dataKey="Sat" stackId="a" fill="#4FD1C5" />
+                                    <Bar dataKey="Sun" stackId="a" fill="#B2F5EA" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </GlassPanelSection>
+                        {/* Get only last 10 days with anomalies */}
+                        <AnomalyHeatmapSection anomalies={statsData.anomalies.slice(-12)} />
                     </Grid>
-                </GlassPanelSection>
-
-                {/* WATER TREND */}
-                <GlassPanelSection
-                    title="Water Usage Trend"
-                    description="Daily water consumption (7-day rolling window)"
-                >
-                    <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={statsData.waterTrend}>
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Line
-                                type="monotone"
-                                dataKey="water"
-                                stroke="#319795"
-                                strokeWidth={2}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </GlassPanelSection>
-            </Stack>
-
-            <Grid
-                templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
-                gap={8}
-                p={8}
-            >
-                {/* CORRELATION */}
-                <GlassPanelSection
-                    title="Weather vs Irrigation"
-                    description="Correlation between weather index and water usage"
-                >
-                    <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={statsData.correlation}>
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Area
-                                type="monotone"
-                                dataKey="water"
-                                stroke="#3182CE"
-                                fill="#BEE3F8"
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="weather"
-                                stroke="#DD6B20"
-                                fill="#FBD38D"
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </GlassPanelSection>
-
-                {/* ZONE DISTRIBUTION */}
-                <GlassPanelSection
-                    title="Zone Water Distribution"
-                    description="Water usage per zone"
-                >
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={statsData.zoneUsage}>
-                            <XAxis dataKey="zone" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="water" fill="#319795" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </GlassPanelSection>
-
-                <GlassPanelSection
-                    title="Hourly Irrigation Heatmap"
-                    description="Water usage distribution across hours (7-day window)"
-                >
-                    <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={statsData.heatmap}>
-                            <XAxis dataKey="hour" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="Mon" stackId="a" fill="#319795" />
-                            <Bar dataKey="Tue" stackId="a" fill="#2C7A7B" />
-                            <Bar dataKey="Wed" stackId="a" fill="#285E61" />
-                            <Bar dataKey="Thu" stackId="a" fill="#81E6D9" />
-                            <Bar dataKey="Fri" stackId="a" fill="#38B2AC" />
-                            <Bar dataKey="Sat" stackId="a" fill="#4FD1C5" />
-                            <Bar dataKey="Sun" stackId="a" fill="#B2F5EA" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </GlassPanelSection>
-                {/* Get only last 10 days with anomalies */}
-                <AnomalyHeatmapSection anomalies={statsData.anomalies.slice(-12)} />
-            </Grid>
-        </Box>
+                </DashboardPageSectionStack>
+            </PageContainer>
+        </>
     )
 }
