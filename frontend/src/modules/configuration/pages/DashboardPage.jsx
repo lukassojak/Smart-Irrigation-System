@@ -17,24 +17,31 @@ import { fetchGlobalConfig } from "../../../api/globalConfig.api"
 
 
 import { FullCorrectionIndicator } from "../../../components/CorrectionIndicator"
-import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
+
 import { HeaderAction, PanelButton } from '../../../components/ui/ActionButtons'
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
-
-import PageContainer from "../../../components/layout/PageContainer"
-import PageSectionStack from "../../../components/layout/PageSectionStack"
-import PanelSection from '../../../components/layout/PanelSection'
+import LoadingState from "../../../components/ui/LoadingState"
 import NodeCard from "../../../components/ui/cards/NodeCard"
 import {
     ControlActionDialogViewport,
     openControlActionDialog,
 } from "../../../components/ui/ControlActionDialogOverlay"
 
+import PageContainer from "../../../components/layout/PageContainer"
+import PageSectionStack from "../../../components/layout/PageSectionStack"
+import PanelSection from '../../../components/layout/PanelSection'
+import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
+
 
 export default function NodesDashboardPage() {
     const [nodes, setNodes] = useState([])
+    const [nodesLoading, setNodesLoading] = useState(true)
     const [nodesError, setNodesError] = useState(false)
+
     const [globalConfig, setGlobalConfig] = useState(null)
+    const [globalConfigLoading, setGlobalConfigLoading] = useState(true)
+    const [globalConfigError, setGlobalConfigError] = useState(false)
+
     const [isSyncingAll, setIsSyncingAll] = useState(false)
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
@@ -52,10 +59,19 @@ export default function NodesDashboardPage() {
                 setNodesError(true)
                 setNodes([])
             })
+            .finally(() => {
+                setNodesLoading(false)
+            })
 
         fetchGlobalConfig()
             .then((response) => setGlobalConfig(response.data))
-            .catch((error) => console.error("Error fetching global config:", error))
+            .catch((error) => {
+                console.error("Error fetching global config:", error)
+                setGlobalConfigError(true)
+            })
+            .finally(() => {
+                setGlobalConfigLoading(false)
+            })
     }, [])
 
     const handleSyncAll = async () => {
@@ -162,7 +178,13 @@ export default function NodesDashboardPage() {
                                 )}
                             </HStack>
 
-                            {globalConfig ? (
+                            {globalConfigLoading ? (
+                                <LoadingState
+                                    message="Loading system configuration..."
+                                />
+                            ) : globalConfigError ? (
+                                <DataUnavailableWarning message="System configuration is currently unavailable. Server may be disconnected." />
+                            ) : (
                                 <Stack gap={6}>
                                     {/* Three-column info cards */}
                                     <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
@@ -312,8 +334,6 @@ export default function NodesDashboardPage() {
                                         </PanelButton>
                                     )}
                                 </Stack>
-                            ) : (
-                                <DataUnavailableWarning message="System configuration is currently unavailable. Server may be disconnected." />
                             )}
                         </Stack>
                     </PanelSection>
@@ -358,7 +378,13 @@ export default function NodesDashboardPage() {
                                 )}
                             </HStack>
 
-                            {globalConfig ? (
+                            {nodesLoading ? (
+                                <LoadingState
+                                    message="Loading nodes data..."
+                                />
+                            ) : nodesError ? (
+                                <DataUnavailableWarning message="Nodes data is currently unavailable. Server may be disconnected." />
+                            ) : (
                                 <Stack gap={6}>
                                     <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
                                         <Box
@@ -452,8 +478,6 @@ export default function NodesDashboardPage() {
                                         </PanelButton>
                                     )}
                                 </Stack>
-                            ) : (
-                                <DataUnavailableWarning message="Node data is currently unavailable. Server may be disconnected." />
                             )}
                         </Stack>
                     </PanelSection>

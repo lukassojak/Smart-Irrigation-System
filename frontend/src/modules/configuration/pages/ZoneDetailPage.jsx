@@ -5,20 +5,23 @@ import { fetchZoneById, deleteZone } from '../../../api/nodes.api'
 
 import FrequencyTimeline from '../../../components/FrequencyTimeline'
 import { FullCorrectionIndicator } from '../../../components/CorrectionIndicator'
-
-import HelpSidebar from "../../../components/HelpSidebar"
-import HelpBox from "../../../components/HelpBox"
-import PanelSection from '../../../components/layout/PanelSection'
-import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
-import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
-import DataUnavailableWarning from '../../../components/ui/DataUnavailableWarning'
 import EmitterOverviewCard from '../components/EmitterOverviewCard'
 import PerPlantAllocationCard from '../components/PerPlantAllocationCard'
+
+import PageContainer from "../../../components/layout/PageContainer"
+import PageSectionStack from "../../../components/layout/PageSectionStack"
+import PanelSection from '../../../components/layout/PanelSection'
+import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
+
+
+import { HeaderAction, HeaderActionDanger } from '../../../components/ui/ActionButtons'
+import DataUnavailableWarning from '../../../components/ui/DataUnavailableWarning'
 import {
     ControlActionDialogViewport,
     openControlActionConfirmDialog,
     openControlActionDialog,
 } from "../../../components/ui/ControlActionDialogOverlay"
+import LoadingState from "../../../components/ui/LoadingState"
 
 import { zoneDetailHelp } from "../../../help/zoneDetailHelp"
 
@@ -26,9 +29,12 @@ import { zoneDetailHelp } from "../../../help/zoneDetailHelp"
 export default function ZoneDetailPage() {
     const { nodeId, zoneId } = useParams();
     const navigate = useNavigate();
+
     const [zone, setZone] = useState(null);
+    const [zoneLoading, setZoneLoading] = useState(true)
     const [zoneError, setZoneError] = useState(false)
     const [isDeletingZone, setIsDeletingZone] = useState(false)
+
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
     const openDialog = (payload) => {
@@ -104,21 +110,12 @@ export default function ZoneDetailPage() {
                 console.error('Failed to fetch zone:', error)
                 setZoneError(true)
             })
+            .finally(() => {
+                setZoneLoading(false)
+            })
     }, [nodeId, zoneId])
 
-    if (!zone) {
-        return (
-            <Box p={4} >
-                {zoneError ? (
-                    <DataUnavailableWarning message="Zone details are unavailable. Server may be disconnected." />
-                ) : (
-                    <Text>Loading zone details...</Text>
-                )}
-            </Box>
-        )
-    }
-
-    const evenAreaEmitters = zone.emitters_configuration?.summary || []
+    const evenAreaEmitters = zone?.emitters_configuration?.summary || []
     const totalEvenAreaFlow = evenAreaEmitters.reduce(
         (sum, emitter) =>
             sum +
@@ -129,30 +126,35 @@ export default function ZoneDetailPage() {
     )
 
     const perPlantZoneBaseVolumeLiters =
-        zone.irrigation_configuration?.base_target_volume_liters ?? 0
+        zone?.irrigation_configuration?.base_target_volume_liters ?? 0
+    const hasZone = Boolean(zone)
 
     return (
         <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
-                title={`Zone #${zone.id}`}
-                subtitle={zone.name || "Unnamed Zone"}
+                title={zone ? `Zone #${zone.id}` : "Zone"}
+                subtitle={zone ? (zone.name || "Unnamed Zone") : undefined}
                 actions={
                     <HeaderActions>
-                        <HeaderActionDanger
-                            onClick={handleDeleteZone}
-                            disabled={isDeletingZone}
-                        >
-                            {isDeletingZone ? "Deleting..." : "Delete zone"}
-                        </HeaderActionDanger>
+                        {zone && (
+                            <>
+                                <HeaderActionDanger
+                                    onClick={handleDeleteZone}
+                                    disabled={isDeletingZone}
+                                >
+                                    {isDeletingZone ? "Deleting..." : "Delete zone"}
+                                </HeaderActionDanger>
 
-                        <HeaderAction
-                            as={Link}
-                            to={`/configuration/nodes/${nodeId}/zones/${zoneId}/edit`}
-                        >
-                            Edit zone
-                        </HeaderAction>
+                                <HeaderAction
+                                    as={Link}
+                                    to={`/configuration/nodes/${nodeId}/zones/${zoneId}/edit`}
+                                >
+                                    Edit zone
+                                </HeaderAction>
+                            </>
+                        )}
 
                         <HeaderAction
                             as={Link}
@@ -176,50 +178,68 @@ export default function ZoneDetailPage() {
                         →
                     </Text>
 
-                    <Text fontSize="xs" color="gray.500">
-                        Zone #{zone.id}
-                    </Text>
+                    {zone ? (
+                        <Text fontSize="xs" color="gray.500">
+                            Zone #{zone.id}
+                        </Text>
+                    ) : (
+                        <Text fontSize="xs" color="gray.500">
+                            Zone
+                        </Text>
+                    )}
                 </HStack>
             </GlassPageHeader>
 
 
-            <Box p={6}>
-                {/* Zone summary */}
-                <Stack gap={10}>
-                    <PanelSection title="Zone Summary">
-                        <DataList.Root orientation="horizontal">
-                            <DataList.Item key="ID">
-                                <DataList.ItemLabel>ID</DataList.ItemLabel>
-                                <DataList.ItemValue>{zone.id}</DataList.ItemValue>
-                            </DataList.Item>
-                            <DataList.Item>
-                                <DataList.ItemLabel>Name</DataList.ItemLabel>
-                                <DataList.ItemValue>{zone.name || "Unnamed Zone"}</DataList.ItemValue>
-                            </DataList.Item>
-                            <DataList.Item>
-                                <DataList.ItemLabel>Relay Valve Pin</DataList.ItemLabel>
-                                <DataList.ItemValue>
-                                    <Badge colorPalette="teal" variant="subtle">
-                                        Pin {zone.relay_pin}
-                                    </Badge>
-                                </DataList.ItemValue>
-                            </DataList.Item>
-                            <DataList.Item>
-                                <DataList.ItemLabel>Auto irrigation</DataList.ItemLabel>
-                                <DataList.ItemValue>
-                                    {zone.enabled ? (
-                                        <Badge colorPalette="green" variant="subtle">Enabled</Badge>
-                                    ) : (
-                                        <Badge colorPalette="red" variant="subtle">Disabled</Badge>
-                                    )}
-                                </DataList.ItemValue>
-                            </DataList.Item>
-                        </DataList.Root>
+            <PageContainer>
+                {zoneError ? (
+                    <PanelSection>
+                        <DataUnavailableWarning
+                            message="Zone details are unavailable. Server may be disconnected."
+                        />
                     </PanelSection>
+                ) : !zone ? (
+                    <LoadingState
+                        message="Loading zone details..."
+                    />
+                ) : (
 
-                    {/* Two-column layout for data + help boxes */}
-                    <SimpleGrid columns={{ base: 1, lg: 3 }} gap={6}>
-                        <Stack gap={10} gridColumn="span 2">
+                    < PageSectionStack >
+                        <SimpleGrid
+                            columns={{ base: 1, md: 2 }}
+                            gap={6}
+                        >
+                            <PanelSection title="Zone Summary">
+                                <DataList.Root orientation="horizontal">
+                                    <DataList.Item key="ID">
+                                        <DataList.ItemLabel>ID</DataList.ItemLabel>
+                                        <DataList.ItemValue>{zone.id}</DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Name</DataList.ItemLabel>
+                                        <DataList.ItemValue>{zone.name || "Unnamed Zone"}</DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Relay Valve Pin</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            <Badge colorPalette="teal" variant="subtle">
+                                                Pin {zone.relay_pin}
+                                            </Badge>
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Auto irrigation</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {zone.enabled ? (
+                                                <Badge colorPalette="green" variant="subtle">Enabled</Badge>
+                                            ) : (
+                                                <Badge colorPalette="red" variant="subtle">Disabled</Badge>
+                                            )}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                </DataList.Root>
+                            </PanelSection>
+
                             {/* Main data boxes */}
                             <PanelSection title="Irrigation Configuration">
                                 {zone.irrigation_mode === "even_area" && (
@@ -284,214 +304,195 @@ export default function ZoneDetailPage() {
                                     </DataList.Root>
                                 )}
                             </PanelSection>
+                        </SimpleGrid>
 
-                            {/* Behavior & Scheduling - frequency settings & fallback strategies */}
-                            <PanelSection title="Behavior & Scheduling">
-                                {/* Top: two-column overview */}
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
-                                    {/* Frequency settings */}
-                                    <Box>
-                                        <Text fontSize="sm" fontWeight="semibold" mb={3}>
-                                            Frequency Settings
-                                        </Text>
+                        {/* Behavior & Scheduling - frequency settings & fallback strategies */}
+                        <PanelSection title="Behavior & Scheduling">
+                            {/* Top: two-column overview */}
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                                {/* Frequency settings */}
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="semibold" mb={3}>
+                                        Frequency Settings
+                                    </Text>
 
-                                        <DataList.Root orientation="horizontal">
+                                    <DataList.Root orientation="horizontal">
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Dynamic interval</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {zone.frequency_settings.dynamic_interval ? (
+                                                    <Badge colorPalette="green" variant="subtle">Enabled</Badge>
+                                                ) : (
+                                                    <Badge variant="subtle">Disabled</Badge>
+                                                )}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>{zone.frequency_settings.dynamic_interval ? "Min interval" : "Fixed interval"}</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {zone.frequency_settings.min_interval_days} days
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+
+                                        {zone.frequency_settings.dynamic_interval && (
                                             <DataList.Item>
-                                                <DataList.ItemLabel>Dynamic interval</DataList.ItemLabel>
+                                                <DataList.ItemLabel>Max interval</DataList.ItemLabel>
                                                 <DataList.ItemValue>
-                                                    {zone.frequency_settings.dynamic_interval ? (
-                                                        <Badge colorPalette="green" variant="subtle">Enabled</Badge>
-                                                    ) : (
-                                                        <Badge variant="subtle">Disabled</Badge>
-                                                    )}
+                                                    {zone.frequency_settings.max_interval_days} days
                                                 </DataList.ItemValue>
                                             </DataList.Item>
+                                        )}
+                                    </DataList.Root>
+                                </Box>
 
-                                            <DataList.Item>
-                                                <DataList.ItemLabel>{zone.frequency_settings.dynamic_interval ? "Min interval" : "Fixed interval"}</DataList.ItemLabel>
-                                                <DataList.ItemValue>
-                                                    {zone.frequency_settings.min_interval_days} days
-                                                </DataList.ItemValue>
-                                            </DataList.Item>
+                                {/* Fallback strategy */}
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="semibold" mb={3}>
+                                        Fallback Strategy
+                                    </Text>
 
-                                            {zone.frequency_settings.dynamic_interval && (
-                                                <DataList.Item>
-                                                    <DataList.ItemLabel>Max interval</DataList.ItemLabel>
-                                                    <DataList.ItemValue>
-                                                        {zone.frequency_settings.max_interval_days} days
-                                                    </DataList.ItemValue>
-                                                </DataList.Item>
-                                            )}
-                                        </DataList.Root>
-                                    </Box>
+                                    <DataList.Root orientation="horizontal">
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>No fresh data</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                <Badge variant="outline">
+                                                    {zone.fallback_strategy.on_fresh_weather_data_unavailable}
+                                                </Badge>
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
 
-                                    {/* Fallback strategy */}
-                                    <Box>
-                                        <Text fontSize="sm" fontWeight="semibold" mb={3}>
-                                            Fallback Strategy
-                                        </Text>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Expired data</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                <Badge variant="outline">
+                                                    {zone.fallback_strategy.on_expired_weather_data}
+                                                </Badge>
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
 
-                                        <DataList.Root orientation="horizontal">
-                                            <DataList.Item>
-                                                <DataList.ItemLabel>No fresh data</DataList.ItemLabel>
-                                                <DataList.ItemValue>
-                                                    <Badge variant="outline">
-                                                        {zone.fallback_strategy.on_fresh_weather_data_unavailable}
-                                                    </Badge>
-                                                </DataList.ItemValue>
-                                            </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Missing weather data</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                <Badge variant="outline">
+                                                    {zone.fallback_strategy.on_missing_weather_data}
+                                                </Badge>
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                    </DataList.Root>
+                                </Box>
+                            </SimpleGrid>
 
-                                            <DataList.Item>
-                                                <DataList.ItemLabel>Expired data</DataList.ItemLabel>
-                                                <DataList.ItemValue>
-                                                    <Badge variant="outline">
-                                                        {zone.fallback_strategy.on_expired_weather_data}
-                                                    </Badge>
-                                                </DataList.ItemValue>
-                                            </DataList.Item>
 
-                                            <DataList.Item>
-                                                <DataList.ItemLabel>Missing weather data</DataList.ItemLabel>
-                                                <DataList.ItemValue>
-                                                    <Badge variant="outline">
-                                                        {zone.fallback_strategy.on_missing_weather_data}
-                                                    </Badge>
-                                                </DataList.ItemValue>
-                                            </DataList.Item>
-                                        </DataList.Root>
-                                    </Box>
+                            {/* show divider & timeline if dynamic interval is enabled */}
+                            {zone.frequency_settings.dynamic_interval && (
+                                <>
+                                    <Box my={6} borderBottom="1px solid" borderColor="border.muted" />
+                                    <FrequencyTimeline settings={zone.frequency_settings} />
+                                </>
+                            )}
+
+                        </PanelSection>
+
+                        {/* Corrections & Adjustments */}
+                        <PanelSection title="Corrections & Adjustments">
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                                {/* Indicators */}
+                                <HStack>
+                                    <FullCorrectionIndicator
+                                        label="Solar"
+                                        value={zone.local_correction_factors.solar}
+                                    />
+                                    <FullCorrectionIndicator
+                                        label="Rain"
+                                        value={zone.local_correction_factors.rain}
+                                    />
+                                    <FullCorrectionIndicator
+                                        label="Temperature"
+                                        value={zone.local_correction_factors.temperature}
+                                    />
+                                </HStack>
+
+                                {/* Legend */}
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                                        Adjustment Impact
+                                    </Text>
+                                    <Text fontSize="sm" color="fg.muted">
+                                        Correction factors dynamically increase or decrease the calculated
+                                        irrigation volume based on environmental conditions.
+                                    </Text>
+                                    <Text fontSize="xs" color="fg.subtle" mt={2}>
+                                        Left = reduce • Center = neutral • Right = amplify
+                                    </Text>
+                                </Box>
+                            </SimpleGrid>
+                        </PanelSection>
+
+                        {/* Emitters overview */}
+                        <PanelSection title="Emitters Overview">
+                            {zone.irrigation_mode === "even_area" && (
+                                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
+                                    {evenAreaEmitters.map((emitter, index) => (
+                                        <EmitterOverviewCard
+                                            key={index}
+                                            emitter={emitter}
+                                            totalFlow={totalEvenAreaFlow}
+                                        />
+                                    ))}
                                 </SimpleGrid>
+                            )}
 
+                            {zone.irrigation_mode === "per_plant" && (
+                                <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
+                                    {(() => {
+                                        const plants = zone.emitters_configuration?.plants || []
+                                        const getEmitterFlow = (emitter) =>
+                                            emitter.type === "soaker_hose"
+                                                ? emitter.flow_rate_lph || 0
+                                                : (emitter.flow_rate_lph || 0) * (emitter.count || 0)
 
-                                {/* show divider & timeline if dynamic interval is enabled */}
-                                {zone.frequency_settings.dynamic_interval && (
-                                    <>
-                                        <Box my={6} borderBottom="1px solid" borderColor="border.muted" />
-                                        <FrequencyTimeline settings={zone.frequency_settings} />
-                                    </>
-                                )}
+                                        const totalPlantFlow = plants.reduce(
+                                            (sum, plant) =>
+                                                sum +
+                                                (plant.emitters || []).reduce(
+                                                    (plantSum, emitter) => plantSum + getEmitterFlow(emitter),
+                                                    0
+                                                ),
+                                            0
+                                        )
 
-                            </PanelSection>
-
-                            {/* Corrections & Adjustments */}
-                            <PanelSection title="Corrections & Adjustments">
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
-                                    {/* Indicators */}
-                                    <HStack>
-                                        <FullCorrectionIndicator
-                                            label="Solar"
-                                            value={zone.local_correction_factors.solar}
-                                        />
-                                        <FullCorrectionIndicator
-                                            label="Rain"
-                                            value={zone.local_correction_factors.rain}
-                                        />
-                                        <FullCorrectionIndicator
-                                            label="Temperature"
-                                            value={zone.local_correction_factors.temperature}
-                                        />
-                                    </HStack>
-
-                                    {/* Legend */}
-                                    <Box>
-                                        <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                                            Adjustment Impact
-                                        </Text>
-                                        <Text fontSize="sm" color="fg.muted">
-                                            Correction factors dynamically increase or decrease the calculated
-                                            irrigation volume based on environmental conditions.
-                                        </Text>
-                                        <Text fontSize="xs" color="fg.subtle" mt={2}>
-                                            Left = reduce • Center = neutral • Right = amplify
-                                        </Text>
-                                    </Box>
-                                </SimpleGrid>
-                            </PanelSection>
-
-                            {/* Emitters overview */}
-                            <PanelSection title="Emitters Overview">
-                                {zone.irrigation_mode === "even_area" && (
-                                    <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
-                                        {evenAreaEmitters.map((emitter, index) => (
-                                            <EmitterOverviewCard
-                                                key={index}
-                                                emitter={emitter}
-                                                totalFlow={totalEvenAreaFlow}
-                                            />
-                                        ))}
-                                    </SimpleGrid>
-                                )}
-
-                                {zone.irrigation_mode === "per_plant" && (
-                                    <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap={4}>
-                                        {(() => {
-                                            const plants = zone.emitters_configuration?.plants || []
-                                            const getEmitterFlow = (emitter) =>
-                                                emitter.type === "soaker_hose"
-                                                    ? emitter.flow_rate_lph || 0
-                                                    : (emitter.flow_rate_lph || 0) * (emitter.count || 0)
-
-                                            const totalPlantFlow = plants.reduce(
-                                                (sum, plant) =>
-                                                    sum +
-                                                    (plant.emitters || []).reduce(
-                                                        (plantSum, emitter) => plantSum + getEmitterFlow(emitter),
-                                                        0
-                                                    ),
+                                        return plants.map((plant, plantIndex) => {
+                                            const plantFlow = (plant.emitters || []).reduce(
+                                                (sum, emitter) => sum + getEmitterFlow(emitter),
                                                 0
                                             )
 
-                                            return plants.map((plant, plantIndex) => {
-                                                const plantFlow = (plant.emitters || []).reduce(
-                                                    (sum, emitter) => sum + getEmitterFlow(emitter),
-                                                    0
-                                                )
+                                            const baseVolumeLiters =
+                                                totalPlantFlow > 0
+                                                    ? (plantFlow / totalPlantFlow) * perPlantZoneBaseVolumeLiters
+                                                    : 0
 
-                                                const baseVolumeLiters =
-                                                    totalPlantFlow > 0
-                                                        ? (plantFlow / totalPlantFlow) * perPlantZoneBaseVolumeLiters
-                                                        : 0
-
-                                                return (
-                                                    <PerPlantAllocationCard
-                                                        key={plantIndex}
-                                                        plantName={plant.name || `Plant #${plantIndex + 1}`}
-                                                        baseVolumeLiters={baseVolumeLiters}
-                                                        assignedDrippers={(plant.emitters || []).map((emitter) => ({
-                                                            count: emitter.count,
-                                                            flow_rate_lph: emitter.flow_rate_lph,
-                                                        }))}
-                                                    />
-                                                )
-                                            })
-                                        })()}
-                                    </SimpleGrid>
-                                )}
-
-                            </PanelSection>
-                        </Stack>
-
-                        {/* Help sidebar */}
-                        <HelpSidebar
-                            sticky
-                            stickyTop="80px"
-                            maxHeight="calc(100vh - 120px)"
-                        >
-                            {zoneDetailHelp.map(box => (
-                                <HelpBox key={box.id} title={box.title}>
-                                    {box.description}
-                                </HelpBox>
-                            ))}
-
-                            {zone.frequency_settings.dynamic_interval && (
-                                <HelpBox title="Frequency & Scheduling">
-                                    {/* původní JSX obsahu */}
-                                </HelpBox>
+                                            return (
+                                                <PerPlantAllocationCard
+                                                    key={plantIndex}
+                                                    plantName={plant.name || `Plant #${plantIndex + 1}`}
+                                                    baseVolumeLiters={baseVolumeLiters}
+                                                    assignedDrippers={(plant.emitters || []).map((emitter) => ({
+                                                        count: emitter.count,
+                                                        flow_rate_lph: emitter.flow_rate_lph,
+                                                    }))}
+                                                />
+                                            )
+                                        })
+                                    })()}
+                                </SimpleGrid>
                             )}
-                        </HelpSidebar>
-                    </SimpleGrid>
-                </Stack>
-            </Box>
+
+                        </PanelSection>
+                    </PageSectionStack>
+                )}
+            </PageContainer >
         </>
     )
 }

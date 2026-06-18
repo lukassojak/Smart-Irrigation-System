@@ -11,16 +11,19 @@ import {
     Image,
     Flex
 } from "@chakra-ui/react"
-import { MemoryStick } from "lucide-react"
+import { MemoryStick, CloudUpload } from "lucide-react"
 
 import { fetchNodeById, deleteNode, forceDeleteNode, pushNodeConfig } from "../../../api/nodes.api"
 import { fetchNodeMetadata } from "../../../api/system.api"
 
-import { LimitedCorrectionIndicator } from "../../../components/CorrectionIndicator"
+import PageContainer from "../../../components/layout/PageContainer"
+import PageSectionStack from "../../../components/layout/PageSectionStack"
 import PanelSection from "../../../components/layout/PanelSection"
 import GlassPageHeader, { HeaderActions } from '../../../components/layout/GlassPageHeader'
+
 import { HeaderAction, HeaderActionDanger, PanelButton } from '../../../components/ui/ActionButtons'
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+import LoadingState from "../../../components/ui/LoadingState"
 import ZoneCard from "../../../components/ui/cards/ZoneCard"
 import {
     ControlActionDialogViewport,
@@ -184,51 +187,44 @@ export default function NodeDetailPage() {
 
     const isPushed = node?.config_sync_status === "PUSHED"
 
-    if (!node) {
-        return (
-            <Box p={6}>
-                {nodeError ? (
-                    <DataUnavailableWarning message="Node details are unavailable. Server may be disconnected." />
-                ) : (
-                    <Text color="fg.muted">Loading node…</Text>
-                )}
-            </Box>
-        )
-    }
-
     return (
         <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
-                title={`Node #${node.id}`}
-                subtitle={node.name || "Unnamed Node"}
+                title={!node ? "Node" : `Node #${node.id}`}
+                subtitle={!node ? undefined : (node.name || "Unnamed Node")}
                 actions={
                     <HeaderActions>
-                        <HeaderActionDanger
-                            onClick={handleDeleteNode}
-                            disabled={isDeletingNode}
-                        >
-                            {isDeletingNode ? "Deleting..." : "Delete node"}
-                        </HeaderActionDanger>
-                        <HeaderAction
-                            as={Link}
-                            to={`/configuration/nodes/${node.id}/edit`}
-                        >
-                            Edit node
-                        </HeaderAction>
-                        <HeaderAction
-                            as={Link}
-                            to={`/configuration/nodes/${node.id}/zones/new`}
-                        >
-                            Create new zone
-                        </HeaderAction>
-                        <HeaderAction
-                            onClick={handlePushConfig}
-                            disabled={isPushingConfig}
-                        >
-                            {isPushingConfig ? "Pushing..." : "Push config"}
-                        </HeaderAction>
+                        {node && (
+                            <>
+                                <HeaderActionDanger
+                                    onClick={handleDeleteNode}
+                                    disabled={isDeletingNode || !node}
+                                >
+                                    {isDeletingNode ? "Deleting..." : "Delete node"}
+                                </HeaderActionDanger>
+                                <HeaderAction
+                                    as={Link}
+                                    to={`/configuration/nodes/${node.id}/edit`}
+                                >
+                                    Edit node
+                                </HeaderAction>
+                                <HeaderAction
+                                    as={Link}
+                                    to={`/configuration/nodes/${node.id}/zones/new`}
+                                >
+                                    Create new zone
+                                </HeaderAction>
+                                <HeaderAction
+                                    onClick={handlePushConfig}
+                                    disabled={isPushingConfig}
+                                >
+                                    {isPushingConfig ? "Pushing..." : "Push config"}
+                                </HeaderAction>
+                            </>
+                        )}
+
                         <HeaderAction
                             as={Link}
                             to="/configuration/nodes"
@@ -240,14 +236,30 @@ export default function NodeDetailPage() {
                 showMobileMenuButton={isMobile}
                 onMobileMenuClick={openMobileSidebar}
             />
-            <Box p={6}>
-                <Stack gap={10} mb={6}>
-                    {/* Node summary with board image */}
-                    <Flex gap={10} flexDirection={{ base: "column", md: "row" }} alignItems={{ base: "stretch", md: "flex-start" }}>
-                        <Box flex={{ base: "1", md: "2" }}>
-                            <PanelSection title="Node Summary">
 
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+            <PageContainer>
+                {nodeError ? (
+                    <PanelSection>
+                        <DataUnavailableWarning
+                            message="Node details are unavailable. Server may be disconnected."
+                        />
+                    </PanelSection>
+                ) : !node ? (
+                    <LoadingState
+                        message="Loading node details..."
+                    />
+                ) : (
+                    <PageSectionStack>
+                        {/* Node summary with board image */}
+                        <SimpleGrid
+                            columns={{ base: 1, lg: 2 }}
+                            gap={6}
+                        >
+                            <Box>
+                                <PanelSection
+                                    h="100%"
+                                    title="Node Summary"
+                                >
                                     <DataList.Root orientation="horizontal">
                                         <DataList.Item>
                                             <DataList.ItemLabel>Node ID</DataList.ItemLabel>
@@ -267,14 +279,14 @@ export default function NodeDetailPage() {
                                             <DataList.ItemLabel>Config sync</DataList.ItemLabel>
                                             <DataList.ItemValue>
                                                 <Badge colorPalette={isPushed ? "green" : "orange"}>
-                                                    {isPushed ? "PUSHED" : "PENDING"}
+                                                    {isPushed ? "Pushed" : "Pending"}
                                                 </Badge>
                                             </DataList.ItemValue>
                                         </DataList.Item>
                                         <DataList.Item>
                                             <DataList.ItemLabel>Software version</DataList.ItemLabel>
                                             <DataList.ItemValue>
-                                                {nodeMetadata?.software_version || "N/A"}
+                                                {nodeMetadata?.software_version || "Unknown"}
                                             </DataList.ItemValue>
                                         </DataList.Item>
                                         <DataList.Item>
@@ -284,130 +296,184 @@ export default function NodeDetailPage() {
                                             </DataList.ItemValue>
                                         </DataList.Item>
                                     </DataList.Root>
-                                </SimpleGrid>
 
-                                {/* Show PanelButton on mobile views to view header details */}
-                                {isMobile && (
-                                    <Box mt={4}>
+                                    {/* Show PanelButton on mobile views to view header details */}
+                                    {isMobile && (
+                                        <Box mt={4}>
+                                            <PanelButton
+                                                size="sm"
+                                                as={Link}
+                                                to={`/configuration/nodes/${node.id}/header`}
+                                                flexShrink={0}
+                                                width="100%"
+                                                variant="subtle"
+                                                colorPalette="gray"
+                                            >
+                                                <MemoryStick size={14} style={{ marginRight: "6px" }} />
+                                                View GPIO header configuration
+                                            </PanelButton>
+                                        </Box>
+                                    )}
+                                </PanelSection>
+                            </Box>
+
+                            <Box display={{ base: "none", lg: "block" }}>
+                                <PanelSection
+                                    h="100%"
+                                    title="GPIO Header"
+                                >
+                                    <Stack
+                                        justify="space-between"
+                                    >
+                                        <Image
+                                            src="/pi_zero_2w_board.webp"
+                                            alt="Raspberry Pi Zero 2W Board"
+                                            maxH="160px"
+                                            objectFit="contain"
+                                            mx="auto"
+                                        />
                                         <PanelButton
                                             size="sm"
                                             as={Link}
                                             to={`/configuration/nodes/${node.id}/header`}
-                                            flexShrink={0}
-                                            width="100%"
+                                            width="fit-content"
                                             variant="subtle"
                                             colorPalette="gray"
                                         >
                                             <MemoryStick size={14} style={{ marginRight: "6px" }} />
                                             View GPIO header configuration
                                         </PanelButton>
-                                    </Box>
-                                )}
+                                    </Stack>
+
+                                </PanelSection>
+                            </Box>
+                        </SimpleGrid>
+
+                        <SimpleGrid
+                            columns={{ base: 1, md: 2 }}
+                            gap={6}
+                        >
+                            <PanelSection title="Configuration Overview">
+                                <DataList.Root orientation="horizontal">
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Automation</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {/* Use badge colors for enabled/disabled */}
+                                            {node.automation.enabled ? (
+                                                <Badge colorPalette="green">Enabled</Badge>
+                                            ) : (
+                                                <Badge colorPalette="red">Disabled</Badge>
+                                            )}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Scheduled Time</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {node.automation.enabled
+                                                ? `${String(node.automation.scheduled_hour).padStart(2, '0')}:${String(node.automation.scheduled_minute).padStart(2, '0')}`
+                                                : "N/A"}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Batch Strategy</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {node.batch_strategy.concurrent_irrigation
+                                                ? "Concurrent irrigation"
+                                                : "Sequential irrigation"}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Flow Control</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {node.batch_strategy.flow_control ? "Enabled" : "Disabled"}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                </DataList.Root>
                             </PanelSection>
-                        </Box>
-                        <Box display={{ base: "none", md: "block" }} flex="1">
-                            <PanelSection>
-                                <Stack>
-                                    <Image
-                                        src="/pi_zero_2w_board.webp"
-                                        alt="Raspberry Pi Zero 2W Board"
-                                        width="100%"
-                                        height="auto"
-                                    />
+
+                            {/* Software Updates section */}
+                            <PanelSection
+                                title="Software Updates"
+                                h="100%"
+                            >
+                                <Stack justify="space-between" gap={6}>
+                                    <DataList.Root orientation="horizontal">
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Status</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                <Badge colorPalette="green">
+                                                    Up to date
+                                                </Badge>
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Current version</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {nodeMetadata?.software_version || "Unknown"}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                        <DataList.Item>
+                                            <DataList.ItemLabel>Latest version</DataList.ItemLabel>
+                                            <DataList.ItemValue>
+                                                {nodeMetadata?.software_version || "Unknown"}
+                                            </DataList.ItemValue>
+                                        </DataList.Item>
+                                    </DataList.Root>
                                     <PanelButton
                                         size="sm"
-                                        as={Link}
-                                        to={`/configuration/nodes/${node.id}/header`}
-                                        width="fit-content"
+                                        width={isMobile ? "100%" : "fit-content"}
+                                        disabled
                                         variant="subtle"
                                         colorPalette="gray"
                                     >
-                                        <MemoryStick size={14} style={{ marginRight: "6px" }} />
-                                        View GPIO header configuration
+                                        <CloudUpload size={14} style={{ marginRight: "6px" }} />
+                                        Update Node Software
                                     </PanelButton>
                                 </Stack>
-
                             </PanelSection>
-                        </Box>
-                    </Flex>
 
-                    <PanelSection title="Configuration Overview">
-                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                            <DataList.Root orientation="horizontal">
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Automation</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {/* Use badge colors for enabled/disabled */}
-                                        {node.automation.enabled ? (
-                                            <Badge colorPalette="green">Enabled</Badge>
-                                        ) : (
-                                            <Badge colorPalette="red">Disabled</Badge>
-                                        )}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Scheduled Time</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {node.automation.enabled
-                                            ? `${String(node.automation.scheduled_hour).padStart(2, '0')}:${String(node.automation.scheduled_minute).padStart(2, '0')}`
-                                            : "N/A"}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Batch Strategy</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {node.batch_strategy.concurrent_irrigation
-                                            ? "Concurrent irrigation"
-                                            : "Sequential irrigation"}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Flow Control</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {node.batch_strategy.flow_control ? "Enabled" : "Disabled"}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                            </DataList.Root>
                         </SimpleGrid>
-                    </PanelSection>
-                </Stack>
 
-                {/* Zones */}
-                <Box>
-                    <Heading size="md" mb={4} color="fg">
-                        Zones
-                    </Heading>
+                        {/* Zones */}
+                        <Stack>
+                            <Heading size="md" color="fg">
+                                Zones
+                            </Heading>
 
-                    {/* Info text */}
-                    <Text mb={4} fontSize="sm" color="fg.muted">
-                        {node.zones.length} configured zone{node.zones.length !== 1 && "s"}
-                    </Text>
+                            {/* Info text */}
+                            {!nodeError && (
+                                <Text fontSize="sm" color="fg.muted">
+                                    {node.zones.length} configured zone{node.zones.length !== 1 && "s"}
+                                </Text>
+                            )}
 
-                    {node.zones.length === 0 && (
-                        <Box
-                            bg="bg.subtle"
-                            borderWidth="1px"
-                            borderColor="border.subtle"
-                            borderRadius="md"
-                            p={4}
-                        >
-                            <Text color="fg.muted">
-                                Node has no zones defined.
-                            </Text>
-                        </Box>
-                    )}
+                            {node.zones.length === 0 && (
+                                <Box
+                                    bg="bg.subtle"
+                                    borderWidth="1px"
+                                    borderColor="border.subtle"
+                                    borderRadius="md"
+                                    p={4}
+                                >
+                                    <Text color="fg.muted">
+                                        Node has no zones defined.
+                                    </Text>
+                                </Box>
+                            )}
+                        </Stack>
 
-                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
-                        {node.zones.map((zone) => (
-                            <ZoneCard
-                                key={zone.id}
-                                nodeId={node.id}
-                                zone={zone}
-                            />
-                        ))}
-                    </SimpleGrid>
-                </Box>
-            </Box>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
+                            {node.zones.map((zone) => (
+                                <ZoneCard
+                                    key={zone.id}
+                                    nodeId={node.id}
+                                    zone={zone}
+                                />
+                            ))}
+                        </SimpleGrid>
+                    </PageSectionStack>
+                )}
+            </PageContainer>
         </>
     )
 }
