@@ -66,9 +66,21 @@ export default function SelectableZoneCard({
             boxShadow={selected ? "0 0 0 2px rgba(56,178,172,0.25)" : "0 4px 16px rgba(15,23,42,0.05)"}
             transition="all 0.15s ease"
             _hover={{
-                borderColor: isSelectable ? "rgba(56,178,172,0.18)" : "rgba(56,178,172,0.06)",
-                boxShadow: isSelectable ? "0 6px 22px rgba(15,23,42,0.06)" : "0 4px 16px rgba(15,23,42,0.05)",
-                transform: isSelectable ? "translateY(-2px)" : "none"
+                borderColor: selected
+                    ? "teal.400"
+                    : isSelectable
+                        ? "rgba(56,178,172,0.18)"
+                        : "rgba(56,178,172,0.06)",
+
+                boxShadow: selected
+                    ? "0 0 0 2px rgba(56,178,172,0.25), 0 6px 22px rgba(15,23,42,0.06)"
+                    : isSelectable
+                        ? "0 6px 22px rgba(15,23,42,0.06)"
+                        : "0 4px 16px rgba(15,23,42,0.05)",
+
+                transform: isSelectable
+                    ? "translateY(-2px)"
+                    : "none"
             }}
             opacity={isStale ? 0.6 : 1}
             filter={isStale ? "grayscale(0.3)" : "grayscale(0)"}
@@ -82,11 +94,12 @@ export default function SelectableZoneCard({
                 bg={accentColor}
                 borderTopLeftRadius="lg"
                 borderBottomLeftRadius="lg"
+                display="flex"
             />
 
-            <VStack align="stretch" spacing={4}>
-                <HStack justify="space-between">
-                    <HStack gap={2} align="center">
+            <VStack align="stretch" gap={4} h="100%">
+                <HStack flex="1" justify="space-between">
+                    <HStack gap={2}>
                         <Box
                             bg="teal.50"
                             borderRadius="md"
@@ -98,26 +111,26 @@ export default function SelectableZoneCard({
                             </Text>
                         </Box>
 
-                        <HStack gap={4}>
-                            <Text fontWeight="600">
-                                {zone.name}
-                            </Text>
-                            {zone.online && (
-                                <Badge
-                                    size="sm"
-                                    colorPalette={badgeConfig.color}
-                                    variant="subtle"
-                                >
-                                    {badgeConfig.label}
-                                </Badge>
-                            )}
-                        </HStack>
+                        <Text fontWeight="600">
+                            {zone.name}
+                        </Text>
                     </HStack>
 
-                    <Box width="28px" height="28px" />
+                    {zone.online && (
+                        <Badge
+                            size="sm"
+                            colorPalette={badgeConfig.color}
+                            variant="subtle"
+                        >
+                            {badgeConfig.label}
+                        </Badge>
+                    )}
                 </HStack>
 
-                <HStack justify="space-between">
+                <HStack
+                    justify="space-between"
+                    mt="auto"
+                >
                     <Text fontSize="xs" color="gray.500">
                         {zone.online ? (zone.stale ? "Disconnected" : "Online") : "Offline"}
                     </Text>

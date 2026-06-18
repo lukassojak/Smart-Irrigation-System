@@ -9,7 +9,8 @@ import {
     Server,
     Wifi,
     EthernetPort,
-    Activity
+    Activity,
+    Router
 } from "lucide-react"
 
 export default function RuntimeNodeCard({ node, onClick }) {
@@ -18,12 +19,9 @@ export default function RuntimeNodeCard({ node, onClick }) {
         ? "green.400"
         : "red.400"
 
-    const controllerColor = {
-        running: "green",
-        idle: "gray",
-        error: "red",
-        offline: "red"
-    }[node.controllerStatus]
+    const lastHeartbeat = (() => {
+        return new Date(node.lastSeen).toLocaleString()
+    })()
 
     return (
         <Box
@@ -42,12 +40,12 @@ export default function RuntimeNodeCard({ node, onClick }) {
                 transform: "translateY(-2px)"
             }}
         >
-            <VStack align="stretch" spacing={4}>
+            <VStack align="stretch" gap={4}>
 
                 {/* Header */}
                 <HStack justify="space-between">
-                    <HStack spacing={3}>
-                        <Server size={18} />
+                    <HStack gap={3}>
+                        <Router size={18} />
                         <Text fontWeight="600">
                             {node.name}
                         </Text>
@@ -62,36 +60,33 @@ export default function RuntimeNodeCard({ node, onClick }) {
                 </HStack>
 
                 {/* Connection */}
-                <HStack spacing={2}>
-                    {node.connection === "wifi" ? (
-                        <Wifi size={14} />
-                    ) : (
+                <HStack gap={2}>
+                    {node.connection === "ethernet" ? (
                         <EthernetPort size={14} />
+                    ) : (
+
+                        <Wifi size={14} />
                     )}
                     <Text fontSize="sm" color="gray.600">
-                        {node.connection === "wifi"
-                            ? `WiFi (${node.signal} dBm)`
-                            : "Ethernet"}
+                        {node.connection === "ethernet"
+                            ? "Ethernet"
+                            : `WiFi (${node.signal ? (
+                                node.signal
+                            ) : (
+                                "unknown"
+                            )} dBm)`}
                     </Text>
                 </HStack>
 
-                {/* Zones */}
+                {/* Last heartbeat */}
                 <Text fontSize="sm" color="gray.600">
-                    Zones: {node.zonesCount}
+                    Last hearbeat: {lastHeartbeat}
                 </Text>
 
                 {/* Controller status */}
                 <HStack justify="space-between">
-                    <Badge
-                        size="sm"
-                        colorPalette={controllerColor}
-                        variant="subtle"
-                    >
-                        {node.controllerStatus}
-                    </Badge>
-
                     {(node.errors > 0 || node.warnings > 0) && (
-                        <HStack spacing={2}>
+                        <HStack gap={2}>
                             {node.warnings > 0 && (
                                 <Badge
                                     size="sm"

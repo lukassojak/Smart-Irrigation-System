@@ -72,12 +72,12 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop, onClick }) {
                 borderBottomLeftRadius="lg"
             />
 
-            <VStack align="stretch" spacing={4}>
+            <VStack align="stretch" gap={4}>
 
                 {/* Header */}
-                <HStack justify="space-between">
+                <HStack flex="1" justify="space-between">
 
-                    <HStack gap={2} align="center">
+                    <HStack gap={2}>
                         {/* Zone ID Icon */}
                         <Box
                             bg="teal.50"
@@ -90,82 +90,71 @@ export default function ZoneRuntimeCard({ zone, isStopping, onStop, onClick }) {
                             </Text>
                         </Box>
 
-                        <HStack gap={4}>
-                            <Text fontWeight="600">
-                                {zone.name}
-                            </Text>
-                            {zone.online && (
-                                <Badge
-                                    size="sm"
-                                    colorPalette={badgeConfig.color}
-                                    variant="subtle"
-                                >
-                                    {badgeConfig.label}
-                                </Badge>
-                            )}
-                        </HStack>
+                        <Text fontWeight="600">
+                            {zone.name}
+                        </Text>
                     </HStack>
 
-                    {/* Action Button */}
-                    {zone.online && zone.status !== "error" && (
-                        isIrrigating ? (
-                            <Button
-                                size="xs"
+                    <HStack gap={4}>
+                        {zone.online && (
+                            <Badge
+                                size="sm"
+                                colorPalette={badgeConfig.color}
                                 variant="subtle"
-                                colorPalette="red"
-                                aria-label="Stop irrigation"
-                                p={1}
-                                isDisabled={zoneState?.isStopDisabled}
-                                onClick={(event) => {
-                                    event.stopPropagation()
-                                    onStop?.(zone.id)
-                                }}
-                                loading={zoneState?.isStopLoading}
                             >
-                                <Square size={14} />
-                            </Button>
-                        ) : (
+                                {badgeConfig.label}
+                            </Badge>
+                        )}
+
+                        {/* Action Button */}
+                        {zone.online && zone.status !== "error" && (
+                            isIrrigating && (
+                                <Button
+                                    size="xs"
+                                    variant="subtle"
+                                    colorPalette="red"
+                                    aria-label="Stop irrigation"
+                                    p={1}
+                                    disabled={zoneState?.isStopDisabled}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        onStop?.(zone.id)
+                                    }}
+                                    loading={zoneState?.isStopLoading}
+                                >
+                                    <Square size={14} />
+                                </Button>
+                            )
+                        )}
+                        {/* If online but in error, show button to view error details */}
+                        {zone.online && zone.status === "error" && (
                             <Button
                                 size="xs"
                                 variant="subtle"
-                                colorPalette="green"
-                                aria-label="Start irrigation"
+                                colorPalette="gray"
+                                aria-label="View error details"
                                 p={1}
-                                isDisabled={zoneState?.isStartDisabled}
+                                isDisabled={zoneState?.isInfoDisabled}
                                 onClick={(event) => event.stopPropagation()}
                             >
-                                <Play size={14} />
+                                <Info size={14} />
                             </Button>
-                        )
-                    )}
-                    {/* If online but in error, show button to view error details */}
-                    {zone.online && zone.status === "error" && (
-                        <Button
-                            size="xs"
-                            variant="subtle"
-                            colorPalette="gray"
-                            aria-label="View error details"
-                            p={1}
-                            isDisabled={zoneState?.isInfoDisabled}
-                            onClick={(event) => event.stopPropagation()}
-                        >
-                            <Info size={14} />
-                        </Button>
-                    )}
-                    {/* If offline, show button to view reconnection options */}
-                    {!zone.online && (
-                        <Button
-                            size="xs"
-                            variant="subtle"
-                            colorPalette="gray"
-                            aria-label="View reconnection options"
-                            p={1}
-                            isDisabled={zoneState?.isInfoDisabled}
-                            onClick={(event) => event.stopPropagation()}
-                        >
-                            <Info size={14} />
-                        </Button>
-                    )}
+                        )}
+                        {/* If offline, show button to view reconnection options */}
+                        {!zone.online && (
+                            <Button
+                                size="xs"
+                                variant="subtle"
+                                colorPalette="gray"
+                                aria-label="View reconnection options"
+                                p={1}
+                                isDisabled={zoneState?.isInfoDisabled}
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <Info size={14} />
+                            </Button>
+                        )}
+                    </HStack>
                 </HStack>
 
                 {/* Meta Info */}

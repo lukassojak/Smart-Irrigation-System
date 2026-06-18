@@ -24,23 +24,23 @@ import {
     ShieldCheck,
 } from "lucide-react"
 
+import PageContainer from "../../../components/layout/PageContainer"
+import DashboardPageSectionStack from "../../../components/layout/DashboardPageSectionStack"
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
-import PanelSection from "../../../components/layout/PanelSection"
 import SystemOverviewCard from "../components/SystemOverviewCard"
 import CurrentTaskCard from "../components/CurrentTaskCard"
 import AlertItem from "../components/AlertItem"
-import TimelineItem from "../components/TimelineItem"
 import TodaysActivityCard from "../components/TodaysActivityCard"
 import WeatherWaterSummaryCard from "../components/WeatherWaterSummaryCard"
 import ZonesGridSection from "../components/ZonesGridSection"
 import WeatherForecastSection from "../components/WeatherForecastSection"
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
+import LoadingState from "../../../components/ui/LoadingState"
 import {
     ControlActionDialogViewport,
     openControlActionDialog,
 } from "../../../components/ui/ControlActionDialogOverlay"
-import RuntimeZoneDetailPage from "./RuntimeZoneDetailPage"
 
 export default function MainDashboardPage() {
     // ---- Fake Data ----
@@ -78,7 +78,6 @@ export default function MainDashboardPage() {
     }
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
-    const [selectedZoneId, setSelectedZoneId] = useState(null)
 
     const livePollIntervalMs = 2000
     const { data: liveData, loading, error, refresh: refreshLive } = useLiveRuntime(livePollIntervalMs)
@@ -98,14 +97,6 @@ export default function MainDashboardPage() {
     } = useRuntimeControlState({
         tasks: liveData?.currentTasks ?? [],
     })
-
-    const selectedZone = useMemo(() => {
-        if (selectedZoneId === null || selectedZoneId === undefined) {
-            return null
-        }
-
-        return liveData?.zones?.find((zone) => String(zone.id) === String(selectedZoneId)) ?? null
-    }, [liveData?.zones, selectedZoneId])
 
     const handleOpenZoneDetail = useCallback((zone) => {
         setSelectedZoneId(zone?.id ?? null)
@@ -179,62 +170,47 @@ export default function MainDashboardPage() {
         openStopActionDialog(result)
     }, [handleStopAll, openStopActionDialog])
 
-    if (selectedZone) {
-        return (
-            <RuntimeZoneDetailPage
-                zone={selectedZone}
-                liveData={liveData}
-                todayData={todayData}
-                currentTasks={liveData?.currentTasks ?? []}
-                todayTasks={todayData?.tasks ?? []}
-                onBack={() => setSelectedZoneId(null)}
-            />
-        )
-    }
 
     if (loading && !liveData) {
         return (
-            <Box>
+            <>
                 <GlassPageHeader
                     title="Dashboard"
                     subtitle="Live system overview"
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-                <Stack align="center" gap={4} py={20}>
-                    <Spinner color="teal.500" size="lg" />
-
-                    <Text
-                        fontSize="md"
-                        fontWeight="medium"
-                        color="teal.700"
-                    >
-                        Loading live data...
-                    </Text>
-
-                </Stack>
-            </Box>
+                <PageContainer>
+                    <LoadingState
+                        message="Loading live data..."
+                    />
+                </PageContainer>
+            </>
         )
     }
 
     if (error) {
         return (
-            <Box>
+            <>
                 <GlassPageHeader
                     title="Dashboard"
                     subtitle="Live system overview"
                     showMobileMenuButton={isMobile}
                     onMobileMenuClick={openMobileSidebar}
                 />
-                <Box p={8}>
-                    <DataUnavailableWarning message="Live runtime data is unavailable. Server may be disconnected." />
-                </Box>
-            </Box>
+                <PageContainer>
+                    <GlassPanelSection>
+                        <DataUnavailableWarning
+                            message="Live runtime data is unavailable. Server may be disconnected."
+                        />
+                    </GlassPanelSection>
+                </PageContainer>
+            </>
         )
     }
 
     return (
-        <Box>
+        <>
             <ControlActionDialogViewport />
 
             <GlassPageHeader
@@ -244,137 +220,134 @@ export default function MainDashboardPage() {
                 onMobileMenuClick={openMobileSidebar}
             />
 
-            <Stack
-                gap={8}
-                px={{ base: 2, md: 6 }}
-                py={{ base: 4, md: 8 }}
-            >
-
-                {/* SECTION 1 - SYSTEM OVERVIEW */}
-                <GlassPanelSection
-                    title="System Overview"
-                    description="Current system health and today's irrigation summary"
-                >
-                    <Grid
-                        templateColumns="repeat(auto-fit, minmax(240px, 1fr))"
-                        gap={6}
-                    >
-
-                        <SystemOverviewCard
-                            icon={ShieldCheck}
-                            title="System Health"
-                            value={`${liveData.overview.zonesOnline} / ${liveData.overview.totalZones}`}
-                            description="Zones online"
-                            footer={
-                                <>
-                                    <Badge colorPalette="orange" variant="subtle">
-                                        {liveData.overview.warnings} warnings
-                                    </Badge>
-                                    <Badge colorPalette="red" variant="subtle">
-                                        {liveData.overview.errors} errors
-                                    </Badge>
-                                </>
-                            }
-                        />
-
-                        <SystemOverviewCard
-                            icon={Activity}
-                            title="Today Summary"
-                            unavailable={!todayLoading && !todayData}
-                            unavailableMessage="Today's activities are unavailable right now."
-                            value={`${todayData ? todayData.overview.tasksPlanned : "N/A"} planned`}
-                            description={`${todayData ? todayData.overview.tasksCompleted : "N/A"} completed`}
-                        />
-
-                        <SystemOverviewCard
-                            icon={Droplets}
-                            title="Water Usage"
-                            value="43 L"
-                            description="vs average +8%"
-                        />
-
-                        <SystemOverviewCard
-                            icon={CloudRain}
-                            title="Weather Impact"
-                            value="+6%"
-                            description="Adjustment applied today"
-                        />
-
-                    </Grid>
-                </GlassPanelSection>
-
-
-                {/* SECTION 2 - CURRENT IRRIGATION (visible only when there are active tasks) */}
-                {liveData.currentTasks.length > 0 && (
+            <PageContainer>
+                <DashboardPageSectionStack>
+                    {/* SECTION 1 - SYSTEM OVERVIEW */}
                     <GlassPanelSection
-                        title="Current Irrigation"
-                        description="Active irrigation tasks"
-                        actions={
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                colorPalette="red"
-                                onClick={handleStopAllWithNotification}
-                                isDisabled={!hasActiveTasks || isStoppingAll}
-                                loading={isStoppingAll}
-                            >
-                                Stop All
-                            </Button>
-                        }
+                        title="System Overview"
+                        description="Current system health and today's irrigation summary"
                     >
-                        <Stack gap={2}>
-                            {(liveData?.currentTasks ?? []).map(task => (
-                                <CurrentTaskCard
-                                    key={task.id}
-                                    task={task}
-                                    isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
-                                    onStop={() => handleStopZoneWithNotification(task.id)}
-                                />
-                            ))}
-                        </Stack>
+                        <Grid
+                            templateColumns="repeat(auto-fit, minmax(240px, 1fr))"
+                            gap={6}
+                        >
+
+                            <SystemOverviewCard
+                                icon={ShieldCheck}
+                                title="System Health"
+                                value={`${liveData.overview.zonesOnline} / ${liveData.overview.totalZones}`}
+                                description="Zones online"
+                                footer={
+                                    <>
+                                        <Badge colorPalette="orange" variant="subtle">
+                                            {liveData.overview.warnings} warnings
+                                        </Badge>
+                                        <Badge colorPalette="red" variant="subtle">
+                                            {liveData.overview.errors} errors
+                                        </Badge>
+                                    </>
+                                }
+                            />
+
+                            <SystemOverviewCard
+                                icon={Activity}
+                                title="Today Summary"
+                                unavailable={!todayLoading && !todayData}
+                                unavailableMessage="Today's activities are unavailable right now."
+                                value={`${todayData ? todayData.overview.tasksPlanned : "N/A"} planned`}
+                                description={`${todayData ? todayData.overview.tasksCompleted : "N/A"} completed`}
+                            />
+
+                            <SystemOverviewCard
+                                icon={Droplets}
+                                title="Water Usage"
+                                value="43 L"
+                                description="vs average +8%"
+                            />
+
+                            <SystemOverviewCard
+                                icon={CloudRain}
+                                title="Weather Impact"
+                                value="+6%"
+                                description="Adjustment applied today"
+                            />
+
+                        </Grid>
                     </GlassPanelSection>
-                )}
 
-                {/* SECTION 3 - ALERTS */}
-                <GlassPanelSection
-                    title="Alerts"
-                    description="Recent system notifications requiring attention"
-                    collapsible
-                >
-                    <Stack gap={2}>
-                        {liveData.alerts.map(alert => (
-                            <AlertItem key={alert.id} alert={alert} />
-                        ))}
-                    </Stack>
-                </GlassPanelSection>
 
-                {/* SECTION 4 - UPCOMING TASKS */}
-                <Grid
-                    templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
-                    gap={8}
-                >
-                    <TodaysActivityCard
-                        items={todayData?.tasks ?? []}
-                        unavailable={Boolean(todayError)}
-                        unavailableMessage="Today's activities are unavailable right now."
+                    {/* SECTION 2 - CURRENT IRRIGATION */}
+                    {liveData.currentTasks.length > 0 && (
+                        <GlassPanelSection
+                            title="Current Irrigation"
+                            description="Active irrigation tasks"
+                            actions={
+                                <Button
+                                    size="xs"
+                                    variant="ghost"
+                                    colorPalette="red"
+                                    onClick={handleStopAllWithNotification}
+                                    isDisabled={!hasActiveTasks || isStoppingAll}
+                                    loading={isStoppingAll}
+                                >
+                                    Stop All
+                                </Button>
+                            }
+                        >
+                            <Stack gap={2}>
+                                {(liveData?.currentTasks ?? []).map(task => (
+                                    <CurrentTaskCard
+                                        key={task.id}
+                                        task={task}
+                                        isStopping={isStoppingAll || stoppingZoneIds[String(task.id)] === true}
+                                        onStop={() => handleStopZoneWithNotification(task.id)}
+                                    />
+                                ))}
+                            </Stack>
+                        </GlassPanelSection>
+                    )}
+
+                    {/* SECTION 3 - ALERTS */}
+                    {liveData.alerts.length > 0 && (
+                        <GlassPanelSection
+                            title="Alerts"
+                            description="Recent system notifications requiring attention"
+                            collapsible
+                        >
+                            <Stack gap={2}>
+                                {liveData.alerts.map(alert => (
+                                    <AlertItem key={alert.id} alert={alert} />
+                                ))}
+                            </Stack>
+                        </GlassPanelSection>
+                    )}
+
+                    {/* SECTION 4 - ZONES STATUS */}
+                    <ZonesGridSection
+                        zones={liveData.zones}
+                        stoppingZoneIds={stoppingZoneIds}
+                        onStopZone={handleStopZoneWithNotification}
                     />
 
-                    <WeatherWaterSummaryCard data={weatherWaterData} />
-                </Grid>
+                    {/* SECTION 5 - UPCOMING TASKS */}
+                    <Grid
+                        templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
+                        gap={8}
+                    >
+                        <TodaysActivityCard
+                            items={todayData?.tasks ?? []}
+                            unavailable={Boolean(todayError)}
+                            unavailableMessage="Today's activities are unavailable right now."
+                        />
 
-                {/* SECTION 5 - ZONES STATUS */}
-                <ZonesGridSection
-                    zones={liveData.zones}
-                    stoppingZoneIds={stoppingZoneIds}
-                    onStopZone={handleStopZoneWithNotification}
-                    onZoneClick={handleOpenZoneDetail}
-                />
+                        <WeatherWaterSummaryCard data={weatherWaterData} />
+                    </Grid>
 
-                {/* SECTION 6 - WEATHER FORECAST */}
-                <WeatherForecastSection data={weatherForecastData} />
+                    {/* SECTION 6 - WEATHER FORECAST */}
+                    {/* <WeatherForecastSection data={weatherForecastData} /> */}
 
-
-            </Stack>
-        </Box >
+                </DashboardPageSectionStack>
+            </PageContainer>
+        </>
     )
 }
