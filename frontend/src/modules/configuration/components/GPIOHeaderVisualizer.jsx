@@ -8,6 +8,8 @@ import {
     Image,
 } from "@chakra-ui/react"
 
+import { CloudOff } from "lucide-react"
+
 const PIN_TYPE_COLOR = {
     gpio_free: "green.500",
     gpio_used: "red.500",
@@ -90,6 +92,7 @@ export default function GPIOHeaderVisualizer({
     showLegend = true,
     showImage = false,
 }) {
+    const hasPins = pins && pins.length > 0
     const rows = []
     for (let i = 0; i < pins.length; i += 2) {
         rows.push([pins[i], pins[i + 1]])
@@ -105,24 +108,38 @@ export default function GPIOHeaderVisualizer({
                 p={4}
                 flexShrink={0}
             >
-                <VStack gap={1}>
-                    {rows.map((row, idx) => (
-                        <HStack key={idx} gap={4}>
-                            <HeaderPin
-                                pin={row[0]}
-                                mode={mode}
-                                selectedBoardPinId={selectedBoardPinId}
-                                onPinSelect={onPinSelect}
-                            />
-                            <HeaderPin
-                                pin={row[1]}
-                                mode={mode}
-                                selectedBoardPinId={selectedBoardPinId}
-                                onPinSelect={onPinSelect}
-                            />
-                        </HStack>
-                    ))}
-                </VStack>
+                {!hasPins ? (
+                    <Box
+                        h="280px"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                    >
+                        <CloudOff
+                            size={32}
+                            color="#F59E0B"
+                        />
+                    </Box>
+                ) : (
+                    <VStack gap={1}>
+                        {rows.map((row, idx) => (
+                            <HStack key={idx} gap={4}>
+                                <HeaderPin
+                                    pin={row[0]}
+                                    mode={mode}
+                                    selectedBoardPinId={selectedBoardPinId}
+                                    onPinSelect={onPinSelect}
+                                />
+                                <HeaderPin
+                                    pin={row[1]}
+                                    mode={mode}
+                                    selectedBoardPinId={selectedBoardPinId}
+                                    onPinSelect={onPinSelect}
+                                />
+                            </HStack>
+                        ))}
+                    </VStack>
+                )}
             </Box>
 
             <VStack align="stretch" gap={8}>
