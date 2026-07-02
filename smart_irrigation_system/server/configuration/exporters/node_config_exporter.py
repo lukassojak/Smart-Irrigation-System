@@ -5,6 +5,53 @@ from smart_irrigation_system.server.configuration.models.zone import Zone
 from smart_irrigation_system.server.configuration.models.global_config import GlobalConfig
 from smart_irrigation_system.server.configuration.domain.domain import IrrigationMode
 
+# TEMPORARY HOTFIX:
+# Server currently stores Raspberry Pi physical header numbering,
+# while node runtime expects BCM numbering.
+# TODO: Replace by explicit relay_pin_physical/relay_pin_bcm fields.
+
+PHYSICAL_TO_BCM = {
+    3: 2,
+    5: 3,
+    7: 4,
+    8: 14,
+    10: 15,
+    11: 17,
+    12: 18,
+    13: 27,
+    15: 22,
+    16: 23,
+    18: 24,
+    19: 10,
+    21: 9,
+    22: 25,
+    23: 11,
+    24: 8,
+    26: 7,
+    27: 0,
+    28: 1,
+    29: 5,
+    31: 6,
+    32: 12,
+    33: 13,
+    35: 19,
+    36: 16,
+    37: 26,
+    38: 20,
+    40: 21,
+}
+
+def _physical_to_bcm(pin: int | None) -> int | None:
+    if pin is None:
+        return None
+
+    bcm = PHYSICAL_TO_BCM.get(pin)
+    if bcm is None:
+        raise ValueError(
+            f"Physical GPIO pin {pin} cannot be mapped to BCM numbering."
+        )
+
+    return bcm
 
 def export_node_config(node: Node) -> dict:
     """
@@ -36,7 +83,7 @@ def _get_zone_config(zone: Zone) -> dict:
     zone_config = {
         "id": zone.id,
         "name": zone.name,
-        "relay_pin": zone.relay_pin,
+        "relay_pin": _physical_to_bcm(zone.relay_pin),
         "enabled": zone.enabled,
         "irrigation_mode": zone.irrigation_mode.value,
         "local_correction_factors": zone.local_correction_factors,
@@ -197,7 +244,7 @@ def _to_legacy_zone_config(zone: Zone) -> dict:
     return {
         "id": zone.id,
         "name": zone.name,
-        "relay_pin": zone.relay_pin,
+        "relay_pin": _physical_to_bcm(zone.relay_pin),
         "enabled": zone.enabled,
         "even_area_mode": even_area_mode,
         "target_mm": target_mm,
