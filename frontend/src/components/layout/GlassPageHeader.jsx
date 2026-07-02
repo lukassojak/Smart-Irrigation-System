@@ -6,19 +6,16 @@ import {
     HStack,
     Stack,
     Grid,
-    useBreakpointValue
+    useBreakpointValue,
+    IconButton
 } from "@chakra-ui/react"
-import { MoreVertical } from "lucide-react"
-import { useOutletContext } from "react-router-dom"
+import { MoreVertical, LayoutList } from "lucide-react"
+
+import MobileActionsDrawer from "./MobileActionsDrawer"
 
 
 export function HeaderActions({ children }) {
-    const { isMobile, openMobileSidebar } = useOutletContext() || {}
-    return isMobile ? (
-        <Stack align="stretch">
-            {children}
-        </Stack>
-    ) : (
+    return (
         <HStack gap={3} align="center">
             {children}
         </HStack>
@@ -50,18 +47,42 @@ export default function GlassPageHeader({
             "
         >
             <Grid
-                templateColumns={isMobile ? "1fr auto" : "1fr auto"}
+                templateColumns={
+                    isMobile
+                        ? "auto 1fr auto"
+                        : "1fr auto"
+                }
                 alignItems="start"
                 gap={4}
             >
                 {/* LEFT SIDE */}
+                {isMobile && (
+                    <Box
+                        display="flex"
+                        alignItems="flex-start"
+                        pt={1}
+                    >
+                        {showMobileMenuButton && (
+                            <IconButton
+                                aria-label="Open menu"
+                                variant="ghost"
+                                size="sm"
+                                onClick={onMobileMenuClick}
+                            >
+                                <LayoutList size={24} />
+                            </IconButton>
+                        )}
+                    </Box>
+                )}
+
                 <Stack
-                    spacing={isMobile ? 1 : 0}
+                    gap={1}
+                    align="flex-start"
                 >
                     {isMobile ? (
                         <>
                             <Heading
-                                size="lg"
+                                size="md"
                                 fontWeight="600"
                                 letterSpacing="-0.01em"
                                 color="gray.800"
@@ -71,7 +92,7 @@ export default function GlassPageHeader({
 
                             {subtitle && (
                                 <Text
-                                    fontSize="sm"
+                                    fontSize="xs"
                                     color="gray.600"
                                     fontWeight="500"
                                 >
@@ -106,24 +127,23 @@ export default function GlassPageHeader({
                 </Stack>
 
                 {/* RIGHT SIDE */}
-                <Stack
-                    direction={isMobile ? "column" : "row"}
-                    gap={3}
-                    align={isMobile ? "stretch" : "center"}
-                >
-                    {showMobileMenuButton && (
-                        <Box
-                            cursor="pointer"
-                            onClick={onMobileMenuClick}
-                            alignSelf={isMobile ? "stretch" : "center"}
-                            textAlign="center"
-                        >
-                            <MoreVertical size={20} />
-                        </Box>
-                    )}
-
-                    {actions}
-                </Stack>
+                {isMobile ? (
+                    <Box
+                        display="flex"
+                        justifyContent="flex-end"
+                        pt={1}
+                    >
+                        {actions && (
+                            <MobileActionsDrawer
+                                actions={actions}
+                            />
+                        )}
+                    </Box>
+                ) : (
+                    <HStack gap={3}>
+                        {actions}
+                    </HStack>
+                )}
             </Grid>
         </Box>
     )

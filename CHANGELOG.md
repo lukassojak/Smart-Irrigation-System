@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4]
+
+### Added
+
+### Changed
+- Introduced frontend mobile actions drawer for improved mobile UX and accessibility of each page's actions. This replaced the previous mobile action buttons placed in the header.
+
+### Fixed
+
+### Removed
+
+### Known Issues
+
+---
+
 ## [1.2.3] - 2026-07-02
 
 ### Added
