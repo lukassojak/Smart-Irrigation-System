@@ -134,6 +134,24 @@ def _compute_total_adjustment(
 
     total_adjustment = solar_adjustment + rain_adjustment + temperature_adjustment
 
+    logger.debug(
+        "Weather adjustment computation: "
+        "delta_solar=%.2f, delta_rain=%.2f, delta_temp=%.2f | "
+        "solar_factor=%.2f, rain_factor=%.2f, temp_factor=%.2f | "
+        "solar_adj=%.2f, rain_adj=%.2f, temp_adj=%.2f | "
+        "total_adjustment=%.2f",
+        delta_solar,
+        delta_rain,
+        delta_temperature,
+        solar_factor,
+        rain_factor,
+        temperature_factor,
+        solar_adjustment,
+        rain_adjustment,
+        temperature_adjustment,
+        total_adjustment,
+    )
+
     return total_adjustment, solar_adjustment, rain_adjustment, temperature_adjustment
 
 

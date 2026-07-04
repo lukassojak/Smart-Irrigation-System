@@ -4,6 +4,7 @@ services:
 
   mqtt:
     image: eclipse-mosquitto
+    restart: unless-stopped
     ports:
       - "1883:1883"
 
@@ -11,6 +12,7 @@ services:
     build:
       context: .
       dockerfile: docker/server.Dockerfile
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
@@ -28,6 +30,7 @@ services:
     build:
       context: .
       dockerfile: docker/node.Dockerfile
+    privileged: true
     restart: unless-stopped
     environment:
       SERVER_URL: http://server:8000
@@ -44,6 +47,7 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
     ports:
       - "5173:5173"
     environment:
