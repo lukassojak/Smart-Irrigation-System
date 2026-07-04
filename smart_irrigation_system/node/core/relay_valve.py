@@ -58,7 +58,7 @@ class RelayValve:
         self._state = RelayValveState.CLOSED  # Default state is CLOSED
         self._lock = threading.Lock()
 
-        self.logger.info(f"RelayValve initialized on pin {self.pin}")
+        self.logger.info(f"RelayValve initialized on pin {self.pin}, gpio supported: {GPIO_SUPPORTED}")
     
     def _init_gpio(self) -> None:
         try:
