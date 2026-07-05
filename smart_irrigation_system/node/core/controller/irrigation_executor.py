@@ -141,7 +141,7 @@ class IrrigationExecutor:
                         planner.mark_done(circuit_id)
                         continue
 
-                    if getattr(circuit, "dynamic_interval", False):
+                    if circuit.zone_config.frequency_settings.dynamic_interval:
                         should_irrigate, target_volume, reason = circuit.evaluate_dynamic_interval(
                             state_manager=self.state_manager,
                             global_config=global_config,

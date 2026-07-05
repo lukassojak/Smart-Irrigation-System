@@ -5,12 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.4]
+## [1.2.5] - 05-07-2026
+
+### Added
+
+### Changed
+
+### Fixed
+- Fixed dynamic interval evaluation in `IrrigationExecutor` to correctly check the `dynamic_interval` attribute from the circuit's `zone_config.frequency_settings` instead of the circuit object itself. This resolves an issue where dynamic interval logic was not being applied as intended.
+
+### Removed
+
+### Known Issues
+
+---
+
+## [1.2.4] - 04-07-2026
 
 ### Added
 
 ### Changed
 - Introduced frontend mobile actions drawer for improved mobile UX and accessibility of each page's actions. This replaced the previous mobile action buttons placed in the header.
+- Added debug logs in `relay_valve.py` and `weather_irrigation_model.py` to trace irrigation execution and weather-based irrigation calculations.
+- Updated docker-compose restart policy.
 
 ### Fixed
 
