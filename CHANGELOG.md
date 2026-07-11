@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.6] - 06-07-2026
 
 ### Added
+- Added `onClose` prop to `GlassPageHeader` component to allow closing the header on click, improving usability on mobile viewports.
+- Added `compact` prop to `GlassPageHeader` component to enable a more compact layout, which is useful for mobile viewports and when space is limited.
+- Added `ScrollToTop` component to automatically scroll to the top of the page when navigating between routes, enhancing user experience during navigation.
 
 ### Changed
 - Updated `SelectableZoneCard` component to align the card to the top of its container and ensure proper spacing between elements. This improves the visual layout and consistency of the zone cards in the runtime dashboard.
+- Updated `GlassPageHeader` component to close on click when the `onClose` prop is provided. It is used on mobile viewports.
 
 ### Fixed
 - Fixed `irrigation_log-YYYY-MM-DD.json` and `irrigation_log.json` file content mirroring issue where the irrigation log file for specific date contained all irrigation records till that date instead of only the records for that date.

@@ -22,7 +22,7 @@ export default function MobileSidebar({ isOpen, onClose }) {
                 <Drawer.Content maxW="260px">
 
                     <Drawer.Body p={0}>
-                        <Sidebar />
+                        <Sidebar onItemClick={onClose} />
                     </Drawer.Body>
 
                 </Drawer.Content>
