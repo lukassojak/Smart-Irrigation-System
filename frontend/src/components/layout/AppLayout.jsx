@@ -2,6 +2,7 @@ import { Box, useBreakpointValue } from "@chakra-ui/react"
 import { Outlet } from "react-router-dom"
 import Sidebar from "./sidebar/Sidebar"
 import MobileSidebar from "./sidebar/MobileSidebar"
+import ScrollToTop from "./ScrollToTop"
 import { useState } from "react"
 import { OverlayCleanup } from "../ui/ControlActionDialogOverlay"
 
@@ -36,6 +37,7 @@ export default function AppLayout() {
                 transition="margin 0.2s ease"
             >
                 <OverlayCleanup />
+                <ScrollToTop />
                 <Outlet
                     context={{
                         isMobile,

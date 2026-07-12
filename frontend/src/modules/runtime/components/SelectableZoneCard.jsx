@@ -55,6 +55,7 @@ export default function SelectableZoneCard({
 
     return (
         <Box
+            alignSelf="flex-start"
             position="relative"
             onClick={onClick}
             cursor={isSelectable ? "pointer" : "default"}
@@ -97,8 +98,8 @@ export default function SelectableZoneCard({
                 display="flex"
             />
 
-            <VStack align="stretch" gap={4} h="100%">
-                <HStack flex="1" justify="space-between">
+            <VStack align="stretch" gap={4}>
+                <HStack justify="space-between">
                     <HStack gap={2}>
                         <Box
                             bg="teal.50"
@@ -127,10 +128,7 @@ export default function SelectableZoneCard({
                     )}
                 </HStack>
 
-                <HStack
-                    justify="space-between"
-                    mt="auto"
-                >
+                <HStack justify="space-between">
                     <Text fontSize="xs" color="gray.500">
                         {zone.online ? (zone.stale ? "Disconnected" : "Online") : "Offline"}
                     </Text>

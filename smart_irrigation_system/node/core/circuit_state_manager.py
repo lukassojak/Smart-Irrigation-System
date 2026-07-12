@@ -301,118 +301,101 @@ class CircuitStateManager():
     # Internal: Irrigation log management
     # =========================================================================
 
+    def _rotate_irrigation_logs(
+        self,
+        log_dir: Path,
+        base_name: str,
+        keep_days: int = 30
+    ) -> None:
+        """
+        Removes irrigation log files older than `keep_days`.
+
+        Expected filename format:
+            irrigation_log-YYYY-MM-DD.json
+        """
+
+        cutoff = date.today() - timedelta(days=keep_days - 1)
+
+        for path in log_dir.glob(f"{base_name}-*.json"):
+            try:
+                suffix = path.stem[len(base_name) + 1:]
+                file_date = date.fromisoformat(suffix)
+
+                if file_date < cutoff:
+                    path.unlink()
+                    self.logger.debug(f"Removed old irrigation log {path.name}")
+
+            except Exception:
+                # Ignore files with unexpected names
+                continue
+
     def _log_irrigation_result(self, result: IrrigationResult) -> None:
-        """Logs the given IrrigationResult into the irrigation log file, grouped by date."""
+        """
+        Append irrigation result into a daily log file.
+
+        File format:
+            irrigation_log-YYYY-MM-DD.json
+
+        Each file contains only a JSON list of IrrigationResult objects
+        for that particular day.
+
+        Old log files are automatically removed, keeping only the most
+        recent `keep_days` days.
+        """
+
         with self.irrigation_log_file_lock:
             try:
-                irrigation_full_datetime = datetime.fromisoformat(result.to_dict()["start_time"])
-                irrigation_date = irrigation_full_datetime.date().isoformat()
+                irrigation_datetime = datetime.fromisoformat(result.start_time.isoformat())
+                irrigation_date = irrigation_datetime.date().isoformat()
 
                 log_path = Path(self.irrigation_log_file)
                 log_dir = log_path.parent
                 log_dir.mkdir(parents=True, exist_ok=True)
 
-                base_name = log_path.stem  # expected 'irrigation_log'
+                base_name = log_path.stem
 
-                def dated_filename(d: str) -> Path:
-                    return log_dir / f"{base_name}-{d}.json"
+                daily_file = log_dir / f"{base_name}-{irrigation_date}.json"
 
-                # Helper: rotate old files keeping last 30 days (including today)
-                def _rotate_logs(keep_days: int = 30) -> None:
-                    files = list(log_dir.glob(f"{base_name}*.json"))
-                    date_map: dict[date, Path] = {}
-                    for p in files:
-                        name = p.stem  # e.g. irrigation_log or irrigation_log-YYYY-MM-DD
-                        if name == base_name:
-                            # today's file -- treat as today's date
-                            try:
-                                date_map[date.today()] = p
-                            except Exception:
-                                continue
-                        elif name.startswith(base_name + "-"):
-                            suffix = name[len(base_name) + 1 :]
-                            try:
-                                d = date.fromisoformat(suffix)
-                                date_map[d] = p
-                            except Exception:
-                                continue
-
-                    # Keep only last `keep_days` dates
-                    keep_cutoff = date.today() - timedelta(days=keep_days - 1)
-                    for d, p in list(date_map.items()):
-                        if d < keep_cutoff:
-                            try:
-                                p.unlink()
-                            except Exception:
-                                self.logger.debug(f"Failed to remove old irrigation log {p}")
-
-                # Helper: migrate legacy single-file mapping format
-                def _migrate_legacy(content: dict) -> None:
-                    # Expecting mapping date->list; write each date to its own file
-                    for k, v in content.items():
-                        if not isinstance(k, str) or not isinstance(v, list):
-                            continue
-                        try:
-                            _ = date.fromisoformat(k)
-                        except Exception:
-                            continue
-                        target = dated_filename(k)
-                        try:
-                            with open(target, "w") as tf:
-                                json.dump(v, tf, indent=4)
-                        except Exception:
-                            self.logger.debug(f"Failed to migrate irrigation log for date {k} to {target}")
-
-                # Read existing file if present
-                today_list: list = []
-                if log_path.exists():
+                # Load today's log if it exists
+                if daily_file.exists():
                     try:
-                        with open(log_path, "r") as f:
-                            existing = json.load(f)
+                        with open(daily_file, "r") as f:
+                            entries = json.load(f)
+
+                        if not isinstance(entries, list):
+                            self.logger.warning(
+                                f"{daily_file} does not contain a JSON list. "
+                                "Starting with an empty log."
+                            )
+                            entries = []
+
                     except json.JSONDecodeError:
-                        existing = None
+                        self.logger.warning(
+                            f"{daily_file} is corrupted. Starting with an empty log."
+                        )
+                        entries = []
 
-                    # If legacy mapping format detected (dict of date -> list), migrate
-                    if isinstance(existing, dict):
-                        # Heuristic: keys look like dates
-                        date_keys = [k for k in existing.keys() if isinstance(k, str) and len(k) >= 8]
-                        if date_keys and any(_ for _ in date_keys):
-                            _migrate_legacy(existing)
-                            # If today's date present in mapping, use that as today's list
-                            today_list = existing.get(irrigation_date, [])
-                        else:
-                            # Unexpected dict shape, ignore and start fresh
-                            today_list = []
-                    elif isinstance(existing, list):
-                        # New per-day format: today's file contains just a list
-                        today_list = existing
-                    else:
-                        today_list = []
                 else:
-                    today_list = []
+                    entries = []
 
-                # Append new entry to today's list
-                today_list.append(result.to_dict())
+                # Append new result
+                entries.append(result.to_dict())
 
-                # Write today's file as the canonical `irrigation_log.json`
-                try:
-                    with open(log_path, "w") as f:
-                        json.dump(today_list, f, indent=4)
-                except Exception as e:
-                    self.logger.error(f"Failed to write today's irrigation log to {self.irrigation_log_file}: {e}")
+                # Save today's file
+                with open(daily_file, "w") as f:
+                    json.dump(entries, f, indent=4)
 
-                # Also ensure there is a dated file for today (mirror)
-                try:
-                    with open(dated_filename(irrigation_date), "w") as df:
-                        json.dump(today_list, df, indent=4)
-                except Exception:
-                    self.logger.debug(f"Failed to write dated irrigation log for {irrigation_date}")
-
-                # Rotate older files
-                _rotate_logs(keep_days=30)
+                # Remove old files
+                self._rotate_irrigation_logs(
+                    log_dir=log_dir,
+                    base_name=base_name,
+                    keep_days=30
+                )
 
             except Exception as e:
-                self.logger.error(f"Failed to log irrigation result to {self.irrigation_log_file}: {e}")
+                self.logger.error(
+                    f"Failed to log irrigation result: {e}"
+                )
 
 
     def _log_missing_interrupted_result(self, circuit_id: int) -> None:

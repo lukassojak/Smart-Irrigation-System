@@ -1,6 +1,6 @@
 // components/layout/sidebar/Sidebar.jsx
 
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Box, VStack, HStack, Text, Image } from "@chakra-ui/react"
 import SidebarSection from "./SidebarSection"
 import SidebarItem from "./SidebarItem"
@@ -23,7 +23,7 @@ import {
     ChevronRight
 } from "lucide-react"
 
-export default function Sidebar({ isCollapsed = false, onToggle }) {
+export default function Sidebar({ isCollapsed = false, onToggle, onItemClick }) {
     const navigate = useNavigate()
     const [hasPendingSyncNodes, setHasPendingSyncNodes] = useState(false)
     const [version, setVersion] = useState("-.-.-")
@@ -84,9 +84,9 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
             {/* Branding with link to homepage */}
             <HStack mb={8} align="center" gap={3} cursor="pointer" onClick={() => navigate("/")}>
                 <Image
-                    src="/logo.png"
+                    src="/sis-logo-v1.2.6.png"
                     alt="Smart Irrigation System"
-                    boxSize="40px"
+                    boxSize="28px"
                 />
                 {!isCollapsed && (
                     <VStack align="start" gap={0}>
@@ -107,16 +107,16 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
                 <SidebarSection
                     title={!isCollapsed ? "Runtime" : null}
                 >
-                    <SidebarItem to="/dashboard" icon={LayoutDashboard} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/dashboard" icon={LayoutDashboard} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Dashboard" : null}
                     </SidebarItem>
-                    <SidebarItem to="/manual" icon={Droplets} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/manual" icon={Droplets} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Manual Control" : null}
                     </SidebarItem>
-                    <SidebarItem to="/notifications" icon={Bell} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/notifications" icon={Bell} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Notifications" : null}
                     </SidebarItem>
-                    <SidebarItem to="/runtime/nodes" icon={Activity} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/runtime/nodes" icon={Activity} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Monitoring" : null}
                     </SidebarItem>
                 </SidebarSection>
@@ -124,13 +124,13 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
                 <SidebarSection
                     title={!isCollapsed ? "History" : null}
                 >
-                    <SidebarItem to="/statistics" icon={BarChart3} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/statistics" icon={BarChart3} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Statistics" : null}
                     </SidebarItem>
-                    <SidebarItem to="/irrigation-history" icon={History} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/irrigation-history" icon={History} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Irrigation History" : null}
                     </SidebarItem>
-                    <SidebarItem to="/weather" icon={Cloud} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/weather" icon={Cloud} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Weather History" : null}
                     </SidebarItem>
                 </SidebarSection>
@@ -143,10 +143,11 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
                         icon={SlidersHorizontal}
                         indicatorIcon={hasPendingSyncNodes ? RefreshCcw : undefined}
                         isCollapsed={isCollapsed}
+                        onClick={onItemClick}
                     >
                         {!isCollapsed ? "Nodes" : null}
                     </SidebarItem>
-                    <SidebarItem to="/configuration/nodes/discovery" icon={SlidersHorizontal} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/configuration/nodes/discovery" icon={SlidersHorizontal} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Add Node" : null}
                     </SidebarItem>
                 </SidebarSection>
@@ -154,7 +155,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
                 <SidebarSection
                     title={!isCollapsed ? "Settings" : null}
                 >
-                    <SidebarItem to="/settings" icon={Settings} isCollapsed={isCollapsed}>
+                    <SidebarItem to="/settings" icon={Settings} isCollapsed={isCollapsed} onClick={onItemClick}>
                         {!isCollapsed ? "Settings" : null}
                     </SidebarItem>
                 </SidebarSection>

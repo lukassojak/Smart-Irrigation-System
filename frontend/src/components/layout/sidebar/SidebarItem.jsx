@@ -1,9 +1,9 @@
 import { Box, HStack, Text } from "@chakra-ui/react"
 import { NavLink } from "react-router-dom"
 
-export default function SidebarItem({ to, icon: Icon, indicatorIcon: IndicatorIcon, children, isCollapsed }) {
+export default function SidebarItem({ to, icon: Icon, indicatorIcon: IndicatorIcon, children, isCollapsed, onClick }) {
     return (
-        <NavLink to={to} style={{ textDecoration: "none" }}>
+        <NavLink to={to} style={{ textDecoration: "none" }} onClick={onClick}>
             {({ isActive }) => (
                 <Box
                     px={isCollapsed ? 2 : 3}

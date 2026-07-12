@@ -32,6 +32,21 @@ def create_skipped_due_to_conditions(circuit_id: int, start_time: datetime, targ
         error="Skipped due to environmental conditions (negative adjustment)"
     )
 
+
+def create_skipped_due_to_dynamic_interval(circuit_id: int, start_time: datetime, target_duration: int, target_water_amount: float) -> IrrigationResult:
+    """Factory function to create a skipped due to dynamic interval irrigation result."""
+    return IrrigationResult(
+        circuit_id=circuit_id,
+        success=True,
+        outcome=IrrigationOutcome.SKIPPED,
+        start_time=start_time,
+        completed_duration=0,
+        target_duration=target_duration,
+        actual_water_amount=0.0,
+        target_water_amount=target_water_amount,
+        error="Skipped due to dynamic interval adjustment"
+    )
+
 def create_failure_invalid_water_amount(circuit_id: int, start_time: datetime, target_duration: int, target_water_amount: float) -> IrrigationResult:
     """Factory function to create a failure due to invalid water amount irrigation result."""
     return IrrigationResult(
