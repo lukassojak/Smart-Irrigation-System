@@ -84,9 +84,9 @@ export default function Sidebar({ isCollapsed = false, onToggle, onItemClick }) 
             {/* Branding with link to homepage */}
             <HStack mb={8} align="center" gap={3} cursor="pointer" onClick={() => navigate("/")}>
                 <Image
-                    src="/logo.png"
+                    src="/sis-logo-v1.2.6.png"
                     alt="Smart Irrigation System"
-                    boxSize="40px"
+                    boxSize="28px"
                 />
                 {!isCollapsed && (
                     <VStack align="start" gap={0}>

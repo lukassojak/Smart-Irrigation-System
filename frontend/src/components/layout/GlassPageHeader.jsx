@@ -48,7 +48,7 @@ export default function GlassPageHeader({
             px={{ base: 4, md: 8 }}
             py={compact ? 3 : 6}
             backdropFilter="blur(20px) saturate(180%)"
-            bg="rgba(255,255,255,0.72)"
+            bg="rgba(255,255,255,0.65)"
             borderBottom="1px solid"
             borderColor="rgba(56,178,172,0.08)"
             boxShadow="
