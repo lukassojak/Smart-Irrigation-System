@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0]
 
 ### Added
+- Added PWA support to the frontend, including a manifest file and optimized icons for better mobile experience. The app can now be installed on mobile devices and will function as a Progressive Web App (PWA).
 
 ### Changed
 
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known issues
 - `IrrigationHistoryPage.jsx` does not yet support pagination or date range filtering. It also shows `Success` aggregate status for just visible records, which may be misleading. The aggregate data should be computed for the entire filtered range by the backend and returned in the API response. This will be addressed in a future release.
+- PWA offline mode is not yet available while running the frontend via Vite development server (`npm run dev`). Offline caching will be enabled after migration to a production build.
 
 ---
 
