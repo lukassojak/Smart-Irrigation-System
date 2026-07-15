@@ -30,8 +30,8 @@ import {
 } from "../../../components/ui/ControlActionDialogOverlay"
 
 import { fetchNodes } from "../../../api/nodes.api"
-import { fetchAllHistoryRecords, fetchNodeHistory } from "../../../api/history.api"
-import { deleteAllHistory } from "../../../api/history.api"
+import { fetchAllHistoryRecords, fetchNodeHistory, deleteAllHistory } from "../../../api/history.api"
+import { Activity, Droplet, Clock, CheckCircle } from "lucide-react"
 
 const SORT_OPTIONS = [
     { value: "start_time_desc", label: "Newest first" },
@@ -103,6 +103,12 @@ export default function IrrigationHistoryPage() {
     const [error, setError] = useState(null)
     const [recordLimit, setRecordLimit] = useState(10)
     const [hasMoreRecords, setHasMoreRecords] = useState(true)
+    const [serverStats, setServerStats] = useState({
+        total_records: 0,
+        returned_records: 0,
+        success_rate: 0,
+        total_water: 0,
+    })
 
 
     const openDialog = (payload) => {
@@ -186,10 +192,17 @@ export default function IrrigationHistoryPage() {
 
         try {
             const response = selectedNodeId === "all"
-                ? await fetchAllHistoryRecords(recordLimit)
-                : await fetchNodeHistory(selectedNodeId, recordLimit)
-            const records = response.data.records || []
+                ? await fetchAllHistoryRecords(recordLimit, includeDeleted, selectedOutcome === "all" ? null : selectedOutcome)
+                : await fetchNodeHistory(selectedNodeId, recordLimit, includeDeleted, selectedOutcome === "all" ? null : selectedOutcome)
+            const data = response.data || {}
+            const records = data.records || []
             setHistoryRecords(records)
+            setServerStats({
+                total_records: data.total_records ?? 0,
+                returned_records: data.returned_records ?? records.length,
+                success_rate: data.success_rate ?? 0,
+                total_water: data.total_water ?? 0,
+            })
             if (
                 recordLimit > 10 &&
                 records.length === previousCount
@@ -207,20 +220,10 @@ export default function IrrigationHistoryPage() {
 
     useEffect(() => {
         loadHistory()
-    }, [selectedNodeId, recordLimit])
+    }, [selectedNodeId, recordLimit, includeDeleted, selectedOutcome])
 
     const visibleRecords = useMemo(() => {
-        const filteredRecords = historyRecords.filter((record) => {
-            if (selectedOutcome !== "all" && record.outcome !== selectedOutcome) {
-                return false
-            }
-            if (!includeDeleted && record.zone_deleted) {
-                return false
-            }
-            return true
-        })
-
-        const sortedRecords = [...filteredRecords]
+        const sortedRecords = [...historyRecords]
 
         sortedRecords.sort((left, right) => {
             switch (sortBy) {
@@ -251,7 +254,7 @@ export default function IrrigationHistoryPage() {
         })
 
         return sortedRecords
-    }, [historyRecords, nodeLabelById, selectedOutcome, sortBy, includeDeleted])
+    }, [historyRecords, nodeLabelById, selectedOutcome, sortBy])
 
     const selectedNode = selectedNodeId !== "all"
         ? nodes.find((node) => String(node.id) === String(selectedNodeId))
@@ -425,7 +428,7 @@ export default function IrrigationHistoryPage() {
                         )}
 
                         <GlassPanelSection title="Summary">
-                            <HistoryStats records={visibleRecords} />
+                            <HistoryStats serverStats={serverStats} avgDuration={0} />
                         </GlassPanelSection>
 
                         <GlassPanelSection title="Irrigation Records">

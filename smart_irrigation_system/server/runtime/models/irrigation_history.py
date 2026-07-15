@@ -24,7 +24,7 @@ class IrrigationHistory(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)  # When record was synced to server
     
     # Outcome of the irrigation attempt
-    outcome: str = Field(index=True)  # COMPLETED, INTERRUPTED, SKIPPED
+    outcome: str = Field(index=True)  # SUCCESS, FAILED, STOPPED, SKIPPED, INTERRUPTED
     
     # Duration and volume data
     completed_duration: Optional[int] = None  # Actual duration in seconds (or None for SKIPPED)

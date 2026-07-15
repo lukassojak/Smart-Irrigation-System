@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1]
+
+### Added
+
+### Changed
+- Moved `irrigation_history.py` router from `server/runtime/api` to `server/history/api` to better reflect its purpose and domain. Updated all relevant imports and references in the codebase to accommodate this change.
+- Updated `IrrigationHistoryReadResponse` schema to include `total_records` and `returned_records`, `success_rate`, and `total_water` fields for better analytics and reporting in the frontend. This change allows the frontend to display more comprehensive statistics about irrigation history.
+- Updated `IrrigationHistoryPage.jsx` to use the new `total_records` and `returned_records` fields from the API response for displaying the total number of matching records and the number of records returned in the current view. This improves the accuracy of the statistics displayed to the user.
+
+### Fixed
+
+### Removed
+
+### Known issues
+
+
+---
 
 ## [1.3.0]
 

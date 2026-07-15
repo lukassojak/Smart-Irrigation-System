@@ -161,6 +161,9 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
         )
     }
 
+    // If date is today, show "Today" instead of the full date, same for yesterday
+    const todayKey = getDateKey(new Date().toISOString())
+    const yesterdayKey = getDateKey(new Date(Date.now() - 86400000).toISOString())
     return (
         <Stack gap={8}>
             {Object.entries(groupedRecords).map(([date, dayRecords]) => (
@@ -171,7 +174,11 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                             color="gray.700"
                             flexShrink={0}
                         >
-                            {date}
+                            {date === todayKey
+                                ? "Today"
+                                : date === yesterdayKey
+                                    ? "Yesterday"
+                                    : date}
                         </Heading>
 
                         <Badge
