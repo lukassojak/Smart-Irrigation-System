@@ -465,14 +465,16 @@ class CircuitStateManager():
         self._save_state()
     
 
-    def irrigation_finished(self, circuit_id: int, result: IrrigationResult) -> None:
+    def irrigation_finished(self, circuit_id: int, result: IrrigationResult, manual_run: bool) -> None:
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
 
         if result.outcome == IrrigationOutcome.SUCCESS:
             entry = self._get_or_create_entry(circuit_id)
-            entry["carry_over_volume_liters"] = 0.0
+            if not manual_run:
+                # Reset carry-over volume on successful automatic irrigation
+                entry["carry_over_volume_liters"] = 0.0
             self._save_state()
         
         # Sync record to server if sync manager is available
@@ -501,3 +503,5 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         entry["carry_over_volume_liters"] = max(float(volume_liters), 0.0)
         self._save_state()
+
+    # In future add reset_carry_over_volume_liters(circuit_id) method instead of resetting it in CircuitStateManager.irrigation_finished()

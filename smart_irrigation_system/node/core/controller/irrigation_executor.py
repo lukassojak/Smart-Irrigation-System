@@ -155,7 +155,7 @@ class IrrigationExecutor:
                                 target_duration=0,
                                 target_water_amount=target_volume,
                             )
-                            self.state_manager.irrigation_finished(circuit_id, skipped_result)
+                            self.state_manager.irrigation_finished(circuit_id, skipped_result, False)
                             planner.mark_done(circuit_id)
                             continue
                     else:
@@ -259,7 +259,7 @@ class IrrigationExecutor:
                     stop_event=local_stop_event,
                     precomputed_target_volume=precomputed_target_volume
                 )
-                self.state_manager.irrigation_finished(circuit_id, result)
+                self.state_manager.irrigation_finished(circuit_id, result, False)
                 self.logger.info(f"Irrigation for Circuit ID {circuit_id} finalized.")
             # TODO: replace with specific exceptions
             except Exception as e:
@@ -303,7 +303,7 @@ class IrrigationExecutor:
                 result: IrrigationResult = circuit.irrigate_man(target_volume=volume,
                                                                 stop_event=local_stop_event
                 )
-                self.state_manager.irrigation_finished(circuit_id, result)
+                self.state_manager.irrigation_finished(circuit_id, result, True)
                 self.logger.info(f"Manual irrigation for Circuit ID {circuit_id} completed successfully.")
             except Exception as e:
                 self.logger.error(f"Manual irrigation for Circuit ID {circuit_id} failed: {e}")
