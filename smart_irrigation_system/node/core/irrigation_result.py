@@ -8,18 +8,18 @@ from smart_irrigation_system.node.core.enums import IrrigationOutcome
 @dataclass
 class IrrigationResult:
     """Class to encapsulate the result of an irrigation attempt."""
-    was_manual_run: bool
+    was_manual_run: Optional[bool] = None # None for unknown (interrupted)
     circuit_id: int
     success: bool   # Outcomes SUCCESS, SKIPPED, and STOPPED are considered successful
     outcome: IrrigationOutcome
-    start_time: datetime
-    completed_duration: int
+    start_time: Optional[datetime] = None
+    completed_duration: Optional[int] = None  # None for interrupted
     target_duration: int
-    actual_water_amount: float
+    actual_water_amount: Optional[float] = None  # None for interrupted
     target_water_amount: float
     error: Optional[str] = None
     # Extended fields for telemetry, weather-model context and carry-over
-    base_water_amount: float = 0.0
+    base_water_amount: Optional[float] = None
     standard_conditions_solar: Optional[float] = None
     standard_conditions_rain: Optional[float] = None
     standard_conditions_temp: Optional[float] = None
@@ -27,9 +27,9 @@ class IrrigationResult:
     actual_rain: Optional[float] = None
     actual_temp: Optional[float] = None
     carry_over_applied: bool = False
-    even_area_mode: bool = False
-    dynamic_interval_enabled: bool = False
-    irrigation_volume_threshold_percent: int = 0
+    even_area_mode: Optional[bool] = None
+    dynamic_interval_enabled: Optional[bool] = None
+    irrigation_volume_threshold_percent: Optional[int] = None
     # target_mm, and actual_mm are set on the server
 
     def to_dict(self) -> dict:
@@ -63,18 +63,18 @@ class IrrigationResult:
     def from_dict(data: dict) -> "IrrigationResult":
         """Reconstruct an IrrigationResult from a dict (e.g. loaded from JSON)."""
         return IrrigationResult(
-            was_manual_run=data.get("was_manual_run", False),
-            circuit_id=data["circuit_id"],
-            success=data["success"],
-            outcome=IrrigationOutcome(data["outcome"]),
-            start_time=datetime.fromisoformat(data["start_time"]),
-            completed_duration=data["completed_duration"],
-            target_duration=data["target_duration"],
-            actual_water_amount=data["actual_water_amount"],
-            target_water_amount=data["target_water_amount"],
+            was_manual_run=data.get("was_manual_run"),
+            circuit_id=data.get("circuit_id"),
+            success=data.get("success"),
+            outcome=IrrigationOutcome(data.get("outcome")),
+            start_time=datetime.fromisoformat(data.get("start_time")) if data.get("start_time") else None,
+            completed_duration=data.get("completed_duration"),
+            target_duration=data.get("target_duration"),
+            actual_water_amount=data.get("actual_water_amount"),
+            target_water_amount=data.get("target_water_amount"),
             error=data.get("error")
             ,
-            base_water_amount=data.get("base_water_amount", 0.0),
+            base_water_amount=data.get("base_water_amount"),
             standard_conditions_solar=data.get("standard_conditions_solar"),
             standard_conditions_rain=data.get("standard_conditions_rain"),
             standard_conditions_temp=data.get("standard_conditions_temp"),
@@ -82,8 +82,8 @@ class IrrigationResult:
             actual_rain=data.get("actual_rain"),
             actual_temp=data.get("actual_temp"),
             carry_over_applied=data.get("carry_over_applied", False),
-            even_area_mode=data.get("even_area_mode", False),
-            dynamic_interval_enabled=data.get("dynamic_interval_enabled", False),
-            irrigation_volume_threshold_percent=data.get("irrigation_volume_threshold_percent", 0)
+            even_area_mode=data.get("even_area_mode"),
+            dynamic_interval_enabled=data.get("dynamic_interval_enabled"),
+            irrigation_volume_threshold_percent=data.get("irrigation_volume_threshold_percent")
         )
 

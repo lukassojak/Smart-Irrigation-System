@@ -20,8 +20,8 @@ from smart_irrigation_system.node.core.status_models import CircuitRuntimeStatus
 from smart_irrigation_system.node.core.irrigation_result import IrrigationResult
 from smart_irrigation_system.node.core.irrigation_models import weather_irrigation_model
 
-from smart_irrigation_system.node.config.global_config import GlobalConfig
-from smart_irrigation_system.node.config.zone_config import ZoneConfig, CorrectionFactors
+from smart_irrigation_system.node.config.global_config import GlobalConfig, StandardConditions
+from smart_irrigation_system.node.config.zone_config import ZoneConfig
 from smart_irrigation_system.node.weather.global_conditions import GlobalConditions
 
 import smart_irrigation_system.node.utils.result_factory as result_factory
@@ -73,15 +73,24 @@ class IrrigationCircuit:
         """Starts the automatic irrigation process based on weather conditions using the configured calculation model."""
         if precomputed_target_volume is not None:
             if precomputed_target_volume <= 0:
-                return result_factory.create_skipped_due_to_conditions(
-                    circuit_id=self.zone_config.id,
+                return result_factory.create_skipped_due_to_negative_adjustment(
+                    zone_config=self.zone_config,
                     start_time=time_utils.now(),
                     target_duration=0,
-                    target_water_amount=0.0,
+                    target_water_amount=precomputed_target_volume,
+                    standard_conditions=global_config.standard_conditions,
+                    actual_conditions=global_conditions
                 )
 
             duration = self._volume_to_duration(precomputed_target_volume)
-            return self._irrigate(duration, stop_event, precomputed_target_volume)
+            return self._irrigate(
+                is_manual=False,
+                target_duration=duration,
+                stop_event=stop_event,
+                target_volume=precomputed_target_volume,
+                standard_conditions=global_config.standard_conditions,
+                actual_conditions=global_conditions
+            )
 
         base_target_volume = self.base_target_volume
 
@@ -108,16 +117,25 @@ class IrrigationCircuit:
          # Handle skip case
 
         if model_result.should_skip:
-            result = result_factory.create_skipped_due_to_conditions(
-                circuit_id=self.zone_config.id,
+            result = result_factory.create_skipped_due_to_negative_adjustment(
+                zone_config=self.zone_config,
                 start_time=time_utils.now(),
                 target_duration=0,
-                target_water_amount=0.0
+                target_water_amount=model_result.final_volume,
+                standard_conditions=global_config.standard_conditions,
+                actual_conditions=global_conditions
             )
             return result
         
         duration = self._volume_to_duration(model_result.final_volume)
-        return self._irrigate(duration, stop_event, model_result.final_volume)
+        return self._irrigate(
+            is_manual=False,
+            target_duration=duration,
+            stop_event=stop_event,
+            target_volume=model_result.final_volume,
+            standard_conditions=global_config.standard_conditions,
+            actual_conditions=global_conditions
+        )
         
 
     def irrigate_man(self, target_volume: float, stop_event: threading.Event) -> IrrigationResult:
@@ -133,22 +151,11 @@ class IrrigationCircuit:
                 circuit_id=self.zone_config.id,
                 start_time=time_utils.now(),
                 target_duration=0,
-                target_water_amount=target_volume
+                target_water_amount=target_volume,
             )
             return result
         
-        return self._irrigate(target_duration, stop_event, target_volume)
-    
-
-    def flow_overload_timeout_triggered(self, start_time: datetime) -> IrrigationResult:
-        result = result_factory.create_flow_overload(
-            circuit_id=self.zone_config.id,
-            start_time=start_time,
-            target_duration=0,
-            target_water_amount=0.0
-        )
-        
-        return result
+        return self._irrigate(True, target_duration, stop_event, target_volume)
     
 
     # ============================================================================================================
@@ -353,20 +360,45 @@ class IrrigationCircuit:
     # Private irrigation methods
     # ============================================================================================================
 
-    def _irrigate(self, target_duration: float, stop_event: threading.Event, target_volume: Optional[float] = None) -> IrrigationResult:
+    def _irrigate(
+            self,
+            is_manual: bool,
+            target_duration: float,
+            stop_event: threading.Event,
+            target_volume: Optional[float] = None,
+            standard_conditions: Optional[StandardConditions] = None,
+            actual_conditions: Optional[GlobalConditions] = None
+        ) -> IrrigationResult:
         # --- INIT PHASE ---
-        init_result = self._irrigation_init(target_duration, target_volume)
+        init_result = self._irrigation_init(is_manual, target_duration, target_volume, standard_conditions, actual_conditions)
         if init_result is not None:
             return init_result      # early exit on init failure
         
         # --- EXECUTION PHASE ---
-        elapsed_time, outcome, error = self._irrigation_execute(target_duration, stop_event)
+        elapsed_time, outcome, error = self._irrigation_execute(
+            duration=target_duration,
+            stop_event=stop_event
+        )
 
         # --- FINALIZATION PHASE ---
-        return self._irrigation_finalize(elapsed_time, outcome, error)
+        return self._irrigation_finalize(
+            is_manual=is_manual,
+            elapsed_time=elapsed_time,
+            outcome=outcome,
+            error=error,
+            standard_conditions=standard_conditions,
+            actual_conditions=actual_conditions
+        )
         
 
-    def _irrigation_init(self, target_duration: float, target_volume: Optional[float]) -> Optional[IrrigationResult]:
+    def _irrigation_init(
+            self,
+            is_manual: bool,
+            target_duration: float,
+            target_volume: Optional[float],
+            standard_conditions: Optional[StandardConditions] = None,
+            actual_conditions: Optional[GlobalConditions] = None
+        ) -> Optional[IrrigationResult]:
         """Prepares circuit for irrigation. Returns IrrigationResult on failure, or None on success."""
 
         # If target_volume is provided by the caller, use it; otherwise, calculate it from target_duration
@@ -377,10 +409,13 @@ class IrrigationCircuit:
                 f"Circuit {self.zone_config.id} is not IDLE (state={self.state.name}). Cannot start irrigation."
             )
             result = result_factory.create_failure_circuit_not_idle(
-                circuit_id=self.zone_config.id,
+                was_manual_run=is_manual,
+                zone_config=self.zone_config,
                 start_time=time_utils.now(),
                 target_duration=int(target_duration),
-                target_water_amount=target_volume
+                target_water_amount=target_volume,
+                standard_conditions=standard_conditions,
+                actual_conditions=actual_conditions
             )
             return result
 
@@ -443,7 +478,15 @@ class IrrigationCircuit:
         return elapsed_time, outcome, error
     
 
-    def _irrigation_finalize(self, elapsed_time: float, outcome: IrrigationOutcome, error: Optional[str]) -> IrrigationResult:
+    def _irrigation_finalize(
+            self,
+            is_manual: bool,
+            elapsed_time: float,
+            outcome: IrrigationOutcome,
+            error: Optional[str],
+            standard_conditions: Optional[StandardConditions] = None,
+            actual_conditions: Optional[GlobalConditions] = None
+        ) -> IrrigationResult:
         """Finalizes the irrigation process and returns the IrrigationResult."""
 
         try:
@@ -452,15 +495,19 @@ class IrrigationCircuit:
             self._handle_valve_failure(failed_state=RelayValveState.CLOSED, reason=str(e))
         
         result = result_factory.create_general(
-            circuit_id=self.zone_config.id,
+            was_manual_run=is_manual,
+            zone_config=self.zone_config,
             start_time=self._start_time,
             completed_duration=int(elapsed_time),
             target_duration=int(self._target_duration),
             actual_water_amount=self._target_volume if outcome == IrrigationOutcome.SUCCESS else self._duration_to_volume(elapsed_time, precision=3),
             target_water_amount=self._target_volume,
-            success=outcome == IrrigationOutcome.SUCCESS,
+            success=outcome == IrrigationOutcome.SUCCESS or outcome == IrrigationOutcome.SKIPPED or outcome == IrrigationOutcome.STOPPED,
             outcome=outcome,
             error=error,
+            standard_conditions=standard_conditions,
+            actual_conditions=actual_conditions,
+            carry_over_applied=False,
         )
 
         # Reset state and runtime attributes

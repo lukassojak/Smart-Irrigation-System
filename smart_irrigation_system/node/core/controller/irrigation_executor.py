@@ -149,7 +149,7 @@ class IrrigationExecutor:
                         )
                         if not should_irrigate:
                             self.logger.info(f"Circuit ID {circuit_id} skipped by dynamic interval logic: {reason}")
-                            skipped_result = result_factory.create_skipped_due_to_conditions(
+                            skipped_result = result_factory.create_skipped_due_to_dynamic_interval(
                                 circuit_id=circuit_id,
                                 start_time=time_utils.now(),
                                 target_duration=0,
