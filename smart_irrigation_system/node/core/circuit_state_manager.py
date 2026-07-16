@@ -258,11 +258,9 @@ class CircuitStateManager():
                     circuit["last_outcome"] = IrrigationOutcome.INTERRUPTED.value
                     circuit["last_duration"] = None
                     circuit["last_volume"] = None
-                    # Unknown irrigation time due to unclean shutdown, set to current time
-                    circuit["last_irrigation"] = time_utils.now_iso()
-                    circuit["last_decision"] = time_utils.now_iso()
                     recovered_circuits.append(circuit_id)
-                    self._log_missing_interrupted_result(circuit_id)
+                    start_time_dt: Optional[datetime] = time_utils.from_iso(circuit.get("last_irrigation")) if circuit.get("last_irrigation") else None
+                    self._log_missing_interrupted_result(circuit_id=circuit_id, start_time=start_time_dt)
 
             circuit["circuit_state"] = SnapshotCircuitState.IDLE.value
 
@@ -396,13 +394,13 @@ class CircuitStateManager():
                 )
 
 
-    def _log_missing_interrupted_result(self, circuit_id: int) -> None:
+    def _log_missing_interrupted_result(self, circuit_id: int, start_time: Optional[datetime] = None) -> None:
         """Logs an interrupted irrigation result for a circuit that was irrigating during an unclean shutdown."""
 
         try:
             interrupted_result = result_factory.create_interrupted(
+                start_time=start_time,
                 zone_id=circuit_id,
-                start_time=
                 reason="Unclean shutdown during irrigation, unknown duration and volume"
             )
             
