@@ -283,7 +283,6 @@ class CircuitStateManager():
         # Set circuit state back to IDLE, update last outcome and last decision
         entry["circuit_state"] = SnapshotCircuitState.IDLE.value
         entry["last_outcome"] = result.outcome.value
-        entry["last_decision"] = time_utils.to_iso(result.start_time)
 
         # SKIPPED - special case, no real irrigation happened
         if result.outcome.value == IrrigationOutcome.SKIPPED.value:
@@ -291,7 +290,6 @@ class CircuitStateManager():
             return
 
         # All the real-run outcomes
-        entry["last_irrigation"] = time_utils.to_iso(result.start_time)
         entry["last_duration"] = result.completed_duration
         entry["last_volume"] = result.actual_water_amount
         self._save_state()
@@ -403,13 +401,9 @@ class CircuitStateManager():
 
         try:
             interrupted_result = result_factory.create_interrupted(
-                circuit_id=circuit_id,
-                start_time=time_utils.now(),
-                elapsed=0,
-                actual_water_amount=0,
-                target_duration=0,
-                target_water_amount=0,
-                reason="Unclean shutdown during irrigation. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
+                zone_id=circuit_id,
+                start_time=
+                reason="Unclean shutdown during irrigation, unknown duration and volume"
             )
             
             self._log_irrigation_result(interrupted_result)
@@ -468,6 +462,8 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         self.logger.debug(f"Setting circuit ID {circuit_id} state to 'irrigating'.")
         entry["circuit_state"] = SnapshotCircuitState.IRRIGATING.value
+        entry["last_irrigation"] = time_utils.now_iso()
+        entry["last_decision"] = time_utils.now_iso()
         self._save_state()
     
 
