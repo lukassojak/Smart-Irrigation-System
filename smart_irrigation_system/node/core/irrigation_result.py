@@ -8,15 +8,15 @@ from smart_irrigation_system.node.core.enums import IrrigationOutcome
 @dataclass
 class IrrigationResult:
     """Class to encapsulate the result of an irrigation attempt."""
-    was_manual_run: Optional[bool] = None # None for unknown (interrupted)
     circuit_id: int
     success: bool   # Outcomes SUCCESS, SKIPPED, and STOPPED are considered successful
     outcome: IrrigationOutcome
+    target_duration: int
+    target_water_amount: float
+    was_manual_run: Optional[bool] = None # None for unknown (interrupted)
     start_time: Optional[datetime] = None
     completed_duration: Optional[int] = None  # None for interrupted
-    target_duration: int
     actual_water_amount: Optional[float] = None  # None for interrupted
-    target_water_amount: float
     error: Optional[str] = None
     # Extended fields for telemetry, weather-model context and carry-over
     base_water_amount: Optional[float] = None

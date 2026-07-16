@@ -1,13 +1,11 @@
 """History API router for uploading irrigation records from nodes."""
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from smart_irrigation_system.server.history.services.history_service import IrrigationHistoryService
-from smart_irrigation_system.server.configuration.repositories.zone_lifecycle_repository import ZoneLifecycleRepository
 from smart_irrigation_system.server.db.session import get_session
-from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory
 from smart_irrigation_system.server.history.schemas.irrigation_history import (
     IrrigationHistoryUploadRequest,
     IrrigationHistoryUploadResponse,

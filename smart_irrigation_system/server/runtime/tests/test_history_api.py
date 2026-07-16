@@ -59,27 +59,43 @@ def test_upload_history_records(client, test_node):
             {
                 "circuit_id": 1,
                 "start_time": "2024-04-30T10:00:00",
-                "outcome": "COMPLETED",
+                "outcome": "success",
+                "was_manual_run": False,
+                "success": True,
                 "completed_duration": 300,
                 "target_duration": 300,
                 "actual_water_amount": 50.0,
                 "target_water_amount": 50.0,
                 "reason": None,
+                "base_water_amount": 50.0,
+                "standard_conditions_solar": 100.0,
+                "standard_conditions_rain": 0.0,
+                "standard_conditions_temp": 22.0,
+                "actual_solar": 110.0,
+                "actual_rain": 0.0,
+                "actual_temp": 23.0,
+                "carry_over_applied": False,
+                "even_area_mode": True,
+                "dynamic_interval_enabled": False,
+                "irrigation_volume_threshold_percent": 50,
             },
             {
                 "circuit_id": 2,
                 "start_time": "2024-04-30T11:00:00",
-                "outcome": "SKIPPED",
+                "outcome": "skipped",
+                "was_manual_run": False,
+                "success": True,
                 "completed_duration": None,
                 "target_duration": 300,
                 "actual_water_amount": None,
                 "target_water_amount": 50.0,
                 "reason": "Insufficient water",
+                "carry_over_applied": True,
             },
         ]
     }
 
-    response = client.post("/api/v1/runtime/history/upload", json=payload)
+    response = client.post("/api/v1/history/irrigation-history/upload", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["uploaded_count"] == 2
@@ -95,7 +111,7 @@ def test_upload_duplicate_records(client, test_node):
             {
                 "circuit_id": 1,
                 "start_time": "2024-04-30T10:00:00",
-                "outcome": "COMPLETED",
+                "outcome": "success",
                 "completed_duration": 300,
                 "target_duration": 300,
                 "actual_water_amount": 50.0,
@@ -103,20 +119,36 @@ def test_upload_duplicate_records(client, test_node):
             },
         ]
     }
-    response1 = client.post("/api/v1/runtime/history/upload", json=payload)
+    response1 = client.post("/api/v1/history/irrigation-history/upload", json=payload)
     assert response1.status_code == 200
     assert response1.json()["uploaded_count"] == 1
 
     # Second upload (same record - should be skipped)
-    response2 = client.post("/api/v1/runtime/history/upload", json=payload)
+    response2 = client.post("/api/v1/history/irrigation-history/upload", json=payload)
     assert response2.status_code == 200
     data = response2.json()
     assert data["uploaded_count"] == 0
     assert "duplicate" in data["message"].lower()
 
 
-def test_fetch_history_records(client, test_node):
+def test_fetch_history_records(client, test_node, test_db):
     """Test fetching irrigation history records."""
+    session = Session(test_db)
+    zone = Zone(
+        node_id=test_node.id,
+        name="Zone 1",
+        relay_pin=5,
+        enabled=True,
+        irrigation_mode=IrrigationMode.EVEN_AREA,
+        local_correction_factors={"solar": 0.0, "rain": 0.0, "temperature": 0.0},
+        frequency_settings={"dynamic_interval": False, "min_interval_days": 1, "max_interval_days": 1, "carry_over_volume": False, "irrigation_volume_threshold_percent": 50},
+        fallback_strategy={"on_fresh_weather_data_unavailable": "use_base_volume", "on_expired_weather_data": "use_base_volume", "on_missing_weather_data": "skip_irrigation"},
+        irrigation_configuration={"zone_area_m2": 10.0, "target_mm": 5.0},
+        emitters_configuration={"summary": []},
+    )
+    session.add(zone)
+    session.commit()
+
     # Upload some records
     payload = {
         "node_id": test_node.id,
@@ -124,7 +156,7 @@ def test_fetch_history_records(client, test_node):
             {
                 "circuit_id": 1,
                 "start_time": "2024-04-30T10:00:00",
-                "outcome": "COMPLETED",
+                "outcome": "success",
                 "completed_duration": 300,
                 "target_duration": 300,
                 "actual_water_amount": 50.0,
@@ -133,7 +165,7 @@ def test_fetch_history_records(client, test_node):
             {
                 "circuit_id": 1,
                 "start_time": "2024-04-30T11:00:00",
-                "outcome": "COMPLETED",
+                "outcome": "success",
                 "completed_duration": 250,
                 "target_duration": 300,
                 "actual_water_amount": 42.0,
@@ -142,33 +174,45 @@ def test_fetch_history_records(client, test_node):
             {
                 "circuit_id": 2,
                 "start_time": "2024-04-30T12:00:00",
-                "outcome": "SKIPPED",
+                "outcome": "skipped",
             },
         ]
     }
-    client.post("/api/v1/runtime/history/upload", json=payload)
+    client.post("/api/v1/history/irrigation-history/upload", json=payload)
 
     # Fetch all records
-    response = client.get(f"/api/v1/runtime/history/records?node_id={test_node.id}&limit=100")
+    response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&limit=100")
     assert response.status_code == 200
     data = response.json()
-    assert data["count"] == 3
+    assert data["total_records"] == 3
+    assert data["returned_records"] == 3
+    assert data["success_rate"] == pytest.approx(1.0)
+    assert data["total_water"] == pytest.approx(92.0)
+    assert data["records"][0]["success"] is True
+    assert data["records"][0]["carry_over_applied"] in (True, False)
+
+    even_area_record = next(record for record in data["records"] if record["start_time"] == "2024-04-30T10:00:00")
+    assert even_area_record["even_area_mode"] is True
+    assert even_area_record["target_mm"] == pytest.approx(5.0)
+    assert even_area_record["actual_mm"] == pytest.approx(5.0)
 
     # Fetch circuit 1 records only
     response = client.get(
-        f"/api/v1/runtime/history/records?node_id={test_node.id}&circuit_id=1&limit=100"
+        f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&circuit_id=1&limit=100"
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["count"] == 2
+    assert data["total_records"] == 2
+    assert data["returned_records"] == 2
 
 
 def test_fetch_empty_history(client, test_node):
     """Test fetching history when no records exist."""
-    response = client.get(f"/api/v1/runtime/history/records?node_id={test_node.id}")
+    response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}")
     assert response.status_code == 200
     data = response.json()
-    assert data["count"] == 0
+    assert data["total_records"] == 0
+    assert data["returned_records"] == 0
     assert data["records"] == []
 
 
@@ -203,12 +247,17 @@ def test_delete_zone_marks_existing_history_as_deleted(test_db, test_node):
         zone_deleted=False,
         start_time=datetime(2024, 1, 10, 10, 0, 0),
         outcome="success",
+        success=True,
+        was_manual_run=False,
         completed_duration=300,
         target_duration=300,
         actual_water_amount=50.0,
         target_water_amount=50.0,
     )
     session.add(history_record)
+    persisted_node = session.get(Node, test_node.id)
+    persisted_node.header_pins = {}
+    session.add(persisted_node)
     session.commit()
 
     service = NodeService(session)
@@ -250,6 +299,8 @@ def test_upload_history_respects_deleted_zone_lifecycle(client, test_node, test_
                 "circuit_id": 9,
                 "start_time": "2024-01-15T10:00:00",
                 "outcome": "success",
+                "was_manual_run": False,
+                "success": True,
                 "completed_duration": 300,
                 "target_duration": 300,
                 "actual_water_amount": 50.0,
@@ -259,6 +310,8 @@ def test_upload_history_respects_deleted_zone_lifecycle(client, test_node, test_
                 "circuit_id": 9,
                 "start_time": "2024-03-15T10:00:00",
                 "outcome": "success",
+                "was_manual_run": False,
+                "success": True,
                 "completed_duration": 280,
                 "target_duration": 300,
                 "actual_water_amount": 48.0,
@@ -267,18 +320,22 @@ def test_upload_history_respects_deleted_zone_lifecycle(client, test_node, test_
         ],
     }
 
-    response = client.post("/api/v1/runtime/history/upload", json=payload)
+    response = client.post("/api/v1/history/irrigation-history/upload", json=payload)
     assert response.status_code == 200
 
-    response = client.get(f"/api/v1/runtime/history/records?node_id={test_node.id}&limit=10")
+    response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&limit=10&include_deleted_zones=true")
     assert response.status_code == 200
-    data = response.json()["records"]
+    payload = response.json()
+    data = payload["records"]
 
-    old_record = next(record for record in data if record["start_time"] == "2024-01-15T10:00:00")
-    current_record = next(record for record in data if record["start_time"] == "2024-03-15T10:00:00")
+    assert len(data) == 2
+    current_record = data[0]
+    old_record = data[1]
 
     assert old_record["zone_deleted"] is True
     assert current_record["zone_deleted"] is False
+    assert current_record["success"] is True
+    assert payload["total_records"] == 2
 
 
 if __name__ == "__main__":

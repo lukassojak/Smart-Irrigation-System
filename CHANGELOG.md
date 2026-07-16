@@ -5,21 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.1]
+## [1.4.0]
 
 ### Added
+- Server support for extended `IrrigationResult`: the server now stores and returns new fields (`success`, `was_manual_run`, `carry_over_applied`, `dynamic_interval_enabled`, `irrigation_volume_threshold_percent`).
+- Alembic migration: `20260716_align_history_with_irrigation_result.py` to add new nullable columns and allow `start_time` to be nullable.
+- `docs/developer_reference/DEPLOYMENT_MIGRATIONS.md`: added instructions for safe production migration with Alembic.
 
 ### Changed
 - Moved `irrigation_history.py` router from `server/runtime/api` to `server/history/api` to better reflect its purpose and domain. Updated all relevant imports and references in the codebase to accommodate this change.
 - Updated `IrrigationHistoryReadResponse` schema to include `total_records` and `returned_records`, `success_rate`, and `total_water` fields for better analytics and reporting in the frontend. This change allows the frontend to display more comprehensive statistics about irrigation history.
 - Updated `IrrigationHistoryPage.jsx` to use the new `total_records` and `returned_records` fields from the API response for displaying the total number of matching records and the number of records returned in the current view. This improves the accuracy of the statistics displayed to the user.
+- Changed `CircuitStateManager` to update `last_decision` and `last_irrigation` timestamps when irrigation starts, ensuring it accurately reflects the most recent irrigation activity and decision-making time. This change improves the reliability of the runtime state information, especially on interrupted or unclean shutdowns.
+- Extended `IrrigationResult` model on node to include more detailed information about the irrigation attempt. This provides better insights into the outcome of irrigation operations, including success/failure status and any relevant metrics.
 
 ### Fixed
 
 ### Removed
 
 ### Known issues
-
 
 ---
 

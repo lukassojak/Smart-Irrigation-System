@@ -19,13 +19,30 @@ class IrrigationOutcome(str, Enum):
 class IrrigationRecordInput(BaseModel):
     """Input model for a single irrigation record from the node."""
     circuit_id: int = Field(..., description="Circuit/zone ID")
-    start_time: datetime = Field(..., description="When irrigation started")
+    start_time: Optional[datetime] = Field(None, description="When irrigation started")
     outcome: str = Field(..., description="Outcome: success, failed, stopped, interrupted, skipped")
+    was_manual_run: Optional[bool] = Field(None, description="Whether irrigation was started manually")
+    success: Optional[bool] = Field(None, description="Whether the irrigation attempt was considered successful")
     completed_duration: Optional[int] = Field(None, description="Actual duration in seconds")
     target_duration: Optional[int] = Field(None, description="Target duration in seconds")
     actual_water_amount: Optional[float] = Field(None, description="Actual water used in liters")
     target_water_amount: Optional[float] = Field(None, description="Target water amount in liters")
     reason: Optional[str] = Field(None, description="Reason if outcome is interrupted, skipped, or failed")
+    # Extended fields
+    base_water_amount: Optional[float] = Field(None, description="Base water amount before corrections (liters)")
+    standard_conditions_solar: Optional[float] = Field(None, description="Standard conditions: solar_total")
+    standard_conditions_rain: Optional[float] = Field(None, description="Standard conditions: rain_mm")
+    standard_conditions_temp: Optional[float] = Field(None, description="Standard conditions: temperature_celsius")
+    actual_solar: Optional[float] = Field(None, description="Actual solar value used by node")
+    actual_rain: Optional[float] = Field(None, description="Actual rain value used by node")
+    actual_temp: Optional[float] = Field(None, description="Actual temperature value used by node")
+    carry_over_applied: Optional[bool] = Field(False, description="Whether irrigation was carried over to next day")
+    # even-area support
+    even_area_mode: Optional[bool] = Field(None, description="Whether this circuit uses even-area (mm) mode")
+    dynamic_interval_enabled: Optional[bool] = Field(None, description="Whether dynamic interval logic is enabled")
+    irrigation_volume_threshold_percent: Optional[int] = Field(None, description="Threshold percent for carry-over logic")
+    target_mm: Optional[float] = Field(None, description="Target in mm when even_area_mode is true")
+    actual_mm: Optional[float] = Field(None, description="Actual delivered mm when even_area_mode is true")
 
 
 class IrrigationHistoryUploadRequest(BaseModel):
@@ -47,12 +64,27 @@ class IrrigationHistoryRecord(BaseModel):
     circuit_id: int
     outcome: IrrigationOutcome
     zone_deleted: bool
-    start_time: datetime
+    start_time: Optional[datetime]
+    was_manual_run: Optional[bool]
+    success: Optional[bool]
     target_duration: Optional[int]
     completed_duration: Optional[int]
     target_water_amount: Optional[float]
     actual_water_amount: Optional[float]
     reason: Optional[str]
+    base_water_amount: Optional[float]
+    standard_conditions_solar: Optional[float]
+    standard_conditions_rain: Optional[float]
+    standard_conditions_temp: Optional[float]
+    actual_solar: Optional[float]
+    actual_rain: Optional[float]
+    actual_temp: Optional[float]
+    carry_over_applied: Optional[bool]
+    even_area_mode: Optional[bool]
+    dynamic_interval_enabled: Optional[bool]
+    irrigation_volume_threshold_percent: Optional[int]
+    target_mm: Optional[float]
+    actual_mm: Optional[float]
 
 class IrrigationHistoryReadResponse(BaseModel):
     """Response model for reading irrigation history records."""

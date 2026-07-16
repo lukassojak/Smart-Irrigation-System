@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List
 
 from sqlmodel import Session, select
@@ -42,7 +43,14 @@ class IrrigationHistoryRepository:
 
         return self.session.exec(statement).all()
 
-    def get_by_unique(self, node_id: int, circuit_id: int, start_time) -> Optional[IrrigationHistory]:
+    def get_by_unique(
+        self,
+        node_id: int,
+        circuit_id: int,
+        start_time: datetime | None,
+    ) -> Optional[IrrigationHistory]:
+        if start_time is None:
+            return None
         statement = (
             select(IrrigationHistory)
             .where(
