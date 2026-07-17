@@ -19,6 +19,7 @@ import RuntimeNodesPage from "./modules/runtime/pages/RuntimeNodesPage"
 import RuntimeNodeDetailPage from "./modules/runtime/pages/RuntimeNodeDetailPage"
 import StatisticsPage from "./modules/runtime/pages/StatisticsPage"
 import IrrigationHistoryPage from "./modules/history/pages/IrrigationHistoryPage"
+import IrrigationRecordDetailPage from "./modules/history/pages/IrrigationRecordDetailPage"
 import HomePage from "./HomePage"
 
 const router = createBrowserRouter([
@@ -124,6 +125,10 @@ const router = createBrowserRouter([
             {
                 path: "irrigation-history",
                 element: <IrrigationHistoryPage />
+            },
+            {
+                path: "irrigation-history/:nodeId/:circuitId/:startTime",
+                element: <IrrigationRecordDetailPage />,
             },
 
             {

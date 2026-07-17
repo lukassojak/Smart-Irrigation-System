@@ -9,6 +9,7 @@ import {
     useBreakpointValue,
 } from "@chakra-ui/react"
 import { Droplet, Clock, AlertCircle, MapPinned } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 function getOutcomeMeta(outcome) {
     switch (outcome) {
@@ -128,6 +129,7 @@ function getDateKey(isoString) {
 
 export default function HistoryRecordsTable({ records = [], nodes = [] }) {
     const isMobile = useBreakpointValue({ base: true, md: false })
+    const navigate = useNavigate()
 
     const groupedRecords = records.reduce((acc, record) => {
         const key = getDateKey(record.start_time)
@@ -203,8 +205,15 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                             const waterUsed = formatWater(record.actual_water_amount)
                             const zoneName = getZoneName(record, nodes)
 
+                            const onOpenRecord = () => {
+                                const start = encodeURIComponent(record.start_time || "")
+                                navigate(`/irrigation-history/${record.node_id}/${record.circuit_id}/${start}`)
+                            }
+
                             return (
                                 <Box
+                                    as="button"
+                                    onClick={onOpenRecord}
                                     key={`${record.node_id}-${record.circuit_id}-${record.start_time}-${idx}`}
                                     position="relative"
                                     overflow="hidden"

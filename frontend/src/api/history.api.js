@@ -37,3 +37,11 @@ export function fetchCircuitHistory(nodeId, circuitId, limit = 100) {
 export function deleteAllHistory() {
     return http.delete(`/history/irrigation-history/records`)
 }
+
+export async function fetchRecordByKey(nodeId, circuitId, startTimeIso) {
+    // Attempt to fetch recent records for the circuit and find exact start_time match.
+    const resp = await fetchCircuitHistory(nodeId, circuitId, 200)
+    const records = resp.data?.records || []
+    const match = records.find(r => r.start_time === startTimeIso || (r.start_time && encodeURIComponent(r.start_time) === encodeURIComponent(startTimeIso)))
+    return { data: match || null }
+}
