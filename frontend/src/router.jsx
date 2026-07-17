@@ -130,6 +130,10 @@ const router = createBrowserRouter([
                 path: "irrigation-history/:nodeId/:circuitId/:startTime",
                 element: <IrrigationRecordDetailPage />,
             },
+            {
+                path: "irrigation-history/:recordId",
+                element: <IrrigationRecordDetailPage />,
+            },
 
             {
                 path: "weather",

@@ -10,6 +10,7 @@ from smart_irrigation_system.server.history.schemas.irrigation_history import (
     IrrigationHistoryUploadRequest,
     IrrigationHistoryUploadResponse,
     IrrigationHistoryReadResponse,
+    IrrigationHistoryRecord,
 )
 
 router = APIRouter()
@@ -97,6 +98,47 @@ def get_records(
             status_code=500,
             detail=f"Failed to retrieve history: {str(e)}"
         )
+
+
+@router.get(
+    "/record/{record_id}",
+    summary="Get a single irrigation history record",
+    status_code=200,
+    response_model=IrrigationHistoryRecord,
+)
+def get_record(
+    record_id: int,
+    session: Session = Depends(get_session),
+) -> IrrigationHistoryRecord:
+    try:
+        service = IrrigationHistoryService(session)
+        rec = service.get_record_by_id(record_id=record_id)
+        if not rec:
+            raise HTTPException(status_code=404, detail="Record not found")
+        return rec
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch record: {str(e)}")
+
+
+@router.delete(
+    "/record/{record_id}",
+    summary="Delete a single irrigation history record",
+    status_code=200,
+)
+def delete_record(
+    record_id: int,
+    session: Session = Depends(get_session),
+) -> dict:
+    try:
+        service = IrrigationHistoryService(session)
+        deleted = service.delete_record_by_id(record_id=record_id)
+        return {"deleted": deleted}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete record: {str(e)}")
 
 
 @router.delete(

@@ -1,47 +1,39 @@
 import http from "./http"
 
-export function fetchHistoryRecords(nodeId, circuitId, limit = 100, includeDeleted = false, outcome = null) {
-    const params = new URLSearchParams()
-    if (nodeId !== null && nodeId !== undefined) {
-        params.append("node_id", nodeId)
-    }
-    if (circuitId !== null && circuitId !== undefined) {
-        params.append("circuit_id", circuitId)
-    }
-    if (limit !== null && limit !== undefined) {
-        params.append("limit", limit)
-    }
-    // include_deleted_zones is expected by the API as boolean string
-    if (includeDeleted !== null && includeDeleted !== undefined) {
-        params.append("include_deleted_zones", String(Boolean(includeDeleted)))
-    }
-    if (outcome !== null && outcome !== undefined && outcome !== "all") {
-        params.append("outcome", outcome)
-    }
-
-    return http.get(`/history/irrigation-history/records?${params.toString()}`)
+export async function fetchHistoryRecords(params = {}) {
+    return http.get("/history/irrigation-history/records", { params })
 }
 
-export function fetchAllHistoryRecords(limit = 100, includeDeleted = false, outcome = null) {
-    return fetchHistoryRecords(undefined, undefined, limit, includeDeleted, outcome)
+export async function fetchAllHistoryRecords() {
+    return http.get("/history/irrigation-history/records", { params: { limit: 1000 } })
 }
 
-export function fetchNodeHistory(nodeId, limit = 100, includeDeleted = false, outcome = null) {
-    return fetchHistoryRecords(nodeId, undefined, limit, includeDeleted, outcome)
+export async function fetchNodeHistory(nodeId, params = {}) {
+    return http.get(`/history/irrigation-history/records`, {
+        params: {
+            node_id: nodeId,
+            ...params,
+        },
+    })
 }
 
-export function fetchCircuitHistory(nodeId, circuitId, limit = 100) {
-    return http.get(`/history/irrigation-history/records?node_id=${nodeId}&circuit_id=${circuitId}&limit=${limit}`)
+export async function fetchCircuitHistory(circuitId, params = {}) {
+    return http.get(`/history/irrigation-history/records`, {
+        params: {
+            circuit_id: circuitId,
+            ...params,
+        },
+    })
 }
 
-export function deleteAllHistory() {
-    return http.delete(`/history/irrigation-history/records`)
+export async function fetchRecordById(recordId) {
+    return http.get(`/history/irrigation-history/record/${recordId}`)
 }
 
-export async function fetchRecordByKey(nodeId, circuitId, startTimeIso) {
-    // Attempt to fetch recent records for the circuit and find exact start_time match.
-    const resp = await fetchCircuitHistory(nodeId, circuitId, 200)
-    const records = resp.data?.records || []
-    const match = records.find(r => r.start_time === startTimeIso || (r.start_time && encodeURIComponent(r.start_time) === encodeURIComponent(startTimeIso)))
-    return { data: match || null }
+export async function deleteRecordById(recordId) {
+    return http.delete(`/history/irrigation-history/record/${recordId}`)
+}
+
+export async function deleteAllHistory() {
+    return http.delete("/history/irrigation-history/records")
 }

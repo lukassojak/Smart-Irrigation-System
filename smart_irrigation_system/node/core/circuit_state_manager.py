@@ -408,6 +408,16 @@ class CircuitStateManager():
         except Exception as e:
             self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit_id}: {e}")
 
+        # Sync record to server if sync manager is available
+        if self.history_sync:
+            try:
+                record = interrupted_result.to_dict()
+                self.history_sync.add_record_to_queue(record)
+                # Try to sync immediately (non-blocking)
+                self.history_sync.sync_to_server(blocking=False)
+            except Exception as e:
+                self.logger.error(f"Failed to queue irrigation result for sync: {e}")
+
 
     # =========================================================================
     # Public API

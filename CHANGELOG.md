@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `IrrigationHistoryPage.jsx` to use the new `total_records` and `returned_records` fields from the API response for displaying the total number of matching records and the number of records returned in the current view. This improves the accuracy of the statistics displayed to the user.
 - Changed `CircuitStateManager` to update `last_decision` and `last_irrigation` timestamps when irrigation starts, ensuring it accurately reflects the most recent irrigation activity and decision-making time. This change improves the reliability of the runtime state information, especially on interrupted or unclean shutdowns.
 - Extended `IrrigationResult` model on node to include more detailed information about the irrigation attempt. This provides better insights into the outcome of irrigation operations, including success/failure status and any relevant metrics.
+- Frontend irrigation history detail flow now uses `record_id` routes (`/irrigation-history/:recordId`) and API calls for direct fetch/delete of a single record.
+- Refactored `IrrigationRecordDetailPage` to richer glass layout components, added delete action with confirmation dialog, and replaced per-factor gauges with unified `WaterAmountGauge` visualization.
+- `IrrigationHistoryReadResponse` record schema was aligned with nullable DB history values (optional fields default to `None`) and extended with `zone_name` for detail/header display.
+- History service/repository response mapping was updated to include `target_mm`/`actual_mm`, zone name enrichment, and proper aggregate payload construction to satisfy API response validation.
+- History backend now supports single-record endpoints `GET /history/irrigation-history/record/{record_id}` and `DELETE /history/irrigation-history/record/{record_id}`.
+- Minor UX text polish in runtime pages (manual control note, runtime zones section description) and history cards interaction polish.
+- Dynamic-interval skipped result creation in node executor now passes explicit actual/standard weather condition inputs to result factory.
+- Interrupted irrigation records are now also queued and synced to server history from `CircuitStateManager` when history sync manager is available.
 
 ### Fixed
 

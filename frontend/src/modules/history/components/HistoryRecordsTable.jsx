@@ -38,8 +38,8 @@ function getOutcomeMeta(outcome) {
             return {
                 label: "Interrupted",
                 palette: "yellow",
-                accent: "linear-gradient(180deg, rgba(251,182,206,0.95) 0%, rgba(245,120,150,0.85) 100%)",
-                cardBg: "rgba(251,182,206,0.08)",
+                accent: "linear-gradient(180deg, rgba(237,137,54,0.95) 0%, rgba(217,119,6,0.85) 100%)",
+                cardBg: "rgba(237,137,54,0.08)",
             }
         case "skipped":
             return {
@@ -207,13 +207,14 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
 
                             const onOpenRecord = () => {
                                 const start = encodeURIComponent(record.start_time || "")
-                                navigate(`/irrigation-history/${record.node_id}/${record.circuit_id}/${start}`)
+                                navigate(`/irrigation-history/${record.id}`)
                             }
 
                             return (
                                 <Box
                                     as="button"
                                     onClick={onOpenRecord}
+                                    cursor="pointer"
                                     key={`${record.node_id}-${record.circuit_id}-${record.start_time}-${idx}`}
                                     position="relative"
                                     overflow="hidden"
@@ -366,11 +367,9 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                                                     <Text fontSize="xs" color="gray.500" mb={1}>
                                                         Water used
                                                     </Text>
-                                                    <HStack spacing={1.5} align="center">
-                                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                                            {waterUsed}
-                                                        </Text>
-                                                    </HStack>
+                                                    <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                        {waterUsed}
+                                                    </Text>
                                                 </Box>
 
                                                 <Box

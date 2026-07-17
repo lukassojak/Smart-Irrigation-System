@@ -151,8 +151,8 @@ class IrrigationExecutor:
                             self.logger.info(f"Circuit ID {circuit_id} skipped by dynamic interval logic: {reason}")
                             skipped_result = result_factory.create_skipped_due_to_dynamic_interval(
                                 zone_config=circuit.zone_config,
-                                global_config=global_config,
-                                global_conditions=current_conditions,
+                                actual_conditions=current_conditions,
+                                standard_conditions=global_config.standard_conditions,
                                 start_time=time_utils.now(),
                                 target_duration=0,
                                 target_water_amount=target_volume,

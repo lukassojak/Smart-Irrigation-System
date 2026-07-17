@@ -335,7 +335,7 @@ export default function ManualControlPage() {
                                 </Button>
 
                                 <Text fontSize="xs" color="gray.500">
-                                    Manual irrigation overrides scheduled automation.
+                                    Manual irrigation overrides scheduled automation. The zone will be skipped by automation for today after the manual irrigation completes.
                                 </Text>
 
                             </VStack>

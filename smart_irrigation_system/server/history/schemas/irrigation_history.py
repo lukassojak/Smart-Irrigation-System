@@ -64,27 +64,28 @@ class IrrigationHistoryRecord(BaseModel):
     circuit_id: int
     outcome: IrrigationOutcome
     zone_deleted: bool
-    start_time: Optional[datetime]
-    was_manual_run: Optional[bool]
-    success: Optional[bool]
-    target_duration: Optional[int]
-    completed_duration: Optional[int]
-    target_water_amount: Optional[float]
-    actual_water_amount: Optional[float]
-    reason: Optional[str]
-    base_water_amount: Optional[float]
-    standard_conditions_solar: Optional[float]
-    standard_conditions_rain: Optional[float]
-    standard_conditions_temp: Optional[float]
-    actual_solar: Optional[float]
-    actual_rain: Optional[float]
-    actual_temp: Optional[float]
-    carry_over_applied: Optional[bool]
-    even_area_mode: Optional[bool]
-    dynamic_interval_enabled: Optional[bool]
-    irrigation_volume_threshold_percent: Optional[int]
-    target_mm: Optional[float]
-    actual_mm: Optional[float]
+    start_time: Optional[datetime] = None
+    was_manual_run: Optional[bool] = None
+    success: Optional[bool] = None
+    target_duration: Optional[int] = None
+    completed_duration: Optional[int] = None
+    target_water_amount: Optional[float] = None
+    actual_water_amount: Optional[float] = None
+    reason: Optional[str] = None
+    base_water_amount: Optional[float] = None
+    standard_conditions_solar: Optional[float] = None
+    standard_conditions_rain: Optional[float] = None
+    standard_conditions_temp: Optional[float] = None
+    actual_solar: Optional[float] = None
+    actual_rain: Optional[float] = None
+    actual_temp: Optional[float] = None
+    carry_over_applied: Optional[bool] = None
+    even_area_mode: Optional[bool] = None
+    dynamic_interval_enabled: Optional[bool] = None
+    irrigation_volume_threshold_percent: Optional[int] = None
+    target_mm: Optional[float] = None
+    actual_mm: Optional[float] = None
+    zone_name: Optional[str] = None
 
 class IrrigationHistoryReadResponse(BaseModel):
     """Response model for reading irrigation history records."""
