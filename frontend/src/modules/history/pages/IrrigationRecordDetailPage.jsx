@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 
 import { deleteRecordById, fetchRecordById } from "../../../api/history.api"
+import { fetchZoneById } from "../../../api/nodes.api"
 
 import {
     ControlActionDialogViewport,
@@ -47,7 +48,6 @@ import DashboardPageSectionStack from "../../../components/layout/DashboardPageS
 import DataUnavailableWarning from "../../../components/ui/DataUnavailableWarning"
 import { HeaderActionDanger, HeaderAction } from "../../../components/ui/ActionButtons"
 import WaterAmountGauge from "../components/WaterAmountGauge"
-
 
 function safeDiv(a, b) {
     if (a == null || b == null) return null
@@ -297,6 +297,53 @@ function InfoChip({ icon: Icon, label, value }) {
     )
 }
 
+function PlantVolumeCard({ plantName, baseVolume, targetVolume, actualVolume }) {
+    return (
+        <Box
+            borderRadius="xl"
+            p={5}
+            bg="rgba(255,255,255,0.95)"
+            border="1px solid rgba(56,178,172,0.10)"
+            boxShadow="0 10px 24px rgba(15,23,42,0.04)"
+        >
+            <Stack gap={4}>
+                <Text fontSize="md" fontWeight="700" color="gray.800">
+                    {plantName || "Unnamed plant"}
+                </Text>
+
+                <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
+                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
+                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                            Base volume
+                        </Text>
+                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
+                            {baseVolume != null ? `${formatNumber(baseVolume)} L` : "-"}
+                        </Text>
+                    </Box>
+
+                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
+                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                            Target volume
+                        </Text>
+                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
+                            {targetVolume != null ? `${formatNumber(targetVolume)} L` : "-"}
+                        </Text>
+                    </Box>
+
+                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
+                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                            Actual volume
+                        </Text>
+                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
+                            {actualVolume != null ? `${formatNumber(actualVolume)} L` : "-"}
+                        </Text>
+                    </Box>
+                </SimpleGrid>
+            </Stack>
+        </Box>
+    )
+}
+
 /* CorrectionGauge removed; replaced by WaterAmountGauge component. */
 
 export default function IrrigationRecordDetailPage() {
@@ -306,6 +353,9 @@ export default function IrrigationRecordDetailPage() {
     const [record, setRecord] = React.useState(null)
     const [loading, setLoading] = React.useState(true)
     const [error, setError] = React.useState(null)
+    const [zoneConfig, setZoneConfig] = React.useState(null)
+    const [zoneConfigLoading, setZoneConfigLoading] = React.useState(false)
+    const [zoneConfigError, setZoneConfigError] = React.useState(null)
 
     const handleDeleteRecord = React.useCallback(async () => {
         if (!record) {
@@ -360,6 +410,36 @@ export default function IrrigationRecordDetailPage() {
         return () => { mounted = false }
     }, [recordId])
 
+    React.useEffect(() => {
+        if (!record || record.even_area_mode || !record.node_id || !record.circuit_id) {
+            setZoneConfig(null)
+            setZoneConfigError(null)
+            setZoneConfigLoading(false)
+            return
+        }
+
+        let mounted = true
+        async function loadZoneConfig() {
+            setZoneConfigLoading(true)
+            setZoneConfigError(null)
+
+            try {
+                const resp = await fetchZoneById(record.node_id, record.circuit_id)
+                if (!mounted) return
+                setZoneConfig(resp.data)
+            } catch (err) {
+                if (!mounted) return
+                setZoneConfigError(err.message || String(err))
+                setZoneConfig(null)
+            } finally {
+                if (mounted) setZoneConfigLoading(false)
+            }
+        }
+
+        loadZoneConfig()
+        return () => { mounted = false }
+    }, [record?.node_id, record?.circuit_id, record?.even_area_mode])
+
     const computed = useMemo(() => {
         if (!record) return {}
         const solar = computeCorrection(record.base_water_amount, record.standard_conditions_solar, record.actual_solar, "solar")
@@ -373,6 +453,43 @@ export default function IrrigationRecordDetailPage() {
 
         return { solar, rain, temp, carryOverVolume }
     }, [record])
+
+    const perPlantVolumes = React.useMemo(() => {
+        if (!record || record.even_area_mode || !zoneConfig) return []
+
+        const plants = zoneConfig?.emitters_configuration?.plants || []
+        if (!plants.length) return []
+
+        const getEmitterFlow = (emitter) => {
+            if (!emitter) return 0
+            const flowRate = Number(emitter.flow_rate_lph || 0)
+            if (emitter.type === "soaker_hose") {
+                return flowRate
+            }
+            return flowRate * Number(emitter.count || 0)
+        }
+
+        const totalPlantFlow = plants.reduce((sum, plant) => {
+            const plantFlow = (plant.emitters || []).reduce((plantSum, emitter) => plantSum + getEmitterFlow(emitter), 0)
+            return sum + plantFlow
+        }, 0)
+
+        const baseTotal = record.base_water_amount ?? zoneConfig?.irrigation_configuration?.base_target_volume_liters ?? null
+        const targetTotal = record.target_water_amount ?? baseTotal
+        const actualTotal = record.actual_water_amount ?? null
+
+        return plants.map((plant, index) => {
+            const plantFlow = (plant.emitters || []).reduce((sum, emitter) => sum + getEmitterFlow(emitter), 0)
+            const share = totalPlantFlow > 0 ? plantFlow / totalPlantFlow : 0
+
+            return {
+                plantName: plant.name || `Plant #${index + 1}`,
+                baseVolume: baseTotal != null ? baseTotal * share : null,
+                targetVolume: targetTotal != null ? targetTotal * share : null,
+                actualVolume: actualTotal != null ? actualTotal * share : null,
+            }
+        })
+    }, [record, zoneConfig])
 
     if (loading) {
         return (
@@ -609,7 +726,7 @@ export default function IrrigationRecordDetailPage() {
                             <MetricConfigCard
                                 label="Dynamic interval"
                                 value={record.dynamic_interval_enabled ? "Enabled" : "Disabled"}
-                                hint={record.irrigation_volume_threshold_percent != null ? `Threshold: ${record.irrigation_volume_threshold_percent}%` : "No threshold reported."}
+                                hint={record.irrigation_volume_threshold_percent != null && record.dynamic_interval_enabled ? `Threshold: ${record.irrigation_volume_threshold_percent}%` : ""}
                             />
                             <MetricConfigCard
                                 label="Base amount"
@@ -674,6 +791,40 @@ export default function IrrigationRecordDetailPage() {
                             </Box>
                         </Stack>
                     </GlassPanelSection>
+
+                    {!record.even_area_mode && (
+                        <GlassPanelSection title="Per-plant volumes">
+                            {zoneConfigLoading ? (
+                                <Text color="gray.600" fontSize="sm">
+                                    Loading plant allocation data...
+                                </Text>
+                            ) : zoneConfigError ? (
+                                <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)">
+                                    <Text color="gray.600" fontSize="sm" textAlign="center">
+                                        Per-plant allocation data is currently unavailable for this record.
+                                    </Text>
+                                </Box>
+                            ) : perPlantVolumes.length === 0 ? (
+                                <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)">
+                                    <Text color="gray.600" fontSize="sm" textAlign="center">
+                                        No plant allocation data is available for this zone.
+                                    </Text>
+                                </Box>
+                            ) : (
+                                <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
+                                    {perPlantVolumes.map((plantVolume, index) => (
+                                        <PlantVolumeCard
+                                            key={`${plantVolume.plantName}-${index}`}
+                                            plantName={plantVolume.plantName}
+                                            baseVolume={plantVolume.baseVolume}
+                                            targetVolume={plantVolume.targetVolume}
+                                            actualVolume={plantVolume.actualVolume}
+                                        />
+                                    ))}
+                                </SimpleGrid>
+                            )}
+                        </GlassPanelSection>
+                    )}
                 </DashboardPageSectionStack >
             </PageContainer >
         </>

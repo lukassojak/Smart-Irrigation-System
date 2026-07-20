@@ -56,21 +56,13 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
 
                     </HStack>
                     <HStack gap={4}>
-                        {isStale ? (
+                        {isStale && (
                             <Badge
                                 size="sm"
                                 colorPalette={taskState?.statusColorPalette ?? "gray"}
                                 variant="subtle"
                             >
                                 {taskState?.statusLabel ?? "Stopped"}
-                            </Badge>
-                        ) : (
-                            <Badge
-                                size="sm"
-                                colorPalette="blue"
-                                variant="subtle"
-                            >
-                                Irrigating
                             </Badge>
                         )}
 
