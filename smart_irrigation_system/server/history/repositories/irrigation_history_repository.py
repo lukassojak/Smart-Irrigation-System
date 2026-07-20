@@ -201,6 +201,34 @@ class IrrigationHistoryRepository:
         val = result[0] if isinstance(result, tuple) else result
         return float(val or 0.0)
 
+    def avg_correction(
+        self,
+        node_id: Optional[int] = None,
+        circuit_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        outcome: Optional[str] = None,
+    ) -> float:
+        correction_expr = 1 - (
+            IrrigationHistory.target_water_amount / func.nullif(IrrigationHistory.base_water_amount, 0)
+        )
+        statement = select(func.avg(correction_expr)).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        if outcome is not None:
+            statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        result = self.session.exec(statement).one()
+        val = result[0] if isinstance(result, tuple) else result
+        return float(val or 0.0)
+
     def create(self, record: IrrigationHistory) -> IrrigationHistory:
         self.session.add(record)
         self.session.flush()

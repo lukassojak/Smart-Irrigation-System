@@ -57,12 +57,19 @@ class IrrigationHistoryService:
             include_deleted_zones=include_deleted_zones,
             outcome=outcome,
         )
+        avg_correction = self.repository.avg_correction(
+            node_id=node_id,
+            circuit_id=circuit_id,
+            include_deleted_zones=include_deleted_zones,
+            outcome=outcome,
+        )
         return IrrigationHistoryReadResponse(
             records=records,
             total_records=total_records,
             returned_records=returned_records,
             success_rate=success_rate,
             total_water=total_water,
+            avg_correction=avg_correction,
         )
 
     def get_record(self, node_id: int, circuit_id: int, start_time: Optional[object] = None) -> Optional[IrrigationHistoryRecord]:

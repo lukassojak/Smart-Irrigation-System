@@ -148,62 +148,86 @@ def test_fetch_history_records(client, test_node, test_db):
     )
     session.add(zone)
     session.commit()
+    session.refresh(zone)
 
-    # Upload some records
-    payload = {
-        "node_id": test_node.id,
-        "records": [
-            {
-                "circuit_id": 1,
-                "start_time": "2024-04-30T10:00:00",
-                "outcome": "success",
-                "completed_duration": 300,
-                "target_duration": 300,
-                "actual_water_amount": 50.0,
-                "target_water_amount": 50.0,
-            },
-            {
-                "circuit_id": 1,
-                "start_time": "2024-04-30T11:00:00",
-                "outcome": "success",
-                "completed_duration": 250,
-                "target_duration": 300,
-                "actual_water_amount": 42.0,
-                "target_water_amount": 50.0,
-            },
-            {
-                "circuit_id": 2,
-                "start_time": "2024-04-30T12:00:00",
-                "outcome": "skipped",
-            },
+    session.add_all(
+        [
+            IrrigationHistory(
+                node_id=test_node.id,
+                circuit_id=zone.id,
+                zone_deleted=False,
+                start_time=datetime(2024, 4, 30, 10, 0, 0),
+                outcome="success",
+                success=True,
+                was_manual_run=False,
+                completed_duration=300,
+                target_duration=300,
+                actual_water_amount=50.0,
+                target_water_amount=50.0,
+                base_water_amount=50.0,
+                even_area_mode=True,
+                target_mm=5.0,
+                actual_mm=5.0,
+            ),
+            IrrigationHistory(
+                node_id=test_node.id,
+                circuit_id=zone.id,
+                zone_deleted=False,
+                start_time=datetime(2024, 4, 30, 11, 0, 0),
+                outcome="success",
+                success=True,
+                was_manual_run=False,
+                completed_duration=250,
+                target_duration=300,
+                actual_water_amount=42.0,
+                target_water_amount=50.0,
+                base_water_amount=100.0,
+                even_area_mode=True,
+                target_mm=5.0,
+                actual_mm=4.2,
+            ),
+            IrrigationHistory(
+                node_id=test_node.id,
+                circuit_id=2,
+                zone_deleted=False,
+                start_time=datetime(2024, 4, 30, 12, 0, 0),
+                outcome="skipped",
+                success=True,
+                was_manual_run=False,
+                actual_water_amount=None,
+                target_water_amount=50.0,
+                base_water_amount=None,
+                reason="Insufficient water",
+            ),
         ]
-    }
-    client.post("/api/v1/history/irrigation-history/upload", json=payload)
+    )
+    session.commit()
 
-    # Fetch all records
-    response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&limit=100")
+    # Fetch all records with a low limit to verify avg_correction ignores it.
+    response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&limit=1")
     assert response.status_code == 200
     data = response.json()
     assert data["total_records"] == 3
-    assert data["returned_records"] == 3
+    assert data["returned_records"] == 1
     assert data["success_rate"] == pytest.approx(1.0)
     assert data["total_water"] == pytest.approx(92.0)
+    assert data["avg_correction"] == pytest.approx(0.25)
     assert data["records"][0]["success"] is True
     assert data["records"][0]["carry_over_applied"] in (True, False)
 
-    even_area_record = next(record for record in data["records"] if record["start_time"] == "2024-04-30T10:00:00")
-    assert even_area_record["even_area_mode"] is True
-    assert even_area_record["target_mm"] == pytest.approx(5.0)
-    assert even_area_record["actual_mm"] == pytest.approx(5.0)
-
-    # Fetch circuit 1 records only
+    # Fetch circuit 1 records only.
     response = client.get(
-        f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&circuit_id=1&limit=100"
+        f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&circuit_id=1&limit=1"
     )
     assert response.status_code == 200
     data = response.json()
     assert data["total_records"] == 2
-    assert data["returned_records"] == 2
+    assert data["returned_records"] == 1
+    assert data["avg_correction"] == pytest.approx(0.25)
+    even_area_record = data["records"][0]
+    assert even_area_record["even_area_mode"] is True
+    assert even_area_record["target_mm"] == pytest.approx(5.0)
+    assert even_area_record["actual_mm"] == pytest.approx(4.2)
 
 
 def test_fetch_empty_history(client, test_node):
@@ -214,6 +238,7 @@ def test_fetch_empty_history(client, test_node):
     assert data["total_records"] == 0
     assert data["returned_records"] == 0
     assert data["records"] == []
+    assert data["avg_correction"] == pytest.approx(0.0)
 
 
 def test_delete_zone_marks_existing_history_as_deleted(test_db, test_node):

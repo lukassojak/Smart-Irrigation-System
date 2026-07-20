@@ -94,6 +94,7 @@ class IrrigationHistoryReadResponse(BaseModel):
     returned_records: int = Field(..., description="Number of records returned in this response")
     success_rate: float = Field(..., description="Fraction of total records that are successful")
     total_water: float = Field(..., description="Total actual water amount (liters) across all matching records")
+    avg_correction: float = Field(..., description="Average correction across all matching records, defined as 1 - (target_water_amount / base_water_amount)")
 
 
 class IrrigationHistoryReadRequest(BaseModel):
