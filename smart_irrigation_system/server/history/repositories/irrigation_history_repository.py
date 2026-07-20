@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 from sqlmodel import Session, select
 from sqlalchemy import func
@@ -7,6 +7,7 @@ from sqlalchemy import func
 from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory
 from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory as HistoryModel
 from smart_irrigation_system.server.configuration.models.zone import Zone
+from smart_irrigation_system.server.configuration.models.zone_lifecycle import ZoneLifecycle
 
 
 class IrrigationHistoryRepository:
@@ -90,6 +91,106 @@ class IrrigationHistoryRepository:
     def get_zone_name(self, circuit_id: int) -> Optional[str]:
         zone = self.session.exec(select(Zone).where(Zone.id == circuit_id)).first()
         return zone.name if zone else None
+
+    def upload_records(self, node_id: int, records: List[dict]) -> Tuple[int, int]:
+        uploaded_count = 0
+        skipped_count = 0
+        seen_keys = set()
+
+        for record in records:
+            payload = self._normalize_record_payload(record)
+            circuit_id = payload.get("circuit_id")
+            if circuit_id is None:
+                raise ValueError("Record is missing circuit_id")
+
+            start_time = payload.get("start_time")
+            record_key = (node_id, circuit_id, start_time)
+            if record_key in seen_keys:
+                skipped_count += 1
+                continue
+            seen_keys.add(record_key)
+
+            existing = self.get_by_unique(node_id=node_id, circuit_id=circuit_id, start_time=start_time)
+            if existing:
+                skipped_count += 1
+                continue
+
+            zone_deleted = self._is_zone_deleted(node_id=node_id, zone_id=circuit_id, start_time=start_time)
+            history_record = IrrigationHistory(
+                node_id=node_id,
+                circuit_id=circuit_id,
+                zone_deleted=zone_deleted,
+                start_time=start_time,
+                outcome=payload.get("outcome"),
+                success=payload.get("success"),
+                was_manual_run=payload.get("was_manual_run"),
+                completed_duration=payload.get("completed_duration"),
+                target_duration=payload.get("target_duration"),
+                actual_water_amount=payload.get("actual_water_amount"),
+                target_water_amount=payload.get("target_water_amount"),
+                base_water_amount=payload.get("base_water_amount"),
+                standard_conditions_solar=payload.get("standard_conditions_solar"),
+                standard_conditions_rain=payload.get("standard_conditions_rain"),
+                standard_conditions_temp=payload.get("standard_conditions_temp"),
+                actual_solar=payload.get("actual_solar"),
+                actual_rain=payload.get("actual_rain"),
+                actual_temp=payload.get("actual_temp"),
+                carry_over_applied=payload.get("carry_over_applied", False),
+                dynamic_interval_enabled=payload.get("dynamic_interval_enabled"),
+                irrigation_volume_threshold_percent=payload.get("irrigation_volume_threshold_percent"),
+                reason=payload.get("reason"),
+                even_area_mode=payload.get("even_area_mode"),
+                target_mm=payload.get("target_mm"),
+                actual_mm=payload.get("actual_mm"),
+            )
+            self.session.add(history_record)
+            uploaded_count += 1
+
+        self.session.commit()
+        return uploaded_count, skipped_count
+
+    def _normalize_record_payload(self, record: Any) -> Dict[str, Any]:
+        if isinstance(record, dict):
+            return dict(record)
+        if hasattr(record, "model_dump"):
+            return record.model_dump()
+        if hasattr(record, "dict"):
+            return record.dict()
+        raise TypeError(f"Unsupported record type: {type(record)!r}")
+
+    def _is_zone_deleted(self, node_id: int, zone_id: int, start_time: Optional[datetime]) -> bool:
+        if start_time is None:
+            return False
+
+        lifecycles = self.session.exec(
+            select(ZoneLifecycle).where(
+                ZoneLifecycle.node_id == node_id,
+                ZoneLifecycle.zone_id == zone_id,
+            )
+        ).all()
+
+        if not lifecycles:
+            return False
+
+        applicable_lifecycles = [
+            lifecycle for lifecycle in lifecycles
+            if lifecycle.created_at is not None and lifecycle.created_at <= start_time
+        ]
+        if not applicable_lifecycles:
+            return False
+
+        latest_lifecycle = max(applicable_lifecycles, key=lambda lifecycle: lifecycle.created_at)
+
+        if any(
+            lifecycle.created_at is not None and lifecycle.created_at > start_time
+            for lifecycle in lifecycles
+        ):
+            return True
+
+        return (
+            latest_lifecycle.deleted_at is not None
+            and latest_lifecycle.deleted_at <= start_time
+        )
 
     def _to_dict(self, row: Optional[HistoryModel]) -> Optional[Dict[str, Any]]:
         if row is None:
