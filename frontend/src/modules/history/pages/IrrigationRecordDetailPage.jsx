@@ -29,7 +29,6 @@ import {
     Thermometer,
     TimerReset,
     TriangleAlert,
-    Wind,
     WavesArrowDown,
 } from "lucide-react"
 
@@ -308,37 +307,61 @@ function PlantVolumeCard({ plantName, baseVolume, targetVolume, actualVolume }) 
         >
             <Stack gap={4}>
                 <Text fontSize="md" fontWeight="700" color="gray.800">
-                    {plantName || "Unnamed plant"}
+                    🌱 {plantName || "Unnamed plant"}
                 </Text>
 
-                <SimpleGrid columns={{ base: 1, md: 3 }} gap={3}>
-                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
-                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-                            Base volume
-                        </Text>
-                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
-                            {baseVolume != null ? `${formatNumber(baseVolume)} L` : "-"}
-                        </Text>
+                <Stack gap={1} fontSize="sm" color="gray.600" align="flex-start">
+                    <Box bg="rgba(56,178,172,0.06)" p={3} borderRadius="md" w="100%">
+                        <HStack gap={2} align="baseline">
+                            <Text>
+                                Base volume:
+                            </Text>
+                            <Text fontWeight="700" color="gray.700">{baseVolume != null ? `${formatNumber(baseVolume)} L` : "-"}</Text>
+                        </HStack>
                     </Box>
+                    <Box bg="rgba(56,178,172,0.06)" p={3} borderRadius="md" w="100%">
+                        <HStack gap={2} align="baseline">
+                            <Text>
+                                Target volume:
+                            </Text>
+                            <Text fontWeight="700" color="gray.700">{targetVolume != null ? `${formatNumber(targetVolume)} L` : "-"}</Text>
+                        </HStack>
+                    </Box>
+                    <Box bg="rgba(56,178,172,0.06)" p={3} borderRadius="md" w="100%">
+                        <HStack gap={2} align="baseline">
+                            <Text>
+                                Actual volume:
+                            </Text>
+                            <Text fontWeight="700" color="gray.700">{actualVolume != null ? `${formatNumber(actualVolume)} L` : "-"}</Text>
+                        </HStack>
+                    </Box>
+                </Stack>
+            </Stack>
+        </Box>
+    )
+}
 
-                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
-                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-                            Target volume
-                        </Text>
-                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
-                            {targetVolume != null ? `${formatNumber(targetVolume)} L` : "-"}
-                        </Text>
-                    </Box>
-
-                    <Box borderRadius="lg" bg="rgba(56,178,172,0.06)" p={3}>
-                        <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
-                            Actual volume
-                        </Text>
-                        <Text fontSize="lg" fontWeight="700" color="gray.800" mt={1}>
-                            {actualVolume != null ? `${formatNumber(actualVolume)} L` : "-"}
-                        </Text>
-                    </Box>
-                </SimpleGrid>
+function MmVolumeCard({ label, value, hint, accent = "rgba(56,178,172,0.08)" }) {
+    return (
+        <Box
+            borderRadius="xl"
+            p={4}
+            bg={accent}
+            border="1px solid rgba(56,178,172,0.10)"
+            boxShadow="0 10px 24px rgba(15,23,42,0.04)"
+        >
+            <Stack gap={1}>
+                <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="0.08em">
+                    {label}
+                </Text>
+                <Text fontSize="lg" fontWeight="700" color="gray.800" lineHeight="1.15">
+                    {value != null ? `${formatNumber(value)} mm` : "-"}
+                </Text>
+                {hint && (
+                    <Text fontSize="xs" color="gray.600">
+                        {hint}
+                    </Text>
+                )}
             </Stack>
         </Box>
     )
@@ -411,7 +434,7 @@ export default function IrrigationRecordDetailPage() {
     }, [recordId])
 
     React.useEffect(() => {
-        if (!record || record.even_area_mode || !record.node_id || !record.circuit_id) {
+        if (!record || !record.node_id || !record.circuit_id) {
             setZoneConfig(null)
             setZoneConfigError(null)
             setZoneConfigLoading(false)
@@ -438,7 +461,7 @@ export default function IrrigationRecordDetailPage() {
 
         loadZoneConfig()
         return () => { mounted = false }
-    }, [record?.node_id, record?.circuit_id, record?.even_area_mode])
+    }, [record?.node_id, record?.circuit_id])
 
     const computed = useMemo(() => {
         if (!record) return {}
@@ -489,6 +512,21 @@ export default function IrrigationRecordDetailPage() {
                 actualVolume: actualTotal != null ? actualTotal * share : null,
             }
         })
+    }, [record, zoneConfig])
+
+    const evenAreaMmVolumes = React.useMemo(() => {
+        if (!record || !record.even_area_mode || !zoneConfig) return null
+
+        const zoneArea = Number(zoneConfig?.irrigation_configuration?.zone_area_m2)
+        if (!Number.isFinite(zoneArea) || zoneArea <= 0) return null
+
+        return {
+            base: record.base_water_amount != null ? record.base_water_amount / zoneArea : null,
+            target: record.target_water_amount != null ? record.target_water_amount / zoneArea : null,
+            actual: record.actual_water_amount != null ? record.actual_water_amount / zoneArea : null,
+            area: zoneArea,
+            zoneTargetMm: zoneConfig?.irrigation_configuration?.target_mm ?? null,
+        }
     }, [record, zoneConfig])
 
     if (loading) {
@@ -707,7 +745,7 @@ export default function IrrigationRecordDetailPage() {
                                             icon={WavesArrowDown}
                                             label="Carry-over"
                                             value={record.carry_over_applied ? "Applied" : "Not applied"}
-                                            hint={record.dynamic_interval_enabled ? "Dynamic interval enabled." : "Standard interval flow."}
+                                            hint={record.carry_over_applied ? "Computed volume was postponed to the next irrigation cycle." : "The zone was irrigated normally."}
                                             accent="rgba(56,178,172,0.08)"
                                         />
                                     )}
@@ -811,7 +849,7 @@ export default function IrrigationRecordDetailPage() {
                                     </Text>
                                 </Box>
                             ) : (
-                                <SimpleGrid columns={{ base: 1, xl: 2 }} gap={4}>
+                                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
                                     {perPlantVolumes.map((plantVolume, index) => (
                                         <PlantVolumeCard
                                             key={`${plantVolume.plantName}-${index}`}
@@ -823,6 +861,60 @@ export default function IrrigationRecordDetailPage() {
                                     ))}
                                 </SimpleGrid>
                             )}
+                        </GlassPanelSection>
+                    )}
+
+                    {record.even_area_mode && evenAreaMmVolumes && (
+                        <GlassPanelSection title="Water depth (mm) coverage">
+                            <Box>
+                                <Stack gap={4}>
+                                    {zoneConfigLoading ? (
+                                        <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)">
+                                            <Text color="gray.600" fontSize="sm" textAlign="center">
+                                                Loading even-area visualization...
+                                            </Text>
+                                        </Box>
+                                    ) : zoneConfigError ? (
+                                        <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)">
+                                            <Text color="gray.600" fontSize="sm" textAlign="center">
+                                                Even-area visualization is currently unavailable.
+                                            </Text>
+                                        </Box>
+                                    ) : !evenAreaMmVolumes ? (
+                                        <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)">
+                                            <Text color="gray.600" fontSize="sm" textAlign="center">
+                                                No area data is available to calculate mm coverage for this record.
+                                            </Text>
+                                        </Box>
+                                    ) : (
+                                        <Stack gap={3}>
+                                            <Box>
+                                                <Text fontSize="sm" color="gray.600">
+                                                    Zone area: {formatNumber(evenAreaMmVolumes.area, 2)} m²
+                                                </Text>
+                                            </Box>
+
+                                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                                                <MmVolumeCard
+                                                    label="Base"
+                                                    value={evenAreaMmVolumes.base}
+                                                    hint="Reference water depth in standard conditions."
+                                                />
+                                                <MmVolumeCard
+                                                    label="Target"
+                                                    value={evenAreaMmVolumes.target}
+                                                    hint="Requested water depth for this cycle."
+                                                />
+                                                <MmVolumeCard
+                                                    label="Actual"
+                                                    value={evenAreaMmVolumes.actual}
+                                                    hint="Measured delivered water depth."
+                                                />
+                                            </SimpleGrid>
+                                        </Stack>
+                                    )}
+                                </Stack>
+                            </Box>
                         </GlassPanelSection>
                     )}
                 </DashboardPageSectionStack >

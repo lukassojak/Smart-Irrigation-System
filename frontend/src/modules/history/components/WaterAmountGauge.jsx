@@ -33,8 +33,8 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
             : null
     // Build markers and cluster them if too close to avoid overlap
     const markerList = []
-    if (basePos != null) markerList.push({ key: 'base', pos: basePos, label: 'Base', value: base, color: 'rgba(126, 126, 126, 0.44)' })
-    if (targetPos != null) markerList.push({ key: 'target', pos: targetPos, label: 'Target', value: target, color: 'rgba(49,151,149,0.95)' })
+    if (basePos != null) markerList.push({ key: 'base', pos: basePos, label: 'Base', value: base, color: 'rgba(126, 126, 126, 0.6)' })
+    if (targetPos != null) markerList.push({ key: 'target', pos: targetPos, label: 'Target', value: target, color: 'rgba(49,151,149,0.6)' })
     if (actualPos != null) markerList.push({ key: 'actual', pos: actualPos, label: 'Actual', value: actual, color: 'rgba(37, 139, 223, 0.95)' })
     if (carryOverThresholdPos != null && manualRun === false && dynamicEnabled === true)
         markerList.push({
@@ -42,7 +42,7 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
             pos: carryOverThresholdPos,
             label: 'Threshold',
             value: thresholdValue,
-            color: 'rgba(126, 126, 126, 0.44)'
+            color: 'rgba(237, 136, 54, 0.6)',
         })
 
     markerList.sort((a, b) => a.pos - b.pos)
@@ -138,7 +138,7 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
                                     top="calc(100% + 28px)"
                                     transform="translate(-50%, 0)"
                                     zIndex={5}
-                                    display="flex"
+                                    display={{ base: 'none', md: 'flex' }}
                                     gap={2}
                                     alignItems="center"
                                 >
@@ -154,9 +154,30 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
                     </Box>
                 </Stack>
 
-                <HStack gap={3} wrap="wrap" mt={14}>
-                    <Badge colorPalette="gray" variant="subtle">Target: {target != null ? `${formatNumber(target)} ${unit}` : "N/A"}</Badge>
-                    <Badge colorPalette="gray" variant="subtle">Actual: {actual != null ? `${formatNumber(actual)} ${unit}` : "N/A"}</Badge>
+                {/* Mobile legend - shown only on small screens */}
+                <Stack gap={3} display={{ base: 'flex', md: 'none' }}>
+                    <Text fontSize="xs" fontWeight="700" color="gray.600" textTransform="uppercase">Legend</Text>
+                    <Stack gap={2}>
+                        {markerList.map(m => (
+                            <HStack key={`legend-${m.key}`} gap={2} align="center">
+                                <Box w="14px" h="3px" borderRadius="full" bg={m.color} flexShrink={0} />
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="600" color="gray.800">{m.label}</Text>
+                                    <Text fontSize="xs" color="gray.600">{formatNumber(m.value)} {unit}</Text>
+                                </Box>
+                            </HStack>
+                        ))}
+                    </Stack>
+                </Stack>
+
+                <HStack gap={3} wrap="wrap" mt={{ base: 2, md: 14 }}>
+                    {/* Dont display on mobile viewport, as the legend is already shown above */}
+                    <Badge colorPalette="gray" variant="subtle" display={{ base: 'none', md: 'inline-flex' }}>
+                        Target: {target != null ? `${formatNumber(target)} ${unit}` : "N/A"}
+                    </Badge>
+                    <Badge colorPalette="gray" variant="subtle" display={{ base: 'none', md: 'inline-flex' }}>
+                        Actual: {actual != null ? `${formatNumber(actual)} ${unit}` : "N/A"}
+                    </Badge>
 
                     {correctionPercent != null && !manualRun && (
                         <Badge colorPalette={correctionPercent >= 0 ? "teal" : "orange"} variant="solid">
