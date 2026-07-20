@@ -6,7 +6,7 @@ function formatNumber(value, fractionDigits = 2) {
     return Number(value).toFixed(fractionDigits)
 }
 
-export default function WaterAmountGauge({ base = null, target = null, actual = null, unit = "L", manualRun = false }) {
+export default function WaterAmountGauge({ base = null, target = null, actual = null, thresholdPerc = null, unit = "L", manualRun = false, dynamicEnabled = false }) {
     // Determine scale max with 20% headroom (user request)
     const values = [base, target, actual].filter(v => v != null && !Number.isNaN(Number(v))).map(Number)
     const rawMax = values.length ? Math.max(...values) : 10
@@ -17,6 +17,7 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
     const basePos = pos(base)
     const targetPos = pos(target)
     const actualPos = pos(actual)
+    const carryOverThresholdPos = pos(thresholdPerc != null && base != null ? (Number(base) * (Number(thresholdPerc) / 100)) : null)
 
     // total correction: percent change from base -> target, e.g. 2L -> 6L === +200%
     let correctionPercent = null
@@ -26,11 +27,23 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
 
     const ticks = 11
 
+    const thresholdValue =
+        thresholdPerc != null && base != null
+            ? Number(base) * (Number(thresholdPerc) / 100)
+            : null
     // Build markers and cluster them if too close to avoid overlap
     const markerList = []
     if (basePos != null) markerList.push({ key: 'base', pos: basePos, label: 'Base', value: base, color: 'rgba(126, 126, 126, 0.44)' })
     if (targetPos != null) markerList.push({ key: 'target', pos: targetPos, label: 'Target', value: target, color: 'rgba(49,151,149,0.95)' })
     if (actualPos != null) markerList.push({ key: 'actual', pos: actualPos, label: 'Actual', value: actual, color: 'rgba(37, 139, 223, 0.95)' })
+    if (carryOverThresholdPos != null && manualRun === false && dynamicEnabled === true)
+        markerList.push({
+            key: 'threshold',
+            pos: carryOverThresholdPos,
+            label: 'Threshold',
+            value: thresholdValue,
+            color: 'rgba(126, 126, 126, 0.44)'
+        })
 
     markerList.sort((a, b) => a.pos - b.pos)
 
@@ -142,16 +155,13 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
                 </Stack>
 
                 <HStack gap={3} wrap="wrap" mt={14}>
-                    <Badge colorPalette="gray" variant="subtle">Base: {base != null ? `${formatNumber(base)} ${unit}` : "N/A"}</Badge>
                     <Badge colorPalette="gray" variant="subtle">Target: {target != null ? `${formatNumber(target)} ${unit}` : "N/A"}</Badge>
                     <Badge colorPalette="gray" variant="subtle">Actual: {actual != null ? `${formatNumber(actual)} ${unit}` : "N/A"}</Badge>
 
-                    {correctionPercent != null && !manualRun ? (
-                        <Badge colorPalette={correctionPercent >= 0 ? "teal" : "teal"} variant="solid">
+                    {correctionPercent != null && !manualRun && (
+                        <Badge colorPalette={correctionPercent >= 0 ? "teal" : "orange"} variant="solid">
                             Total correction: {correctionPercent >= 0 ? "+" : ""}{Math.round(correctionPercent)}%
                         </Badge>
-                    ) : (
-                        <Badge colorPalette="gray" variant="subtle">Total correction: N/A</Badge>
                     )}
                 </HStack>
             </Stack>

@@ -4,7 +4,7 @@ import {
     Text,
     HStack,
 } from "@chakra-ui/react"
-import { Activity, Droplet, Clock, CheckCircle } from "lucide-react"
+import { Activity, Droplet, WandSparkles, CheckCircle } from "lucide-react"
 
 function StatCard({ icon, title, value, helper, bg, border }) {
     return (
@@ -34,11 +34,14 @@ function StatCard({ icon, title, value, helper, bg, border }) {
     )
 }
 
-export default function HistoryStats({ serverStats, avgDuration = 0 }) {
+export default function HistoryStats({ serverStats }) {
     // serverStats is required by the new UI contract; do not fallback to local computation.
     const successRatePercent = Math.round((serverStats.success_rate ?? 0) * 100)
     const totalWaterUsed = serverStats.total_water ?? 0
     const totalRecordsValue = serverStats.total_records ?? 0
+    const avgCorrection = serverStats.avg_correction ?? 0
+    const avgCorrectionPercent = Math.round(avgCorrection * 100).toFixed(0)
+    const avgCorrectionFormatted = `${avgCorrectionPercent >= 0 ? "+" : ""}${avgCorrectionPercent}%`
     const recordsHelper = `${serverStats.returned_records ?? 0} visible`
 
     return (
@@ -62,10 +65,10 @@ export default function HistoryStats({ serverStats, avgDuration = 0 }) {
             />
 
             <StatCard
-                icon={<Clock size={18} color="rgb(237, 137, 54)" />}
-                title="Avg duration"
-                value={`${avgDuration}s`}
-                helper="across matching records"
+                icon={<WandSparkles size={18} color="rgb(237, 137, 54)" />}
+                title="Avg correction"
+                value={avgCorrectionFormatted}
+                helper="automatically adjusted water amount"
                 bg="rgba(237, 137, 54, 0.08)"
                 border="1px solid rgba(237, 137, 54, 0.18)"
             />

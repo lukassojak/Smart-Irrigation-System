@@ -108,6 +108,7 @@ export default function IrrigationHistoryPage() {
         returned_records: 0,
         success_rate: 0,
         total_water: 0,
+        avg_correction: 0,
     })
 
 
@@ -202,6 +203,7 @@ export default function IrrigationHistoryPage() {
                 returned_records: data.returned_records ?? records.length,
                 success_rate: data.success_rate ?? 0,
                 total_water: data.total_water ?? 0,
+                avg_correction: data.avg_correction ?? 0,
             })
             if (
                 recordLimit > 10 &&
@@ -428,7 +430,7 @@ export default function IrrigationHistoryPage() {
                         )}
 
                         <GlassPanelSection title="Summary">
-                            <HistoryStats serverStats={serverStats} avgDuration={0} />
+                            <HistoryStats serverStats={serverStats} />
                         </GlassPanelSection>
 
                         <GlassPanelSection title="Irrigation Records">

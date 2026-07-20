@@ -206,7 +206,7 @@ function MetricConditionCard({ icon: Icon, label, valueFrom, valueTo, unit, hint
                         <Text fontSize="lg" fontWeight="700" color={valueColor} lineHeight="1.15">
                             {valueFrom != null ? `${formatNumber(valueFrom)}` : "-"}
                         </Text>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="xs" color="gray.500">
                             {unit}
                         </Text>
                         <Text fontSize="lg" fontWeight="700" color={valueColor} lineHeight="1.15" mx={1}>
@@ -215,7 +215,7 @@ function MetricConditionCard({ icon: Icon, label, valueFrom, valueTo, unit, hint
                         <Text fontSize="lg" fontWeight="700" color={valueColor} lineHeight="1.15">
                             {valueTo != null ? `${formatNumber(valueTo)}` : "-"}
                         </Text>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize="xs" color="gray.500">
                             {unit}
                         </Text>
                     </HStack>
@@ -454,7 +454,7 @@ export default function IrrigationRecordDetailPage() {
                             <Flex direction={{ base: "column", lg: "row" }} gap={5} align="stretch">
                                 <Box flex="1" p={5} borderRadius="2xl" bg={outcomeMeta.accent} border="1px solid rgba(56,178,172,0.10)">
                                     <HStack justify="space-between" align="start" mb={4}>
-                                        <Stack gap={2}>
+                                        <Stack gap={4}>
                                             <HStack gap={2} flexWrap="wrap">
                                                 <Badge colorPalette={outcomeMeta.colorPalette} variant="subtle">
                                                     <OutcomeIcon size={14} style={{ marginRight: 6 }} />
@@ -462,11 +462,6 @@ export default function IrrigationRecordDetailPage() {
                                                 </Badge>
                                                 {record.zone_deleted && <Badge colorPalette="gray" variant="solid">Deleted zone</Badge>}
                                                 {record.was_manual_run && <Badge colorPalette="gray" variant="subtle">Manual run</Badge>}
-                                                {record.success != null && (
-                                                    <Badge colorPalette={record.success ? "green" : "red"} variant="subtle">
-                                                        {record.success ? "Successful" : "Unsuccessful"}
-                                                    </Badge>
-                                                )}
                                             </HStack>
 
                                             <Heading size="lg" color="gray.800" letterSpacing="-0.02em">
@@ -481,17 +476,14 @@ export default function IrrigationRecordDetailPage() {
                                             <>
                                                 {isDynamicSkip && (
                                                     <>
-                                                        <Separator mt={4} mb={2} />
+                                                        <Separator />
                                                         <Box>
                                                             <HStack gap={2} align="start">
                                                                 <Stack gap={1}>
                                                                     <Text fontWeight="700" color="gray.800">Skipped by dynamic interval</Text>
                                                                     <Text color="gray.700">
                                                                         The normal target water is not shown here because it has been moved into carry-over volume.
-                                                                        This helps explain why the cycle was not executed immediately.
-                                                                    </Text>
-                                                                    <Text fontSize="sm" color="gray.600">
-                                                                        Carry-over volume: <strong>{formatNumber(carryOverVolume)} L</strong>
+                                                                        The carried-over volume of <strong>{formatNumber(carryOverVolume)} L</strong> will be added to the next irrigation cycle.
                                                                     </Text>
                                                                 </Stack>
                                                             </HStack>
@@ -501,7 +493,7 @@ export default function IrrigationRecordDetailPage() {
 
                                                 {record.outcome === "stopped" && (
                                                     <>
-                                                        <Separator mt={4} mb={2} />
+                                                        <Separator />
                                                         <Box>
                                                             <HStack gap={2} align="start">
                                                                 <Stack gap={1}>
@@ -522,7 +514,7 @@ export default function IrrigationRecordDetailPage() {
 
                                                 {record.outcome === "interrupted" && (
                                                     <>
-                                                        <Separator mt={4} mb={2} />
+                                                        <Separator />
                                                         <Box>
                                                             <HStack gap={2} align="start">
                                                                 <Stack gap={1}>
@@ -548,7 +540,7 @@ export default function IrrigationRecordDetailPage() {
 
                                                 {record.outcome === "failed" && (
                                                     <>
-                                                        <Separator mt={4} mb={2} />
+                                                        <Separator />
                                                         <Box>
                                                             <HStack gap={2} align="start">
                                                                 <Stack gap={1}>
@@ -574,9 +566,9 @@ export default function IrrigationRecordDetailPage() {
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4} flex="1">
                                     <MetricCard
                                         icon={Droplets}
-                                        label="Water target"
+                                        label={!isDynamicSkip ? "Water target" : "Carry-over volume"}
                                         value={isDynamicSkip ? formatNumber(carryOverVolume) : `${formatNumber(record.target_water_amount)} L`}
-                                        hint={isDynamicSkip ? "Displayed as carry-over volume because the cycle was skipped by dynamic interval." : "Planned irrigation volume in liters."}
+                                        hint={isDynamicSkip ? "Will be added to the next irrigation cycle." : "Planned water volume for this irrigation cycle."}
                                         accent="rgba(56,178,172,0.08)"
                                     />
                                     <MetricCard
@@ -593,13 +585,15 @@ export default function IrrigationRecordDetailPage() {
                                         hint={record.target_duration != null ? `Target: ${record.target_duration} s` : "No target duration provided."}
                                         accent="rgba(56,178,172,0.08)"
                                     />
-                                    <MetricCard
-                                        icon={WavesArrowDown}
-                                        label="Carry-over"
-                                        value={record.carry_over_applied ? "Applied" : "Not applied"}
-                                        hint={record.dynamic_interval_enabled ? "Dynamic interval enabled." : "Standard interval flow."}
-                                        accent="rgba(56,178,172,0.08)"
-                                    />
+                                    {record.dynamic_interval_enabled && !record.was_manual_run && (
+                                        <MetricCard
+                                            icon={WavesArrowDown}
+                                            label="Carry-over"
+                                            value={record.carry_over_applied ? "Applied" : "Not applied"}
+                                            hint={record.dynamic_interval_enabled ? "Dynamic interval enabled." : "Standard interval flow."}
+                                            accent="rgba(56,178,172,0.08)"
+                                        />
+                                    )}
                                 </SimpleGrid>
                             </Flex>
                         </Stack>
@@ -627,32 +621,43 @@ export default function IrrigationRecordDetailPage() {
 
                     <GlassPanelSection title="Corrections & Conditions">
                         <Stack gap={4}>
-                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <MetricConditionCard
-                                    icon={SunMedium}
-                                    label="Solar"
-                                    valueFrom={record.standard_conditions_solar}
-                                    valueTo={record.actual_solar}
-                                    unit="W/m²/day"
-                                    hint="Baseline vs actual solar total."
-                                />
-                                <MetricConditionCard
-                                    icon={CloudRain}
-                                    label="Rain"
-                                    valueFrom={record.standard_conditions_rain}
-                                    valueTo={record.actual_rain}
-                                    unit="mm/day"
-                                    hint="Baseline vs actual rainfall."
-                                />
-                                <MetricConditionCard
-                                    icon={Thermometer}
-                                    label="Temperature"
-                                    valueFrom={record.standard_conditions_temp}
-                                    valueTo={record.actual_temp}
-                                    unit="°C avg"
-                                    hint="Baseline vs actual temperature."
-                                />
-                            </SimpleGrid>
+                            {record.standard_conditions_solar != null || record.actual_solar != null || record.standard_conditions_rain != null || record.actual_rain != null || record.standard_conditions_temp != null || record.actual_temp != null ? (
+                                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                                    <MetricConditionCard
+                                        icon={SunMedium}
+                                        label="Solar"
+                                        valueFrom={record.standard_conditions_solar}
+                                        valueTo={record.actual_solar}
+                                        unit="W/m²"
+                                        hint="Baseline vs actual solar total."
+                                    />
+                                    <MetricConditionCard
+                                        icon={CloudRain}
+                                        label="Rain"
+                                        valueFrom={record.standard_conditions_rain}
+                                        valueTo={record.actual_rain}
+                                        unit="mm"
+                                        hint="Baseline vs actual rainfall."
+                                    />
+                                    <MetricConditionCard
+                                        icon={Thermometer}
+                                        label="Temperature"
+                                        valueFrom={record.standard_conditions_temp}
+                                        valueTo={record.actual_temp}
+                                        unit="°C avg"
+                                        hint="Baseline vs actual temperature."
+                                    />
+                                </SimpleGrid>
+                            ) : (
+                                <Box p={4} borderRadius="lg" bg="rgba(255,255,255,0.6)" border="1px solid rgba(56,178,172,0.08)" align="center">
+                                    <Text
+                                        color="gray.600"
+                                        fontSize="sm"
+                                        textAlign="center"
+                                    >No condition data available for this record.
+                                    </Text>
+                                </Box>
+                            )}
 
                             <Separator />
 
@@ -661,14 +666,16 @@ export default function IrrigationRecordDetailPage() {
                                     base={record.base_water_amount}
                                     target={record.target_water_amount}
                                     actual={record.actual_water_amount}
+                                    thresholdPerc={record.irrigation_volume_threshold_percent}
                                     unit="L"
                                     manualRun={record.was_manual_run}
+                                    dynamicEnabled={record.dynamic_interval_enabled}
                                 />
                             </Box>
                         </Stack>
                     </GlassPanelSection>
-                </DashboardPageSectionStack>
-            </PageContainer>
+                </DashboardPageSectionStack >
+            </PageContainer >
         </>
     )
 }
