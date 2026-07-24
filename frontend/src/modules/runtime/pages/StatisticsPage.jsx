@@ -54,8 +54,8 @@ import {
 import StatisticsOverviewCard from "../components/StatisticsOverviewCard"
 
 const PIE_COLORS = ["rgba(56,161,105,0.85)", "rgba(217,119,6,0.85)", "rgba(113,128,150,0.85)", "rgba(217,119,6,0.85)", "rgba(229,62,62,0.85)"]
-{/* Define a lighter color palette for zones in the Zone Water Distribution chart, supporting up to 10 zones. If there are more than 10 zones, colors will repeat. */ }
-{/* The colors are chosen to be visually distinct but with a lighter tone and similar tones to avoid overhelming the chart. */ }
+// Define a lighter color palette for zones in the Zone Water Distribution chart, supporting up to 10 zones. If there are more than 10 zones, colors will repeat.
+// The colors are chosen to be visually distinct but with a lighter tone and similar tones to avoid overwhelming the chart.
 const ZONE_WATER_DISTRIBUTION_COLORS = [
     "rgba(56,161,105,0.6)", // Zone 1
     "rgba(105, 161, 56, 0.6)",  // Zone 2
