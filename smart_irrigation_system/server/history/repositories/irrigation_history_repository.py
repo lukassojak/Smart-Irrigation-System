@@ -13,8 +13,8 @@ from smart_irrigation_system.server.configuration.models.zone_lifecycle import Z
 class IrrigationHistoryRepository:
     """Repository responsible for CRUD operations on IrrigationHistory records.
 
-    This class intentionally does not commit transactions; callers manage
-    transaction boundaries (flush / commit) as done across the codebase.
+    Mutating methods in this repository currently commit transactions directly.
+    If external transaction control is required, refactor these methods to avoid committing.
     """
 
     def __init__(self, session: Session):
