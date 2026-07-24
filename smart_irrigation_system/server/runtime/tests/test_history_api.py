@@ -188,6 +188,37 @@ def test_fetch_history_records(client, test_node, test_db):
             ),
             IrrigationHistory(
                 node_id=test_node.id,
+                circuit_id=zone.id,
+                zone_deleted=False,
+                start_time=datetime(2024, 4, 30, 13, 0, 0),
+                outcome="success",
+                success=True,
+                was_manual_run=True,
+                completed_duration=120,
+                target_duration=300,
+                actual_water_amount=30.0,
+                target_water_amount=30.0,
+                base_water_amount=100.0,
+            ),
+            IrrigationHistory(
+                node_id=test_node.id,
+                circuit_id=zone.id,
+                zone_deleted=False,
+                start_time=datetime(2024, 4, 30, 14, 0, 0),
+                outcome="success",
+                success=True,
+                was_manual_run=False,
+                completed_duration=90,
+                target_duration=300,
+                actual_water_amount=20.0,
+                target_water_amount=20.0,
+                base_water_amount=0.0,
+                even_area_mode=True,
+                target_mm=5.0,
+                actual_mm=4.0,
+            ),
+            IrrigationHistory(
+                node_id=test_node.id,
                 circuit_id=2,
                 zone_deleted=False,
                 start_time=datetime(2024, 4, 30, 12, 0, 0),
@@ -203,15 +234,15 @@ def test_fetch_history_records(client, test_node, test_db):
     )
     session.commit()
 
-    # Fetch all records with a low limit to verify avg_correction ignores it.
+    # Fetch all records with a low limit to verify avg_correction ignores manual and invalid base values.
     response = client.get(f"/api/v1/history/irrigation-history/records?node_id={test_node.id}&limit=1")
     assert response.status_code == 200
     data = response.json()
-    assert data["total_records"] == 3
+    assert data["total_records"] == 5
     assert data["returned_records"] == 1
     assert data["success_rate"] == pytest.approx(1.0)
-    assert data["total_water"] == pytest.approx(92.0)
-    assert data["avg_correction"] == pytest.approx(0.25)
+    assert data["total_water"] == pytest.approx(142.0)
+    assert data["avg_correction"] == pytest.approx(-0.25)
     assert data["records"][0]["success"] is True
     assert data["records"][0]["carry_over_applied"] in (True, False)
 
@@ -221,13 +252,13 @@ def test_fetch_history_records(client, test_node, test_db):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["total_records"] == 2
+    assert data["total_records"] == 4
     assert data["returned_records"] == 1
-    assert data["avg_correction"] == pytest.approx(0.25)
+    assert data["avg_correction"] == pytest.approx(-0.25)
     even_area_record = data["records"][0]
     assert even_area_record["even_area_mode"] is True
     assert even_area_record["target_mm"] == pytest.approx(5.0)
-    assert even_area_record["actual_mm"] == pytest.approx(4.2)
+    assert even_area_record["actual_mm"] == pytest.approx(4.0)
 
 
 def test_fetch_empty_history(client, test_node):

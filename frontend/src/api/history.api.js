@@ -4,16 +4,36 @@ export async function fetchHistoryRecords(params = {}) {
     return http.get("/history/irrigation-history/records", { params })
 }
 
-export async function fetchAllHistoryRecords() {
-    return http.get("/history/irrigation-history/records", { params: { limit: 1000 } })
+export async function fetchAllHistoryRecords(limit = 100, includeDeleted = false, outcome = null) {
+    const params = { limit }
+
+    if (includeDeleted) {
+        params.include_deleted_zones = true
+    }
+
+    if (outcome) {
+        params.outcome = outcome
+    }
+
+    return http.get("/history/irrigation-history/records", { params })
 }
 
-export async function fetchNodeHistory(nodeId, params = {}) {
+export async function fetchNodeHistory(nodeId, limit = 100, includeDeleted = false, outcome = null) {
+    const params = {
+        node_id: nodeId,
+        limit,
+    }
+
+    if (includeDeleted) {
+        params.include_deleted_zones = true
+    }
+
+    if (outcome) {
+        params.outcome = outcome
+    }
+
     return http.get(`/history/irrigation-history/records`, {
-        params: {
-            node_id: nodeId,
-            ...params,
-        },
+        params,
     })
 }
 

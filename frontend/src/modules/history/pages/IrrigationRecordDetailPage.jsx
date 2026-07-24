@@ -767,7 +767,7 @@ export default function IrrigationRecordDetailPage() {
                                 hint={record.irrigation_volume_threshold_percent != null && record.dynamic_interval_enabled ? `Threshold: ${record.irrigation_volume_threshold_percent}%` : ""}
                             />
                             <MetricConfigCard
-                                label="Base amount"
+                                label="Base volume"
                                 value={`${formatNumber(record.base_water_amount)} L`}
                                 hint="Uncorrected reference target."
                             />

@@ -74,7 +74,7 @@ export default function WaterAmountGauge({ base = null, target = null, actual = 
                         <Box
                             h="14px"
                             borderRadius="full"
-                            bg="linear-gradient(270deg, rgba(197,224,255,0.65) 0%, rgba(225,245,255,0.6) 50%, rgba(197,224,255,0.4) 100%)"
+                            bg="linear-gradient(270deg, rgba(197, 224, 255, 0.7) 0%, rgba(225, 245, 255, 0.55) 50%, rgba(197, 224, 255, 0.28) 100%)"
                             border="1px solid rgba(66,153,225,0.12)"
                         />
 

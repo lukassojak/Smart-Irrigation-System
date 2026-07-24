@@ -1,10 +1,47 @@
-import { Box, Heading, Text, Stack, HStack } from "@chakra-ui/react"
+import { Box, Heading, Text, Stack, HStack, Button, Spinner } from "@chakra-ui/react"
+
+function RangeFilterToggle({ rangeFilter }) {
+    if (!rangeFilter?.options?.length) {
+        return null
+    }
+
+    return (
+        <HStack
+            gap={1}
+            p={1}
+            borderRadius="full"
+            bg="rgba(255,255,255,0.72)"
+            border="1px solid rgba(56,178,172,0.16)"
+            boxShadow="0 10px 24px rgba(15,23,42,0.04)"
+        >
+            {rangeFilter.options.map((option) => {
+                const isActive = rangeFilter.value === option.value
+
+                return (
+                    <Button
+                        key={option.value}
+                        size="2xs"
+                        variant={isActive ? "solid" : "ghost"}
+                        borderRadius="full"
+                        colorPalette="teal"
+                        onClick={() => rangeFilter.onChange?.(option.value)}
+                    >
+                        {option.label}
+                    </Button>
+                )
+            })}
+        </HStack>
+    )
+}
 
 export default function GlassPanelSection({
     title,
     description,
     children,
     actions,
+    headerActions,
+    rangeFilter,
+    isLoading = false,
     ...props
 }) {
     return (
@@ -20,13 +57,23 @@ export default function GlassPanelSection({
             p={{ base: 4, md: 6 }}
             {...props}
         >
-            {(title || description || actions) && (
+            {(title || description || actions || headerActions || rangeFilter) && (
                 <HStack justify="space-between" align="flex-start" mb={5}>
                     <Stack spacing={1}>
                         {title && (
-                            <Heading size="sm" color="teal.600">
-                                {title}
-                            </Heading>
+                            <HStack spacing={2} align="center">
+                                <Heading size="sm" color="teal.600">
+                                    {title}
+                                </Heading>
+                                {isLoading && (
+                                    <Spinner
+                                        size="xs"
+                                        borderWidth="1px"
+                                        animationDuration="0.8s"
+                                        color="teal.600"
+                                    />
+                                )}
+                            </HStack>
                         )}
                         {description && (
                             <Text fontSize="sm" color="gray.600">
@@ -34,7 +81,11 @@ export default function GlassPanelSection({
                             </Text>
                         )}
                     </Stack>
-                    {actions}
+                    <HStack gap={2} align="center">
+                        <RangeFilterToggle rangeFilter={rangeFilter} />
+                        {headerActions}
+                        {actions}
+                    </HStack>
                 </HStack>
             )}
 

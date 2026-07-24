@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Moved `irrigation_history.py` router from `server/runtime/api` to `server/history/api` to better reflect its purpose and domain. Updated all relevant imports and references in the codebase to accommodate this change.
+- Added a new irrigation statistics API and frontend analytics panels for overview, water usage trend, outcome breakdown, correction trend, and zone water distribution.
+- Refined the history pages with richer filters, zone scoping, and updated detail metrics for irrigation records.
+- Improved mobile statistics charts and overview cards with responsive spacing, conditional point rendering, and value animations.
 - Updated `IrrigationHistoryReadResponse` schema to include `total_records` and `returned_records`, `success_rate`, and `total_water` fields for better analytics and reporting in the frontend. This change allows the frontend to display more comprehensive statistics about irrigation history.
 - Updated `IrrigationHistoryPage.jsx` to use the new `total_records` and `returned_records` fields from the API response for displaying the total number of matching records and the number of records returned in the current view. This improves the accuracy of the statistics displayed to the user.
 - Changed `CircuitStateManager` to update `last_decision` and `last_irrigation` timestamps when irrigation starts, ensuring it accurately reflects the most recent irrigation activity and decision-making time. This change improves the reliability of the runtime state information, especially on interrupted or unclean shutdowns.
@@ -26,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Minor UX text polish in runtime pages (manual control note, runtime zones section description) and history cards interaction polish.
 - Dynamic-interval skipped result creation in node executor now passes explicit actual/standard weather condition inputs to result factory.
 - Interrupted irrigation records are now also queued and synced to server history from `CircuitStateManager` when history sync manager is available.
+- Multiple `IrrigationHistoryPage.jsx` polishments.
 
 ### Fixed
 

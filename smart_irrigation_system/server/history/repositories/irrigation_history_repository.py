@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 
 from sqlmodel import Session, select
@@ -27,6 +27,7 @@ class IrrigationHistoryRepository:
         limit: int = 100,
         include_deleted_zones: bool = False,
         outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         query = select(HistoryModel)
         if node_id is not None:
@@ -37,6 +38,7 @@ class IrrigationHistoryRepository:
             query = query.where(HistoryModel.outcome == outcome)
         if not include_deleted_zones:
             query = query.where(HistoryModel.zone_deleted.is_(False))
+        query = self._apply_range_days(query, range_days)
         query = query.order_by(HistoryModel.start_time.desc()).limit(limit)
         rows = self.session.exec(query).all()
         return [self._to_dict(row) for row in rows]
@@ -231,6 +233,7 @@ class IrrigationHistoryRepository:
         circuit_id: Optional[int] = None,
         include_deleted_zones: bool = False,
         outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
     ) -> int:
         statement = select(func.count()).select_from(IrrigationHistory)
 
@@ -246,6 +249,8 @@ class IrrigationHistoryRepository:
         if outcome is not None:
             statement = statement.where(IrrigationHistory.outcome == outcome)
 
+        statement = self._apply_range_days(statement, range_days)
+
         return int(self.session.exec(statement).one())
 
     def count_successful_records(
@@ -254,6 +259,7 @@ class IrrigationHistoryRepository:
         circuit_id: Optional[int] = None,
         include_deleted_zones: bool = False,
         outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
     ) -> int:
         # successful = not (failed or interrupted)
         statement = select(func.count()).select_from(IrrigationHistory)
@@ -270,6 +276,8 @@ class IrrigationHistoryRepository:
         if outcome is not None:
             statement = statement.where(IrrigationHistory.outcome == outcome)
 
+        statement = self._apply_range_days(statement, range_days)
+
         statement = statement.where(
             (IrrigationHistory.outcome != 'failed') & (IrrigationHistory.outcome != 'interrupted')
         )
@@ -282,6 +290,7 @@ class IrrigationHistoryRepository:
         circuit_id: Optional[int] = None,
         include_deleted_zones: bool = False,
         outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
     ) -> float:
         statement = select(func.sum(IrrigationHistory.actual_water_amount)).select_from(IrrigationHistory)
 
@@ -297,10 +306,284 @@ class IrrigationHistoryRepository:
         if outcome is not None:
             statement = statement.where(IrrigationHistory.outcome == outcome)
 
+        statement = self._apply_range_days(statement, range_days)
+
         result = self.session.exec(statement).one()
         # result may be (None,) if no rows
         val = result[0] if isinstance(result, tuple) else result
         return float(val or 0.0)
+
+    def count_manual_runs(
+        self,
+        node_id: Optional[int] = None,
+        circuit_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
+    ) -> int:
+        statement = select(func.count()).select_from(IrrigationHistory).where(
+            IrrigationHistory.was_manual_run.is_(True)
+        )
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        if outcome is not None:
+            statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        statement = self._apply_range_days(statement, range_days)
+
+        return int(self.session.exec(statement).one())
+
+    def count_outcome_records(
+        self,
+        outcome_value: str,
+        node_id: Optional[int] = None,
+        circuit_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
+    ) -> int:
+        statement = select(func.count()).select_from(IrrigationHistory).where(
+            IrrigationHistory.outcome == outcome_value
+        )
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        if outcome is not None:
+            statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        statement = self._apply_range_days(statement, range_days)
+
+        return int(self.session.exec(statement).one())
+
+    def get_record_time_bounds(
+        self,
+        node_id: Optional[int] = None,
+        circuit_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
+    ) -> Tuple[Optional[datetime], Optional[datetime]]:
+        statement = select(
+            func.min(IrrigationHistory.start_time),
+            func.max(IrrigationHistory.start_time),
+        ).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        if outcome is not None:
+            statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        statement = self._apply_range_days(statement, range_days)
+
+        first_record_at, last_record_at = self.session.exec(statement).one()
+        return first_record_at, last_record_at
+
+    def get_daily_water_trend(
+        self,
+        node_id: Optional[int] = None,
+        circuit_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        statement = select(
+            func.date(IrrigationHistory.start_time).label("date"),
+            func.coalesce(func.sum(IrrigationHistory.actual_water_amount), 0).label("water"),
+            func.count(IrrigationHistory.id).label("runs"),
+        ).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        if outcome is not None:
+            statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        statement = self._apply_range_days(statement, range_days)
+
+        statement = statement.group_by(func.date(IrrigationHistory.start_time))
+        statement = statement.order_by(func.date(IrrigationHistory.start_time).asc())
+
+        rows = self.session.exec(statement).all()
+        points = [
+            {
+                "date": row[0].isoformat() if hasattr(row[0], "isoformat") else str(row[0]),
+                "water": float(row[1] or 0.0),
+                "runs": int(row[2] or 0),
+            }
+            for row in rows
+        ]
+
+        if not range_days:
+            return points
+
+        points_by_date: Dict[str, Dict[str, Any]] = {point["date"]: point for point in points}
+        today = datetime.utcnow().date()
+        first_day = today - timedelta(days=range_days - 1)
+
+        complete_points: List[Dict[str, Any]] = []
+        for offset in range(range_days):
+            current_day = first_day + timedelta(days=offset)
+            current_key = current_day.isoformat()
+            complete_points.append(
+                points_by_date.get(
+                    current_key,
+                    {
+                        "date": current_key,
+                        "water": 0.0,
+                        "runs": 0,
+                    },
+                )
+            )
+
+        return complete_points
+
+    def get_outcome_breakdown(
+        self,
+        node_id: Optional[int] = None,
+        circuit_ids: Optional[List[int]] = None,
+        include_deleted_zones: bool = False,
+        range_days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        statement = select(
+            IrrigationHistory.outcome,
+            func.count(IrrigationHistory.id),
+        ).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_ids:
+            statement = statement.where(IrrigationHistory.circuit_id.in_(circuit_ids))
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        statement = self._apply_range_days(statement, range_days)
+        statement = statement.group_by(IrrigationHistory.outcome)
+        statement = statement.order_by(func.count(IrrigationHistory.id).desc())
+
+        rows = self.session.exec(statement).all()
+        return [
+            {"name": row[0], "value": int(row[1] or 0)}
+            for row in rows
+        ]
+
+    def get_zone_water_distribution(
+        self,
+        node_id: Optional[int] = None,
+        circuit_ids: Optional[List[int]] = None,
+        include_deleted_zones: bool = False,
+        range_days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        statement = select(
+            IrrigationHistory.circuit_id,
+            func.sum(IrrigationHistory.actual_water_amount),
+            func.count(IrrigationHistory.id),
+        ).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_ids:
+            statement = statement.where(IrrigationHistory.circuit_id.in_(circuit_ids))
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        statement = self._apply_range_days(statement, range_days)
+        statement = statement.group_by(IrrigationHistory.circuit_id)
+        statement = statement.order_by(func.sum(IrrigationHistory.actual_water_amount).desc())
+
+        rows = self.session.exec(statement).all()
+        return [
+            {
+                "circuit_id": int(row[0]),
+                "zone_name": self.get_zone_name(int(row[0])) if row[0] is not None else None,
+                "water": float(row[1] or 0.0),
+                "runs": int(row[2] or 0),
+            }
+            for row in rows
+        ]
+
+    def get_zone_correction_trend(
+        self,
+        circuit_id: Optional[int] = None,
+        node_id: Optional[int] = None,
+        include_deleted_zones: bool = False,
+        range_days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        correction_expr = (
+            IrrigationHistory.target_water_amount / func.nullif(IrrigationHistory.base_water_amount, 0)
+        ) - 1
+        statement = select(
+            func.date(IrrigationHistory.start_time).label("date"),
+            func.avg(correction_expr).label("correction"),
+            func.count(IrrigationHistory.id).label("runs"),
+        ).select_from(IrrigationHistory)
+
+        if node_id is not None:
+            statement = statement.where(IrrigationHistory.node_id == node_id)
+
+        if circuit_id is not None:
+            statement = statement.where(IrrigationHistory.circuit_id == circuit_id)
+
+        if not include_deleted_zones:
+            statement = statement.where(IrrigationHistory.zone_deleted.is_(False))
+
+        statement = statement.where(IrrigationHistory.was_manual_run.is_(False))
+        statement = statement.where(IrrigationHistory.base_water_amount.is_not(None))
+        statement = statement.where(IrrigationHistory.base_water_amount != 0)
+        statement = self._apply_range_days(statement, range_days)
+        statement = statement.group_by(func.date(IrrigationHistory.start_time))
+        statement = statement.order_by(func.date(IrrigationHistory.start_time).asc())
+
+        rows = self.session.exec(statement).all()
+        return [
+            {
+                "date": row[0].isoformat() if hasattr(row[0], "isoformat") else str(row[0]),
+                "correction": float(row[1] or 0.0),
+                "runs": int(row[2] or 0),
+            }
+            for row in rows
+        ]
+
+    def _apply_range_days(self, statement, range_days: Optional[int]):
+        if range_days is None:
+            return statement
+
+        cutoff = datetime.utcnow() - timedelta(days=range_days)
+        return statement.where(
+            IrrigationHistory.start_time.is_not(None),
+            IrrigationHistory.start_time >= cutoff,
+        )
 
     def avg_correction(
         self,
@@ -308,10 +591,11 @@ class IrrigationHistoryRepository:
         circuit_id: Optional[int] = None,
         include_deleted_zones: bool = False,
         outcome: Optional[str] = None,
+        range_days: Optional[int] = None,
     ) -> float:
-        correction_expr = 1 - (
+        correction_expr = (
             IrrigationHistory.target_water_amount / func.nullif(IrrigationHistory.base_water_amount, 0)
-        )
+        ) - 1
         statement = select(func.avg(correction_expr)).select_from(IrrigationHistory)
 
         if node_id is not None:
@@ -325,6 +609,12 @@ class IrrigationHistoryRepository:
 
         if outcome is not None:
             statement = statement.where(IrrigationHistory.outcome == outcome)
+
+        statement = self._apply_range_days(statement, range_days)
+
+        statement = statement.where(IrrigationHistory.was_manual_run.is_(False))
+        statement = statement.where(IrrigationHistory.base_water_amount.is_not(None))
+        statement = statement.where(IrrigationHistory.base_water_amount != 0)
 
         result = self.session.exec(statement).one()
         val = result[0] if isinstance(result, tuple) else result
