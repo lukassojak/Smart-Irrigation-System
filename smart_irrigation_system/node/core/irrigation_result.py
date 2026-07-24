@@ -39,7 +39,7 @@ class IrrigationResult:
             "circuit_id": self.circuit_id,
             "success": self.success,
             "outcome": self.outcome.value,
-            "start_time": self.start_time.isoformat(),
+            "start_time": self.start_time.isoformat() if self.start_time else None,
             "completed_duration": self.completed_duration,
             "target_duration": self.target_duration,
             "actual_water_amount": self.actual_water_amount,
@@ -86,4 +86,3 @@ class IrrigationResult:
             dynamic_interval_enabled=data.get("dynamic_interval_enabled"),
             irrigation_volume_threshold_percent=data.get("irrigation_volume_threshold_percent")
         )
-
