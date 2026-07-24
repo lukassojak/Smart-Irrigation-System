@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.add_column('irrigationhistory', sa.Column('actual_solar', sa.Float(), nullable=True))
     op.add_column('irrigationhistory', sa.Column('actual_rain', sa.Float(), nullable=True))
     op.add_column('irrigationhistory', sa.Column('actual_temp', sa.Float(), nullable=True))
-    op.add_column('irrigationhistory', sa.Column('carry_over', sa.Boolean(), nullable=True))
+    op.add_column('irrigationhistory', sa.Column('carry_over_applied', sa.Boolean(), nullable=True))
     op.add_column('irrigationhistory', sa.Column('even_area_mode', sa.Boolean(), nullable=True))
     op.add_column('irrigationhistory', sa.Column('target_mm', sa.Float(), nullable=True))
     op.add_column('irrigationhistory', sa.Column('actual_mm', sa.Float(), nullable=True))
