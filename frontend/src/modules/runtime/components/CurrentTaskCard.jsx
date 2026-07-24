@@ -56,21 +56,13 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
 
                     </HStack>
                     <HStack gap={4}>
-                        {isStale ? (
+                        {isStale && (
                             <Badge
                                 size="sm"
                                 colorPalette={taskState?.statusColorPalette ?? "gray"}
                                 variant="subtle"
                             >
                                 {taskState?.statusLabel ?? "Stopped"}
-                            </Badge>
-                        ) : (
-                            <Badge
-                                size="sm"
-                                colorPalette="blue"
-                                variant="subtle"
-                            >
-                                Irrigating
                             </Badge>
                         )}
 
@@ -119,7 +111,7 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
                 <HStack justify="space-between">
                     <HStack gap={4}>
                         <Text fontSize="sm" color="gray.600">
-                            {task.currentVolume} / {task.targetVolume} L
+                            {task.currentVolume != null ? task.currentVolume.toFixed(2) : "-"} L / {task.targetVolume != null ? task.targetVolume.toFixed(2) : "-"} L
                         </Text>
 
                         <Text fontSize="xs" color="gray.500">

@@ -52,9 +52,6 @@ class CircuitExecutionLike(Protocol):
                      target_volume: float,
                      stop_event: threading.Event) -> IrrigationResult:
         ...
-        
-    def flow_overload_timeout_triggered(self, start_time: datetime) -> IrrigationResult:
-        ...
 
     def is_safe_to_irrigate(self) -> bool:
         """Run-time safety check before starting irrigation. Shouldn't be called from planning phase."""

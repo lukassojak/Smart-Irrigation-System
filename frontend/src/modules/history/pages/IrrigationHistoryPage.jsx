@@ -30,8 +30,8 @@ import {
 } from "../../../components/ui/ControlActionDialogOverlay"
 
 import { fetchNodes } from "../../../api/nodes.api"
-import { fetchAllHistoryRecords, fetchNodeHistory } from "../../../api/history.api"
-import { deleteAllHistory } from "../../../api/history.api"
+import { deleteAllHistory, fetchHistoryRecords } from "../../../api/history.api"
+import { Activity, Droplet, Clock, CheckCircle } from "lucide-react"
 
 const SORT_OPTIONS = [
     { value: "start_time_desc", label: "Newest first" },
@@ -93,6 +93,7 @@ export default function IrrigationHistoryPage() {
 
     const [nodes, setNodes] = useState([])
     const [selectedNodeId, setSelectedNodeId] = useState("all")
+    const [selectedZoneId, setSelectedZoneId] = useState("all")
     const [selectedOutcome, setSelectedOutcome] = useState("all")
     const [sortBy, setSortBy] = useState("start_time_desc")
     const [historyRecords, setHistoryRecords] = useState([])
@@ -103,6 +104,13 @@ export default function IrrigationHistoryPage() {
     const [error, setError] = useState(null)
     const [recordLimit, setRecordLimit] = useState(10)
     const [hasMoreRecords, setHasMoreRecords] = useState(true)
+    const [serverStats, setServerStats] = useState({
+        total_records: 0,
+        returned_records: 0,
+        success_rate: 0,
+        total_water: 0,
+        avg_correction: 0,
+    })
 
 
     const openDialog = (payload) => {
@@ -157,6 +165,17 @@ export default function IrrigationHistoryPage() {
         [nodes],
     )
 
+    const zoneOptions = useMemo(() =>
+        nodes.flatMap((node) => {
+            const zones = Array.isArray(node.zones) ? node.zones : []
+            return zones.map((zone) => ({
+                value: String(zone.id),
+                label: `${zone.name ? `Zone ${zone.id} · ${zone.name}` : `Zone ${zone.id}`}`,
+            }))
+        }),
+        [nodes],
+    )
+
     // Load available nodes
     useEffect(() => {
         const loadNodes = async () => {
@@ -175,6 +194,46 @@ export default function IrrigationHistoryPage() {
         setRecordLimit(prev => prev + 10)
     }
 
+    const handleNodeScopeChange = (event) => {
+        const nextNodeId = event.target.value
+        setSelectedNodeId(nextNodeId)
+        setSelectedZoneId("all")
+        setRecordLimit(10)
+        setHasMoreRecords(true)
+    }
+
+    const handleZoneScopeChange = (event) => {
+        const nextZoneId = event.target.value
+        setSelectedZoneId(nextZoneId)
+        setSelectedNodeId("all")
+        setRecordLimit(10)
+        setHasMoreRecords(true)
+    }
+
+    const handleOutcomeChange = (event) => {
+        const nextOutcome = event.target.value
+        setSelectedOutcome(nextOutcome)
+        setRecordLimit(10)
+        setHasMoreRecords(true)
+    }
+
+    const handleIncludeDeletedChange = (event) => {
+        const nextIncludeDeleted = Boolean(event.checked)
+        setIncludeDeleted(nextIncludeDeleted)
+        setRecordLimit(10)
+        setHasMoreRecords(true)
+    }
+
+    const handleResetView = () => {
+        setSelectedNodeId("all")
+        setSelectedZoneId("all")
+        setSelectedOutcome("all")
+        setSortBy("start_time_desc")
+        setIncludeDeleted(true)
+        setRecordLimit(10)
+        setHasMoreRecords(true)
+    }
+
     // Load history records when node selection changes (exposed as function so we can
     // reload after deleting all records)
     const loadHistory = async () => {
@@ -185,11 +244,34 @@ export default function IrrigationHistoryPage() {
         const previousCount = historyRecords.length
 
         try {
-            const response = selectedNodeId === "all"
-                ? await fetchAllHistoryRecords(recordLimit)
-                : await fetchNodeHistory(selectedNodeId, recordLimit)
-            const records = response.data.records || []
+            const params = {
+                limit: recordLimit,
+                include_deleted_zones: includeDeleted,
+            }
+
+            if (selectedNodeId !== "all") {
+                params.node_id = Number(selectedNodeId)
+            }
+
+            if (selectedZoneId !== "all") {
+                params.circuit_id = Number(selectedZoneId)
+            }
+
+            if (selectedOutcome !== "all") {
+                params.outcome = selectedOutcome
+            }
+
+            const response = await fetchHistoryRecords(params)
+            const data = response.data || {}
+            const records = data.records || []
             setHistoryRecords(records)
+            setServerStats({
+                total_records: data.total_records ?? 0,
+                returned_records: data.returned_records ?? records.length,
+                success_rate: data.success_rate ?? 0,
+                total_water: data.total_water ?? 0,
+                avg_correction: data.avg_correction ?? 0,
+            })
             if (
                 recordLimit > 10 &&
                 records.length === previousCount
@@ -207,20 +289,10 @@ export default function IrrigationHistoryPage() {
 
     useEffect(() => {
         loadHistory()
-    }, [selectedNodeId, recordLimit])
+    }, [selectedNodeId, selectedZoneId, recordLimit, includeDeleted, selectedOutcome])
 
     const visibleRecords = useMemo(() => {
-        const filteredRecords = historyRecords.filter((record) => {
-            if (selectedOutcome !== "all" && record.outcome !== selectedOutcome) {
-                return false
-            }
-            if (!includeDeleted && record.zone_deleted) {
-                return false
-            }
-            return true
-        })
-
-        const sortedRecords = [...filteredRecords]
+        const sortedRecords = [...historyRecords]
 
         sortedRecords.sort((left, right) => {
             switch (sortBy) {
@@ -251,7 +323,7 @@ export default function IrrigationHistoryPage() {
         })
 
         return sortedRecords
-    }, [historyRecords, nodeLabelById, selectedOutcome, sortBy, includeDeleted])
+    }, [historyRecords, nodeLabelById, selectedOutcome, sortBy])
 
     const selectedNode = selectedNodeId !== "all"
         ? nodes.find((node) => String(node.id) === String(selectedNodeId))
@@ -296,7 +368,7 @@ export default function IrrigationHistoryPage() {
                     <DashboardPageSectionStack>
                         <GlassPanelSection title="Filters & Sorting">
                             <Stack gap={6}>
-                                <Grid templateColumns={{ base: "1fr", lg: "repeat(3, minmax(0, 1fr))" }} gap={4}>
+                                <Grid templateColumns={{ base: "1fr", lg: "repeat(4, minmax(0, 1fr))" }} gap={4}>
                                     <Box>
                                         <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
                                             Node scope
@@ -304,14 +376,38 @@ export default function IrrigationHistoryPage() {
                                         <NativeSelect.Root>
                                             <NativeSelect.Field
                                                 value={selectedNodeId}
-                                                onChange={(event) => setSelectedNodeId(event.target.value)}
+                                                disabled={selectedZoneId !== "all"}
+                                                onChange={handleNodeScopeChange}
                                                 bg="rgba(255, 255, 255, 0.55)"
                                                 border="1px solid rgba(56,178,172,0.16)"
                                             >
                                                 <option value="all">All nodes</option>
                                                 {nodes.map((node) => (
                                                     <option key={node.id} value={String(node.id)}>
-                                                        Node #{node.id} {node.name ? `- ${node.name}` : ""}
+                                                        Node {node.id} {node.name ? `- ${node.name}` : ""}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Box>
+
+                                    <Box>
+                                        <Text mb={2} fontSize="sm" fontWeight="600" color="gray.700">
+                                            Zone scope
+                                        </Text>
+                                        <NativeSelect.Root>
+                                            <NativeSelect.Field
+                                                value={selectedZoneId}
+                                                disabled={selectedNodeId !== "all"}
+                                                onChange={handleZoneScopeChange}
+                                                bg="rgba(255, 255, 255, 0.55)"
+                                                border="1px solid rgba(56,178,172,0.16)"
+                                            >
+                                                <option value="all">All zones</option>
+                                                {zoneOptions.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
                                                     </option>
                                                 ))}
                                             </NativeSelect.Field>
@@ -326,7 +422,7 @@ export default function IrrigationHistoryPage() {
                                         <NativeSelect.Root>
                                             <NativeSelect.Field
                                                 value={selectedOutcome}
-                                                onChange={(event) => setSelectedOutcome(event.target.value)}
+                                                onChange={handleOutcomeChange}
                                                 bg="rgba(255, 255, 255, 0.55)"
                                                 border="1px solid rgba(56,178,172,0.16)"
                                             >
@@ -365,7 +461,7 @@ export default function IrrigationHistoryPage() {
                                 <Checkbox.Root
                                     colorPalette="teal"
                                     checked={includeDeleted}
-                                    onCheckedChange={(event) => setIncludeDeleted(Boolean(event.checked))}
+                                    onCheckedChange={handleIncludeDeletedChange}
                                     mb={2}
                                 >
                                     <Checkbox.HiddenInput />
@@ -403,12 +499,7 @@ export default function IrrigationHistoryPage() {
                                         size="sm"
                                         variant="outline"
                                         borderColor="rgba(56,178,172,0.18)"
-                                        onClick={() => {
-                                            setSelectedNodeId("all")
-                                            setSelectedOutcome("all")
-                                            setSortBy("start_time_desc")
-                                            setIncludeDeleted(true)
-                                        }}
+                                        onClick={handleResetView}
                                     >
                                         Reset view
                                     </Button>
@@ -424,8 +515,16 @@ export default function IrrigationHistoryPage() {
                             </Box>
                         )}
 
+                        {selectedZoneId !== "all" && !loading && (
+                            <Box px={1}>
+                                <Text fontSize="sm" color="gray.600">
+                                    Currently scoped to zone <strong>{zoneOptions.find((option) => option.value === selectedZoneId)?.label}</strong>.
+                                </Text>
+                            </Box>
+                        )}
+
                         <GlassPanelSection title="Summary">
-                            <HistoryStats records={visibleRecords} />
+                            <HistoryStats serverStats={serverStats} />
                         </GlassPanelSection>
 
                         <GlassPanelSection title="Irrigation Records">

@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Added
+- Server support for extended `IrrigationResult`: the server now stores and returns new fields (`success`, `was_manual_run`, `carry_over_applied`, `dynamic_interval_enabled`, `irrigation_volume_threshold_percent`).
+- Alembic migration: `20260716_align_history_with_irrigation_result.py` to add new nullable columns and allow `start_time` to be nullable.
+- `docs/developer_reference/DEPLOYMENT_MIGRATIONS.md`: added instructions for safe production migration with Alembic.
+- Global minimum font size of 16px for all input, textarea, and select elements to improve mobile usability and prevent zooming issues on iOS devices.
+
+### Changed
+- Moved `irrigation_history.py` router from `server/runtime/api` to `server/history/api` to better reflect its purpose and domain. Updated all relevant imports and references in the codebase to accommodate this change.
+- Added a new irrigation statistics API and frontend analytics panels for overview, water usage trend, outcome breakdown, correction trend, and zone water distribution.
+- Refined the history pages with richer filters, zone scoping, and updated detail metrics for irrigation records.
+- Improved mobile statistics charts and overview cards with responsive spacing, conditional point rendering, and value animations.
+- Updated `IrrigationHistoryReadResponse` schema to include `total_records` and `returned_records`, `success_rate`, and `total_water` fields for better analytics and reporting in the frontend. This change allows the frontend to display more comprehensive statistics about irrigation history.
+- Updated `IrrigationHistoryPage.jsx` to use the new `total_records` and `returned_records` fields from the API response for displaying the total number of matching records and the number of records returned in the current view. This improves the accuracy of the statistics displayed to the user.
+- Changed `CircuitStateManager` to update `last_decision` and `last_irrigation` timestamps when irrigation starts, ensuring it accurately reflects the most recent irrigation activity and decision-making time. This change improves the reliability of the runtime state information, especially on interrupted or unclean shutdowns.
+- Extended `IrrigationResult` model on node to include more detailed information about the irrigation attempt. This provides better insights into the outcome of irrigation operations, including success/failure status and any relevant metrics.
+- Frontend irrigation history detail flow now uses `record_id` routes (`/irrigation-history/:recordId`) and API calls for direct fetch/delete of a single record.
+- Refactored `IrrigationRecordDetailPage` to richer glass layout components, added delete action with confirmation dialog, and replaced per-factor gauges with unified `WaterAmountGauge` visualization.
+- `IrrigationHistoryReadResponse` record schema was aligned with nullable DB history values (optional fields default to `None`) and extended with `zone_name` for detail/header display.
+- History service/repository response mapping was updated to include `target_mm`/`actual_mm`, zone name enrichment, and proper aggregate payload construction to satisfy API response validation.
+- History backend now supports single-record endpoints `GET /history/irrigation-history/record/{record_id}` and `DELETE /history/irrigation-history/record/{record_id}`.
+- Minor UX text polish in runtime pages (manual control note, runtime zones section description) and history cards interaction polish.
+- Dynamic-interval skipped result creation in node executor now passes explicit actual/standard weather condition inputs to result factory.
+- Interrupted irrigation records are now also queued and synced to server history from `CircuitStateManager` when history sync manager is available.
+- Multiple `IrrigationHistoryPage.jsx` polishments.
+- PWA viewport meta tag updated to include `maximum-scale=1` and `user-scalable=no` to prevent zooming issues on mobile devices, ensuring a consistent and user-friendly experience.
+
+### Fixed
+
+### Removed
+
+### Known issues
+
+---
 
 ## [1.3.0]
 

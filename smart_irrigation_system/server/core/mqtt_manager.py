@@ -628,12 +628,15 @@ class MQTTManager(threading.Thread):
         self.logger.warning("Unknown legacy command action: %s", action)
 
     def run(self):
+        connect_error_logged = False
         while not self._stop_event.is_set():
             try:
                 self.client.connect(self.broker_host, self.broker_port, keepalive=60)
                 break
             except Exception as exc:
-                self.logger.error("Failed to connect to MQTT broker: %s", exc)
+                if not connect_error_logged:
+                    self.logger.error("Failed to connect to MQTT broker: %s", exc)
+                    connect_error_logged = True
                 time.sleep(5)
 
         self.client.loop_start()

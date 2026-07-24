@@ -1,30 +1,59 @@
 import http from "./http"
 
-export function fetchHistoryRecords(nodeId, circuitId, limit = 100) {
-    const params = new URLSearchParams()
-    if (nodeId !== null && nodeId !== undefined) {
-        params.append("node_id", nodeId)
+export async function fetchHistoryRecords(params = {}) {
+    return http.get("/history/irrigation-history/records", { params })
+}
+
+export async function fetchAllHistoryRecords(limit = 100, includeDeleted = false, outcome = null) {
+    const params = { limit }
+
+    if (includeDeleted) {
+        params.include_deleted_zones = true
     }
-    if (circuitId !== null && circuitId !== undefined) {
-        params.append("circuit_id", circuitId)
+
+    if (outcome) {
+        params.outcome = outcome
     }
-    params.append("limit", limit)
 
-    return http.get(`/runtime/history/records?${params.toString()}`)
+    return http.get("/history/irrigation-history/records", { params })
 }
 
-export function fetchAllHistoryRecords(limit = 100) {
-    return fetchHistoryRecords(undefined, undefined, limit)
+export async function fetchNodeHistory(nodeId, limit = 100, includeDeleted = false, outcome = null) {
+    const params = {
+        node_id: nodeId,
+        limit,
+    }
+
+    if (includeDeleted) {
+        params.include_deleted_zones = true
+    }
+
+    if (outcome) {
+        params.outcome = outcome
+    }
+
+    return http.get(`/history/irrigation-history/records`, {
+        params,
+    })
 }
 
-export function fetchNodeHistory(nodeId, limit = 100) {
-    return http.get(`/runtime/history/records?node_id=${nodeId}&limit=${limit}`)
+export async function fetchCircuitHistory(circuitId, params = {}) {
+    return http.get(`/history/irrigation-history/records`, {
+        params: {
+            circuit_id: circuitId,
+            ...params,
+        },
+    })
 }
 
-export function fetchCircuitHistory(nodeId, circuitId, limit = 100) {
-    return http.get(`/runtime/history/records?node_id=${nodeId}&circuit_id=${circuitId}&limit=${limit}`)
+export async function fetchRecordById(recordId) {
+    return http.get(`/history/irrigation-history/record/${recordId}`)
 }
 
-export function deleteAllHistory() {
-    return http.delete(`/runtime/history/records`)
+export async function deleteRecordById(recordId) {
+    return http.delete(`/history/irrigation-history/record/${recordId}`)
+}
+
+export async function deleteAllHistory() {
+    return http.delete("/history/irrigation-history/records")
 }

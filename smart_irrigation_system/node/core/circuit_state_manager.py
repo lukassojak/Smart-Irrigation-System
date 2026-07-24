@@ -258,11 +258,9 @@ class CircuitStateManager():
                     circuit["last_outcome"] = IrrigationOutcome.INTERRUPTED.value
                     circuit["last_duration"] = None
                     circuit["last_volume"] = None
-                    # Unknown irrigation time due to unclean shutdown, set to current time
-                    circuit["last_irrigation"] = time_utils.now_iso()
-                    circuit["last_decision"] = time_utils.now_iso()
                     recovered_circuits.append(circuit_id)
-                    self._log_missing_interrupted_result(circuit_id)
+                    start_time_dt: Optional[datetime] = time_utils.from_iso(circuit.get("last_irrigation")) if circuit.get("last_irrigation") else None
+                    self._log_missing_interrupted_result(circuit_id=circuit_id, start_time=start_time_dt)
 
             circuit["circuit_state"] = SnapshotCircuitState.IDLE.value
 
@@ -283,7 +281,6 @@ class CircuitStateManager():
         # Set circuit state back to IDLE, update last outcome and last decision
         entry["circuit_state"] = SnapshotCircuitState.IDLE.value
         entry["last_outcome"] = result.outcome.value
-        entry["last_decision"] = time_utils.to_iso(result.start_time)
 
         # SKIPPED - special case, no real irrigation happened
         if result.outcome.value == IrrigationOutcome.SKIPPED.value:
@@ -291,7 +288,6 @@ class CircuitStateManager():
             return
 
         # All the real-run outcomes
-        entry["last_irrigation"] = time_utils.to_iso(result.start_time)
         entry["last_duration"] = result.completed_duration
         entry["last_volume"] = result.actual_water_amount
         self._save_state()
@@ -398,23 +394,29 @@ class CircuitStateManager():
                 )
 
 
-    def _log_missing_interrupted_result(self, circuit_id: int) -> None:
+    def _log_missing_interrupted_result(self, circuit_id: int, start_time: Optional[datetime] = None) -> None:
         """Logs an interrupted irrigation result for a circuit that was irrigating during an unclean shutdown."""
 
         try:
             interrupted_result = result_factory.create_interrupted(
-                circuit_id=circuit_id,
-                start_time=time_utils.now(),
-                elapsed=0,
-                actual_water_amount=0,
-                target_duration=0,
-                target_water_amount=0,
-                reason="Unclean shutdown during irrigation. 'start_time', 'completed_duration', 'target_duration', 'actual_water_amount', and 'target_water_amount' are unknown."
+                start_time=start_time,
+                zone_id=circuit_id,
+                reason="Unclean shutdown during irrigation, unknown duration and volume"
             )
             
             self._log_irrigation_result(interrupted_result)
         except Exception as e:
             self.logger.error(f"Failed to log interrupted irrigation result for circuit {circuit_id}: {e}")
+
+        # Sync record to server if sync manager is available
+        if self.history_sync:
+            try:
+                record = interrupted_result.to_dict()
+                self.history_sync.add_record_to_queue(record)
+                # Try to sync immediately (non-blocking)
+                self.history_sync.sync_to_server(blocking=False)
+            except Exception as e:
+                self.logger.error(f"Failed to queue irrigation result for sync: {e}")
 
 
     # =========================================================================
@@ -468,17 +470,21 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         self.logger.debug(f"Setting circuit ID {circuit_id} state to 'irrigating'.")
         entry["circuit_state"] = SnapshotCircuitState.IRRIGATING.value
+        entry["last_irrigation"] = time_utils.now_iso()
+        entry["last_decision"] = time_utils.now_iso()
         self._save_state()
     
 
-    def irrigation_finished(self, circuit_id: int, result: IrrigationResult) -> None:
+    def irrigation_finished(self, circuit_id: int, result: IrrigationResult, manual_run: bool) -> None:
         """Updates the circuit state based on the given IrrigationResult and records the result."""
         self._update_irrigation_result(circuit_id, result)
         self._log_irrigation_result(result)
 
         if result.outcome == IrrigationOutcome.SUCCESS:
             entry = self._get_or_create_entry(circuit_id)
-            entry["carry_over_volume_liters"] = 0.0
+            if not manual_run:
+                # Reset carry-over volume on successful automatic irrigation
+                entry["carry_over_volume_liters"] = 0.0
             self._save_state()
         
         # Sync record to server if sync manager is available
@@ -507,3 +513,5 @@ class CircuitStateManager():
         entry = self._get_or_create_entry(circuit_id)
         entry["carry_over_volume_liters"] = max(float(volume_liters), 0.0)
         self._save_state()
+
+    # In future add reset_carry_over_volume_liters(circuit_id) method instead of resetting it in CircuitStateManager.irrigation_finished()

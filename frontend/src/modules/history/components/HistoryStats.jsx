@@ -4,7 +4,7 @@ import {
     Text,
     HStack,
 } from "@chakra-ui/react"
-import { Activity, Droplet, Clock, CheckCircle } from "lucide-react"
+import { Activity, Droplet, WandSparkles, CheckCircle } from "lucide-react"
 
 function StatCard({ icon, title, value, helper, bg, border }) {
     return (
@@ -34,33 +34,23 @@ function StatCard({ icon, title, value, helper, bg, border }) {
     )
 }
 
-export default function HistoryStats({ records = [] }) {
-    const successful = records.filter(r => r.outcome === "success").length
-    const failed = records.filter(r => r.outcome === "failed").length
-    const stopped = records.filter(r => r.outcome === "stopped").length
-    const interrupted = records.filter(r => r.outcome === "interrupted").length
-    const skipped = records.filter(r => r.outcome === "skipped").length
-    const total = records.length
-
-    const totalWaterUsed = records
-        .filter(r => r.actual_water_amount)
-        .reduce((sum, r) => sum + (r.actual_water_amount || 0), 0)
-
-    const totalTimeSeconds = records
-        .filter(r => r.completed_duration)
-        .reduce((sum, r) => sum + (r.completed_duration || 0), 0)
-
-    const avgDuration = successful > 0 ? Math.round(totalTimeSeconds / successful) : 0
-
-    const successRate = total > 0 ? Math.round((successful / total) * 100) : 0
+export default function HistoryStats({ serverStats }) {
+    // serverStats is required by the new UI contract; do not fallback to local computation.
+    const successRatePercent = Math.round((serverStats.success_rate ?? 0) * 100)
+    const totalWaterUsed = serverStats.total_water ?? 0
+    const totalRecordsValue = serverStats.total_records ?? 0
+    const avgCorrection = serverStats.avg_correction ?? 0
+    const avgCorrectionPercent = Math.round(avgCorrection * 100).toFixed(0)
+    const avgCorrectionFormatted = `${avgCorrectionPercent >= 0 ? "+" : ""}${avgCorrectionPercent}%`
+    const recordsHelper = `${serverStats.returned_records ?? 0} visible`
 
     return (
         <Grid templateColumns={{ base: "1fr", md: "repeat(4, 1fr)" }} gap={4}>
             <StatCard
                 icon={<CheckCircle size={18} color="rgb(72, 187, 120)" />}
                 title="Success rate"
-                value={`${successRate}%`}
-                helper={`${successful}/${total} successful`}
+                value={`${successRatePercent}%`}
+                helper="successful, skipped, or stopped records"
                 bg="rgba(72, 187, 120, 0.08)"
                 border="1px solid rgba(72, 187, 120, 0.18)"
             />
@@ -68,30 +58,26 @@ export default function HistoryStats({ records = [] }) {
             <StatCard
                 icon={<Droplet size={18} color="rgb(74, 144, 226)" />}
                 title="Total water"
-                value={`${totalWaterUsed.toFixed(1)}L`}
-                helper="consumed across visible records"
+                value={`${(totalWaterUsed || 0).toFixed(1)}L`}
+                helper="across matching records"
                 bg="rgba(74, 144, 226, 0.08)"
                 border="1px solid rgba(74, 144, 226, 0.18)"
             />
 
             <StatCard
-                icon={<Clock size={18} color="rgb(237, 137, 54)" />}
-                title="Avg duration"
-                value={`${avgDuration}s`}
-                helper="per completed cycle"
+                icon={<WandSparkles size={18} color="rgb(237, 137, 54)" />}
+                title="Avg correction"
+                value={avgCorrectionFormatted}
+                helper="automatically adjusted water amount"
                 bg="rgba(237, 137, 54, 0.08)"
                 border="1px solid rgba(237, 137, 54, 0.18)"
             />
 
             <StatCard
                 icon={<Activity size={18} color="rgb(237, 100, 166)" />}
-                title="Records"
-                value={total}
-                helper={
-                    failed > 0 || stopped > 0 || interrupted > 0 || skipped > 0
-                        ? [failed > 0 ? `${failed} failed` : null, stopped > 0 ? `${stopped} stopped` : null, interrupted > 0 ? `${interrupted} interrupted` : null, skipped > 0 ? `${skipped} skipped` : null].filter(Boolean).join(" · ")
-                        : "all visible"
-                }
+                title="Matching records"
+                value={totalRecordsValue}
+                helper={recordsHelper}
                 bg="rgba(237, 100, 166, 0.08)"
                 border="1px solid rgba(237, 100, 166, 0.18)"
             />

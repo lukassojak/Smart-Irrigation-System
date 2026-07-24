@@ -9,6 +9,7 @@ import {
     useBreakpointValue,
 } from "@chakra-ui/react"
 import { Droplet, Clock, AlertCircle, MapPinned } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 function getOutcomeMeta(outcome) {
     switch (outcome) {
@@ -37,8 +38,8 @@ function getOutcomeMeta(outcome) {
             return {
                 label: "Interrupted",
                 palette: "yellow",
-                accent: "linear-gradient(180deg, rgba(251,182,206,0.95) 0%, rgba(245,120,150,0.85) 100%)",
-                cardBg: "rgba(251,182,206,0.08)",
+                accent: "linear-gradient(180deg, rgba(237,137,54,0.95) 0%, rgba(217,119,6,0.85) 100%)",
+                cardBg: "rgba(237,137,54,0.08)",
             }
         case "skipped":
             return {
@@ -128,6 +129,7 @@ function getDateKey(isoString) {
 
 export default function HistoryRecordsTable({ records = [], nodes = [] }) {
     const isMobile = useBreakpointValue({ base: true, md: false })
+    const navigate = useNavigate()
 
     const groupedRecords = records.reduce((acc, record) => {
         const key = getDateKey(record.start_time)
@@ -161,6 +163,9 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
         )
     }
 
+    // If date is today, show "Today" instead of the full date, same for yesterday
+    const todayKey = getDateKey(new Date().toISOString())
+    const yesterdayKey = getDateKey(new Date(Date.now() - 86400000).toISOString())
     return (
         <Stack gap={8}>
             {Object.entries(groupedRecords).map(([date, dayRecords]) => (
@@ -171,7 +176,11 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                             color="gray.700"
                             flexShrink={0}
                         >
-                            {date}
+                            {date === todayKey
+                                ? "Today"
+                                : date === yesterdayKey
+                                    ? "Yesterday"
+                                    : date}
                         </Heading>
 
                         <Badge
@@ -195,9 +204,24 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                             const duration = formatDuration(record.completed_duration)
                             const waterUsed = formatWater(record.actual_water_amount)
                             const zoneName = getZoneName(record, nodes)
+                            const showCorrectionBox = !record.was_manual_run
+
+// Correction applied percentage
+const correctionApplied = record.target_water_amount != null && record.base_water_amount != null && Number(record.base_water_amount) !== 0
+    ? Math.round(((record.target_water_amount - record.base_water_amount) / record.base_water_amount) * 100)
+    : null
+const correctionAppliedWithSign = correctionApplied != null ? `${correctionApplied >= 0 ? "+" : ""}${correctionApplied}%` : "N/A"
+
+                            const onOpenRecord = () => {
+                                const start = encodeURIComponent(record.start_time || "")
+                                navigate(`/irrigation-history/${record.id}`)
+                            }
 
                             return (
                                 <Box
+                                    as="button"
+                                    onClick={onOpenRecord}
+                                    cursor="pointer"
                                     key={`${record.node_id}-${record.circuit_id}-${record.start_time}-${idx}`}
                                     position="relative"
                                     overflow="hidden"
@@ -284,6 +308,16 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                                                         <MapPinned size={15} />
                                                         <Text>Node {record.node_id}</Text>
                                                     </HStack>
+                                                    {record.was_manual_run && (
+                                                        <>
+                                                            <HStack>
+                                                                <Text color="gray.400">•</Text>
+                                                                <HStack gap={1.5}>
+                                                                    <Text>Manual run</Text>
+                                                                </HStack>
+                                                            </HStack>
+                                                        </>
+                                                    )}
                                                 </HStack>
                                             </Stack>
 
@@ -305,7 +339,7 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                                         </Stack>
 
                                         {isMobile ? (
-                                            <Stack gap={1} fontSize="sm" color="gray.600">
+                                            <Stack gap={1} fontSize="sm" color="gray.600" align="flex-start">
                                                 <Text>
                                                     <Text as="span" fontWeight="600" color="gray.700">
                                                         Duration:
@@ -318,20 +352,23 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                                                     </Text>{" "}
                                                     {waterUsed}
                                                 </Text>
-                                                <Text>
-                                                    <Text as="span" fontWeight="600" color="gray.700">
-                                                        Target water:
-                                                    </Text>{" "}
-                                                    {formatWater(record.target_water_amount)}
-                                                </Text>
+                                                {!record.was_manual_run && (
+                                                    <Text>
+                                                        <Text as="span" fontWeight="600" color="gray.700">
+                                                            Correction applied:
+                                                        </Text>{" "}
+                                                        {correctionAppliedWithSign}
+                                                    </Text>
+                                                )}
                                             </Stack>
                                         ) : (
-                                            <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }} gap={3}>
+                                            <Grid templateColumns={{ base: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))" }} gap={3} justifyContent="flex-end">
                                                 <Box
                                                     p={3}
                                                     borderRadius="xl"
                                                     bg="rgba(56,178,172,0.03)"
                                                     border="1px solid rgba(56,178,172,0.08)"
+                                                    gridColumn={{ base: "auto", md: showCorrectionBox ? "auto" : "2" }}
                                                 >
                                                     <Text fontSize="xs" color="gray.500" mb={1}>
                                                         Duration
@@ -346,31 +383,32 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                                                     borderRadius="xl"
                                                     bg="rgba(56,178,172,0.03)"
                                                     border="1px solid rgba(56,178,172,0.08)"
+                                                    gridColumn={{ base: "auto", md: showCorrectionBox ? "auto" : "3" }}
                                                 >
                                                     <Text fontSize="xs" color="gray.500" mb={1}>
                                                         Water used
                                                     </Text>
-                                                    <HStack spacing={1.5} align="center">
-                                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                                            {waterUsed}
-                                                        </Text>
-                                                    </HStack>
+                                                    <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                        {waterUsed}
+                                                    </Text>
                                                 </Box>
 
-                                                <Box
-                                                    p={3}
-                                                    borderRadius="xl"
-                                                    bg="rgba(56,178,172,0.03)"
-                                                    border="1px solid rgba(56,178,172,0.08)"
-                                                    gridColumn={{ base: "span 2", md: "auto" }}
-                                                >
-                                                    <Text fontSize="xs" color="gray.500" mb={1}>
-                                                        Target water
-                                                    </Text>
-                                                    <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                                        {formatWater(record.target_water_amount)}
-                                                    </Text>
-                                                </Box>
+                                                {showCorrectionBox && (
+                                                    <Box
+                                                        p={3}
+                                                        borderRadius="xl"
+                                                        bg="rgba(56,178,172,0.03)"
+                                                        border="1px solid rgba(56,178,172,0.08)"
+                                                        gridColumn={{ base: "span 2", md: "auto" }}
+                                                    >
+                                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                                            Correction
+                                                        </Text>
+                                                        <Text fontSize="lg" fontWeight="700" color="gray.800">
+                                                            {correctionAppliedWithSign}
+                                                        </Text>
+                                                    </Box>
+                                                )}
                                             </Grid>
                                         )}
                                     </Grid>

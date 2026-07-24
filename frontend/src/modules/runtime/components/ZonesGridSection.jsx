@@ -20,7 +20,7 @@ export default function ZonesGridSection({ zones, stoppingZoneIds, onStopZone, o
     return (
         <GlassPanelSection
             title="Zones"
-            description="Runtime status and quick controls. Click any zone card to open its runtime detail."
+            description="Runtime status and quick controls."
         >
             <Grid
                 templateColumns={{

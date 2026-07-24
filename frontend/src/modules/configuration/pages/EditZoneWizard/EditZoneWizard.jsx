@@ -167,7 +167,7 @@ export default function EditZoneWizard() {
         AutoOptimize state for per-plant emitter configuration
     -------------------------------------------- */
 
-    const [autoOptimize, setAutoOptimize] = useState(true)
+    const [autoOptimize, setAutoOptimize] = useState(false)
 
     /* --------------------------------------------
        Steps (DATA-DRIVEN)
@@ -245,7 +245,7 @@ export default function EditZoneWizard() {
                     ) : (
                         <StepIrrigationPerPlant
                             data={zoneDraft.irrigation_configuration || {}}
-                            autoOptimize={autoOptimize}
+                            autoOptimize={false} // Disable auto-optimize toggle for editing existing zones
                             onChange={(config) =>
                                 setZoneDraft({
                                     ...zoneDraft,
@@ -253,6 +253,7 @@ export default function EditZoneWizard() {
                                 })
                             }
                             onAutoOptimizeChange={setAutoOptimize}
+                            allowAutoOptimize={false} // Disable auto-optimize toggle for editing existing zones
                         />
                     ),
             },

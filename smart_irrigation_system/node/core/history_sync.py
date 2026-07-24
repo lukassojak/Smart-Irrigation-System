@@ -174,7 +174,7 @@ class HistorySyncManager:
     def _sync_once(self, queue: List[Dict[str, Any]]) -> bool:
         """Try to sync once without retries."""
         try:
-            url = f"{self.server_url}/api/v1/runtime/history/upload"
+            url = f"{self.server_url}/api/v1/history/irrigation-history/upload"
             
             payload = {
                 "node_id": self.node_id,

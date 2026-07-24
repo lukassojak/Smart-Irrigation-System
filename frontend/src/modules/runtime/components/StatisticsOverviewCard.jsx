@@ -4,6 +4,41 @@ import {
     HStack,
     Text
 } from "@chakra-ui/react"
+import { keyframes } from "@emotion/react"
+import { useState, useEffect } from "react"
+
+// Animace při změně hodnoty - slide in s fade efektem
+const slideInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
+
+function AnimatedValue({ value }) {
+    const [animationKey, setAnimationKey] = useState(0)
+
+    useEffect(() => {
+        setAnimationKey((prev) => prev + 1)
+    }, [value])
+
+    return (
+        <Text
+            key={animationKey}
+            fontSize="2xl"
+            fontWeight="600"
+            color="gray.800"
+            letterSpacing="-0.02em"
+            animation={`${slideInUp} 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)`}
+        >
+            {value}
+        </Text>
+    )
+}
 
 export default function StatisticsOverviewCard({
     icon: Icon,
@@ -45,14 +80,7 @@ export default function StatisticsOverviewCard({
                     </Text>
                 </HStack>
 
-                <Text
-                    fontSize="2xl"
-                    fontWeight="600"
-                    color="gray.800"
-                    letterSpacing="-0.02em"
-                >
-                    {value}
-                </Text>
+                <AnimatedValue value={value} />
 
                 {description && (
                     <Text fontSize="sm" color="gray.500">

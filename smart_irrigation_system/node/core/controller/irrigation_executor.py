@@ -149,13 +149,15 @@ class IrrigationExecutor:
                         )
                         if not should_irrigate:
                             self.logger.info(f"Circuit ID {circuit_id} skipped by dynamic interval logic: {reason}")
-                            skipped_result = result_factory.create_skipped_due_to_conditions(
-                                circuit_id=circuit_id,
+                            skipped_result = result_factory.create_skipped_due_to_dynamic_interval(
+                                zone_config=circuit.zone_config,
+                                actual_conditions=current_conditions,
+                                standard_conditions=global_config.standard_conditions,
                                 start_time=time_utils.now(),
                                 target_duration=0,
                                 target_water_amount=target_volume,
                             )
-                            self.state_manager.irrigation_finished(circuit_id, skipped_result)
+                            self.state_manager.irrigation_finished(circuit_id, skipped_result, False)
                             planner.mark_done(circuit_id)
                             continue
                     else:
@@ -259,7 +261,7 @@ class IrrigationExecutor:
                     stop_event=local_stop_event,
                     precomputed_target_volume=precomputed_target_volume
                 )
-                self.state_manager.irrigation_finished(circuit_id, result)
+                self.state_manager.irrigation_finished(circuit_id, result, False)
                 self.logger.info(f"Irrigation for Circuit ID {circuit_id} finalized.")
             # TODO: replace with specific exceptions
             except Exception as e:
@@ -303,7 +305,7 @@ class IrrigationExecutor:
                 result: IrrigationResult = circuit.irrigate_man(target_volume=volume,
                                                                 stop_event=local_stop_event
                 )
-                self.state_manager.irrigation_finished(circuit_id, result)
+                self.state_manager.irrigation_finished(circuit_id, result, True)
                 self.logger.info(f"Manual irrigation for Circuit ID {circuit_id} completed successfully.")
             except Exception as e:
                 self.logger.error(f"Manual irrigation for Circuit ID {circuit_id} failed: {e}")

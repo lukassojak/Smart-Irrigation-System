@@ -16,6 +16,7 @@ from smart_irrigation_system.server.api.routes import router as api_router
 from smart_irrigation_system.server.configuration.api.v1.routers import router as configuration_router
 from smart_irrigation_system.server.runtime.api.routes import router as runtime_router
 from smart_irrigation_system.server.system.api.system import router as system_router
+from smart_irrigation_system.server.history.api.routes import router as history_router
 from smart_irrigation_system.server.runtime.services.live_service import initialize_live_store_from_config
 from smart_irrigation_system.server.runtime.models.irrigation_history import IrrigationHistory  # noqa: F401
 from smart_irrigation_system.server.configuration.models.zone_lifecycle import ZoneLifecycle  # noqa: F401
@@ -52,6 +53,7 @@ app.include_router(api_router, prefix="/api/v1")
 app.include_router(configuration_router, prefix="/api/v1")
 app.include_router(runtime_router, prefix="/api/v1/runtime")
 app.include_router(system_router, prefix="/api/v1/system")
+app.include_router(history_router, prefix="/api/v1/history")
 
 # SQLModel.metadata.create_all(bind=engine)
 
