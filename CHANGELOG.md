@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Server support for extended `IrrigationResult`: the server now stores and returns new fields (`success`, `was_manual_run`, `carry_over_applied`, `dynamic_interval_enabled`, `irrigation_volume_threshold_percent`).
 - Alembic migration: `20260716_align_history_with_irrigation_result.py` to add new nullable columns and allow `start_time` to be nullable.
 - `docs/developer_reference/DEPLOYMENT_MIGRATIONS.md`: added instructions for safe production migration with Alembic.
+- Global minimum font size of 16px for all input, textarea, and select elements to improve mobile usability and prevent zooming issues on iOS devices.
 
 ### Changed
 - Moved `irrigation_history.py` router from `server/runtime/api` to `server/history/api` to better reflect its purpose and domain. Updated all relevant imports and references in the codebase to accommodate this change.
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic-interval skipped result creation in node executor now passes explicit actual/standard weather condition inputs to result factory.
 - Interrupted irrigation records are now also queued and synced to server history from `CircuitStateManager` when history sync manager is available.
 - Multiple `IrrigationHistoryPage.jsx` polishments.
+- PWA viewport meta tag updated to include `maximum-scale=1` and `user-scalable=no` to prevent zooming issues on mobile devices, ensuring a consistent and user-friendly experience.
 
 ### Fixed
 
