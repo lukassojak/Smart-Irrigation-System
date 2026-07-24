@@ -206,11 +206,11 @@ export default function HistoryRecordsTable({ records = [], nodes = [] }) {
                             const zoneName = getZoneName(record, nodes)
                             const showCorrectionBox = !record.was_manual_run
 
-                            {/* Correction applied percentage */ }
-                            const correctionApplied = record.target_water_amount != null && record.base_water_amount != null
-                                ? Math.round(((record.target_water_amount - record.base_water_amount) / record.base_water_amount) * 100)
-                                : null
-                            const correctionAppliedWithSign = correctionApplied != null ? `${correctionApplied >= 0 ? "+" : ""}${correctionApplied}%` : "N/A"
+// Correction applied percentage
+const correctionApplied = record.target_water_amount != null && record.base_water_amount != null && Number(record.base_water_amount) !== 0
+    ? Math.round(((record.target_water_amount - record.base_water_amount) / record.base_water_amount) * 100)
+    : null
+const correctionAppliedWithSign = correctionApplied != null ? `${correctionApplied >= 0 ? "+" : ""}${correctionApplied}%` : "N/A"
 
                             const onOpenRecord = () => {
                                 const start = encodeURIComponent(record.start_time || "")
