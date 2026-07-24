@@ -111,7 +111,7 @@ export default function CurrentTaskCard({ task, isStopping, onStop }) {
                 <HStack justify="space-between">
                     <HStack gap={4}>
                         <Text fontSize="sm" color="gray.600">
-                            {task.currentVolume.toFixed(2)} L / {task.targetVolume.toFixed(2)} L
+                            {task.currentVolume != null ? task.currentVolume.toFixed(2) : "-"} L / {task.targetVolume != null ? task.targetVolume.toFixed(2) : "-"} L
                         </Text>
 
                         <Text fontSize="xs" color="gray.500">
