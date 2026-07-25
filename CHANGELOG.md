@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Disabled the "Upcoming Tasks" and "Weather & Water Summary" sections on the main dashboard page for now, as they are not yet fully implemented and may cause confusion. These sections will be re-enabled in a future release once the necessary data and functionality are available.
+- Disabled outline focus on the recharts.
+- Unified all bottom sheet "back" buttons to use the same text and icon for consistency across the application.
 
 ### Fixed
 - Fixed hamburger menu link issue (invalid href) in `ZoneDetailPage.jsx`.
