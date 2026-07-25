@@ -108,7 +108,7 @@ export default function GlobalSettingsPage() {
                 actions={
                     <HeaderActions>
                         <HeaderAction as={Link} to="/configuration/nodes">
-                            Back to Dashboard
+                            &larr; Back to Dashboard
                         </HeaderAction>
                     </HeaderActions>
                 }

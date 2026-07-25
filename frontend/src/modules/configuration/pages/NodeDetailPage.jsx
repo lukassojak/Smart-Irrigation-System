@@ -229,7 +229,7 @@ export default function NodeDetailPage() {
                             as={Link}
                             to="/configuration/nodes"
                         >
-                            &larr; Back
+                            &larr; Back to dashboard
                         </HeaderAction>
                     </HeaderActions>
                 }

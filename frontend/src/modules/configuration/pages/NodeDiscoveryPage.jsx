@@ -141,7 +141,7 @@ export default function NodeDiscoveryPage() {
                 actions={
                     <HeaderActions>
                         <HeaderAction as={Link} to="/configuration/nodes">
-                            Back to dashboard
+                            &larr; Back to dashboard
                         </HeaderAction>
                     </HeaderActions>
                 }
