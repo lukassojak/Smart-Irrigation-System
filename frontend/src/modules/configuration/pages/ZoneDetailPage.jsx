@@ -168,7 +168,7 @@ export default function ZoneDetailPage() {
                 onMobileMenuClick={openMobileSidebar}
             >
                 <HStack>
-                    <Link to={`/nodes/${nodeId}`}>
+                    <Link to={`/configuration/nodes/${nodeId}`}>
                         <Text fontSize="xs" color="gray.500">
                             Node #{nodeId}
                         </Text>

@@ -113,3 +113,45 @@ select {
         transform: scale(1.02) rotate(0deg);
     }
 }
+
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible {
+    outline: none;
+}
+
+.recharts-sector:focus,
+.recharts-sector:focus-visible,
+.recharts-pie-sector:focus,
+.recharts-pie-sector:focus-visible,
+.recharts-layer:focus,
+.recharts-layer:focus-visible,
+path:focus,
+path:focus-visible {
+    outline: none;
+}
+
+.recharts-line:focus,
+.recharts-line:focus-visible,
+.recharts-curve:focus,
+.recharts-curve:focus-visible,
+.recharts-dot:focus,
+.recharts-dot:focus-visible,
+.recharts-rectangle:focus,
+.recharts-rectangle:focus-visible,
+.recharts-bar-rectangle:focus,
+.recharts-bar-rectangle:focus-visible {
+    outline: none;
+}
+
+.recharts-surface path:focus,
+.recharts-surface rect:focus,
+.recharts-surface circle:focus,
+.recharts-surface g:focus,
+.recharts-surface path:focus-visible,
+.recharts-surface rect:focus-visible,
+.recharts-surface circle:focus-visible,
+.recharts-surface g:focus-visible {
+    outline: none;
+}

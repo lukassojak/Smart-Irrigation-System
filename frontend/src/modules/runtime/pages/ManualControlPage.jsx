@@ -8,10 +8,13 @@ import {
     Input,
     Button,
     VStack,
+    HStack,
+    Slider,
 } from "@chakra-ui/react"
 
 import { useOutletContext } from "react-router-dom"
 
+import { fetchNodes, fetchZoneById } from "../../../api/nodes.api"
 import useLiveRuntime from "../../../hooks/useLiveRuntime"
 import useRuntimeControlState from "../../../hooks/useRuntimeControlState"
 import { startIrrigation as startIrrigationApi } from "../../../api/runtime.api"
@@ -55,11 +58,44 @@ const buildErrorDetail = (error, fallbackMessage) => {
     }
 }
 
+const parsePositiveNumber = (value) => {
+    const parsedValue = Number(value)
+
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        return null
+    }
+
+    return parsedValue
+}
+
+const formatLiters = (value) => `${value.toFixed(1)} L`
+
+const formatMillimeters = (value) => `${value.toFixed(1)} mm`
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+const extractNodesPayload = (payload) => {
+    if (Array.isArray(payload)) {
+        return payload
+    }
+
+    if (Array.isArray(payload?.nodes)) {
+        return payload.nodes
+    }
+
+    return []
+}
+
 export default function ManualControlPage() {
     const [selectedZone, setSelectedZone] = useState(null)
     const [mode, setMode] = useState("volume")
     const [valueInput, setValueInput] = useState("")
+    const [percentageInput, setPercentageInput] = useState(100)
+    const [rainMmInput, setRainMmInput] = useState("")
     const [isStarting, setIsStarting] = useState(false)
+    const [selectedZoneDetail, setSelectedZoneDetail] = useState(null)
+    const [zoneDetailLoading, setZoneDetailLoading] = useState(false)
+    const [zoneDetailError, setZoneDetailError] = useState(null)
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
@@ -83,6 +119,63 @@ export default function ManualControlPage() {
     )
 
     useEffect(() => {
+        let isActive = true
+
+        if (!selectedZoneData) {
+            setSelectedZoneDetail(null)
+            setZoneDetailLoading(false)
+            setZoneDetailError(null)
+            return undefined
+        }
+
+        const loadZoneDetail = async () => {
+            setZoneDetailLoading(true)
+            setZoneDetailError(null)
+
+            try {
+                const response = await fetchNodes()
+
+                const nodes = extractNodesPayload(response?.data)
+                const matchingNode = nodes.find((node) =>
+                    Array.isArray(node.zones)
+                    && node.zones.some((zone) => String(zone.id) === String(selectedZoneData.id))
+                )
+
+                if (!matchingNode?.id) {
+                    throw new Error(`Unable to resolve node for zone ${selectedZoneData.id}`)
+                }
+
+                const zoneResponse = await fetchZoneById(matchingNode.id, selectedZoneData.id)
+                const matchingZone = zoneResponse?.data ?? null
+
+                if (!isActive) {
+                    return
+                }
+
+                setSelectedZoneDetail(matchingZone)
+            } catch (detailError) {
+                if (!isActive) {
+                    return
+                }
+
+                console.error("Failed to load selected zone details:", detailError)
+                setSelectedZoneDetail(null)
+                setZoneDetailError(detailError)
+            } finally {
+                if (isActive) {
+                    setZoneDetailLoading(false)
+                }
+            }
+        }
+
+        loadZoneDetail()
+
+        return () => {
+            isActive = false
+        }
+    }, [selectedZoneData?.id])
+
+    useEffect(() => {
         if (!selectedZoneData) {
             return
         }
@@ -93,6 +186,204 @@ export default function ManualControlPage() {
         }
     }, [selectedZoneData])
 
+    useEffect(() => {
+        if (!selectedZoneDetail || zoneDetailLoading) {
+            return
+        }
+
+        if (mode === "rain" && selectedZoneDetail.irrigation_mode !== "even_area") {
+            setMode("volume")
+        }
+    }, [mode, selectedZoneDetail, zoneDetailLoading])
+
+    const selectedZoneBaseVolumeLiters = useMemo(() => {
+        if (!selectedZoneDetail) {
+            return null
+        }
+
+        const baseVolume = selectedZoneDetail?.irrigation_configuration?.base_target_volume_liters
+        if (baseVolume !== null && baseVolume !== undefined) {
+            const parsedBaseVolume = parsePositiveNumber(baseVolume)
+            if (parsedBaseVolume !== null) {
+                return parsedBaseVolume
+            }
+        }
+
+        if (selectedZoneDetail.irrigation_mode === "even_area") {
+            const targetMm = selectedZoneDetail?.irrigation_configuration?.target_mm
+            const zoneAreaM2 = selectedZoneDetail?.irrigation_configuration?.zone_area_m2
+
+            if (targetMm === null || targetMm === undefined || zoneAreaM2 === null || zoneAreaM2 === undefined) {
+                return null
+            }
+
+            const targetMmNum = parsePositiveNumber(targetMm)
+            const zoneAreaM2Num = parsePositiveNumber(zoneAreaM2)
+
+            if (targetMmNum === null || zoneAreaM2Num === null) {
+                return null
+            }
+
+            return targetMmNum * zoneAreaM2Num
+        }
+
+        return null
+    }, [selectedZoneDetail])
+
+    const selectedZoneBaseVolumeMm = useMemo(() => {
+        if (selectedZoneDetail?.irrigation_mode !== "even_area") {
+            return null
+        }
+
+        const targetMm = parsePositiveNumber(selectedZoneDetail?.irrigation_configuration?.target_mm)
+        if (targetMm !== null) {
+            return targetMm
+        }
+
+        const zoneAreaM2 = parsePositiveNumber(selectedZoneDetail?.irrigation_configuration?.zone_area_m2)
+        const baseVolumeLiters = parsePositiveNumber(selectedZoneDetail?.irrigation_configuration?.base_target_volume_liters)
+
+        if (zoneAreaM2 === null || baseVolumeLiters === null) {
+            return null
+        }
+
+        return baseVolumeLiters / zoneAreaM2
+    }, [selectedZoneDetail])
+
+    useEffect(() => {
+        if (mode !== "rain") {
+            return
+        }
+
+        if (selectedZoneBaseVolumeMm === null) {
+            return
+        }
+
+        const normalizedRainMm = clamp(selectedZoneBaseVolumeMm, 1, 10)
+        setRainMmInput(String(normalizedRainMm))
+    }, [mode, selectedZoneBaseVolumeMm, selectedZone?.id])
+
+    const selectedZoneAreaM2 = useMemo(() => {
+        if (selectedZoneDetail?.irrigation_mode !== "even_area") {
+            return null
+        }
+
+        return parsePositiveNumber(selectedZoneDetail?.irrigation_configuration?.zone_area_m2)
+    }, [selectedZoneDetail])
+
+    const canUsePercentMode = selectedZoneBaseVolumeLiters !== null
+    const canUseRainMode = selectedZoneDetail?.irrigation_mode === "even_area"
+
+    const modeOptions = useMemo(() => {
+        const options = [{ value: "volume", label: "By Volume (L)" }]
+
+        if (canUsePercentMode) {
+            options.push({ value: "percent", label: "By Base Volume (%)" })
+        }
+
+        if (canUseRainMode) {
+            options.push({ value: "rain", label: "By Rainfall (mm)" })
+        }
+
+        return options
+    }, [canUsePercentMode, canUseRainMode])
+
+    const manualIrrigationPlan = useMemo(() => {
+        if (!selectedZoneData) {
+            return {
+                valid: false,
+                message: "Select a zone first.",
+                targetVolumeLiters: null,
+            }
+        }
+
+        if (mode === "volume") {
+            const liters = parsePositiveNumber(valueInput)
+
+            if (liters === null) {
+                return {
+                    valid: false,
+                    message: "Enter a value greater than 0 liters.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            return {
+                valid: true,
+                message: `Manual volume: ${formatLiters(liters)}.`,
+                targetVolumeLiters: liters,
+            }
+        }
+
+        if (mode === "percent") {
+            if (selectedZoneBaseVolumeLiters === null) {
+                return {
+                    valid: false,
+                    message: "Base volume is unavailable for this zone.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            const targetVolumeLiters = selectedZoneBaseVolumeLiters * (percentageInput / 100)
+
+            if (targetVolumeLiters <= 0) {
+                return {
+                    valid: false,
+                    message: "Calculated volume must be greater than 0 liters.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            return {
+                valid: true,
+                message: `${percentageInput}% of base volume = ${formatLiters(targetVolumeLiters)}.`,
+                targetVolumeLiters,
+            }
+        }
+
+        if (mode === "rain") {
+            if (selectedZoneDetail?.irrigation_mode !== "even_area") {
+                return {
+                    valid: false,
+                    message: "Rainfall mode is only available for even_area zones.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            if (selectedZoneAreaM2 === null || selectedZoneBaseVolumeMm === null) {
+                return {
+                    valid: false,
+                    message: "Rainfall settings are unavailable for this zone.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            const rainfallMm = parsePositiveNumber(rainMmInput)
+
+            if (rainfallMm === null || rainfallMm < 1 || rainfallMm > 10) {
+                return {
+                    valid: false,
+                    message: "Enter a rainfall amount from 1 to 10 mm.",
+                    targetVolumeLiters: null,
+                }
+            }
+
+            const targetVolumeLiters = rainfallMm * selectedZoneAreaM2
+
+            return {
+                valid: true,
+                message: `${rainfallMm.toFixed(1)} mm on ${selectedZoneAreaM2.toFixed(1)} m² = ${formatLiters(targetVolumeLiters)}.`,
+                targetVolumeLiters,
+            }
+        }
+
+        return {
+            valid: false,
+            message: "Unsupported manual control mode.",
+            targetVolumeLiters: null,
+        }
+    }, [mode, percentageInput, rainMmInput, selectedZoneAreaM2, selectedZoneBaseVolumeLiters, selectedZoneData, selectedZoneDetail])
+
     const openControlDialog = useCallback((payload) => {
         const id = `manual-control-action-result-${Date.now()}`
         openControlActionDialog(id, payload)
@@ -100,18 +391,7 @@ export default function ManualControlPage() {
 
     const handleStartManual = useCallback(async () => {
         const targetZone = selectedZoneData
-        if (!targetZone || isStarting) {
-            return
-        }
-
-        const numericValue = Number(valueInput)
-        if (!Number.isFinite(numericValue) || numericValue <= 0) {
-            openControlDialog({
-                title: "Invalid input",
-                description: "Enter a value greater than 0 liters.",
-                status: "error",
-                zoneId: targetZone.id,
-            })
+        if (!targetZone || isStarting || !manualIrrigationPlan.valid) {
             return
         }
 
@@ -119,14 +399,14 @@ export default function ManualControlPage() {
         try {
             const response = await startIrrigationApi({
                 zoneId: targetZone.id,
-                targetVolume: numericValue,
+                targetVolume: manualIrrigationPlan.targetVolumeLiters,
                 waitForResponse: true,
                 timeoutSeconds: 5,
             })
 
             openControlDialog({
                 title: "Manual irrigation started",
-                description: "Start command completed successfully.",
+                description: `${manualIrrigationPlan.message} Start command completed successfully.`,
                 status: "success",
                 zoneId: targetZone.id,
                 nodeId: response?.node_id,
@@ -135,6 +415,7 @@ export default function ManualControlPage() {
             })
 
             setValueInput("")
+            setRainMmInput("")
         } catch (startError) {
             const errorDetail = buildErrorDetail(startError, `Failed to start irrigation for zone ${targetZone.id}`)
             openControlDialog({
@@ -150,7 +431,7 @@ export default function ManualControlPage() {
         } finally {
             setIsStarting(false)
         }
-    }, [isStarting, openControlDialog, selectedZoneData, valueInput])
+    }, [isStarting, manualIrrigationPlan, openControlDialog, selectedZoneData])
 
     const handleStopZoneWithNotification = useCallback(async (zoneId) => {
         const result = await handleStopZone(zoneId)
@@ -212,7 +493,9 @@ export default function ManualControlPage() {
         })
     }, [handleStopAll, openControlDialog])
 
-    const startDisabled = !selectedZoneData || isStarting || mode !== "volume"
+    const startDisabled = !selectedZoneData || isStarting || !manualIrrigationPlan.valid
+
+    const rainSliderDefaultMm = selectedZoneBaseVolumeMm ?? 1
 
     if (loading && !liveData) {
         return (
@@ -306,23 +589,120 @@ export default function ManualControlPage() {
                                     <NativeSelect.Field
                                         value={mode}
                                         onChange={(event) => setMode(event.target.value)}
+                                        disabled={!selectedZoneData || isStarting}
                                     >
-                                        <option value="volume">By Volume (L)</option>
+                                        {modeOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
                                     </NativeSelect.Field>
                                     <NativeSelect.Indicator />
                                 </NativeSelect.Root>
+
+                                {zoneDetailLoading && selectedZoneData && (
+                                    <Text fontSize="xs" color="gray.500">
+                                        Loading zone configuration...
+                                    </Text>
+                                )}
+
+                                {zoneDetailError && selectedZoneData && (
+                                    <Text fontSize="xs" color="red.500">
+                                        Zone configuration could not be loaded from nodes. Base-volume and rainfall modes are unavailable.
+                                    </Text>
+                                )}
 
                                 <Text fontSize="sm" color="gray.600">
                                     Value
                                 </Text>
 
-                                <Input
-                                    placeholder="Enter value"
-                                    type="number"
-                                    value={valueInput}
-                                    onChange={(event) => setValueInput(event.target.value)}
-                                    disabled={!selectedZoneData || isStarting}
-                                />
+                                {mode === "volume" && (
+                                    <Input
+                                        placeholder="Enter liters"
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        value={valueInput}
+                                        onChange={(event) => setValueInput(event.target.value)}
+                                        disabled={!selectedZoneData || isStarting}
+                                    />
+                                )}
+
+                                {mode === "percent" && (
+                                    <VStack align="stretch" gap={3}>
+                                        <Slider.Root
+                                            value={[percentageInput]}
+                                            min={50}
+                                            max={150}
+                                            step={5}
+                                            colorPalette="orange"
+                                            onValueChange={(event) => setPercentageInput(event.value[0])}
+                                            disabled={!selectedZoneData || isStarting || selectedZoneBaseVolumeLiters === null}
+                                        >
+                                            <HStack justify="space-between" align="center">
+                                                <Text fontSize="sm" color="gray.600">
+                                                    Base volume multiplier
+                                                </Text>
+                                                <Text fontSize="sm" fontWeight="medium">
+                                                    {percentageInput}%
+                                                </Text>
+                                            </HStack>
+                                            <Slider.Control>
+                                                <Slider.Track>
+                                                    <Slider.Range />
+                                                </Slider.Track>
+                                                <Slider.Thumbs />
+                                            </Slider.Control>
+                                        </Slider.Root>
+
+                                        <Text fontSize="sm" color="gray.600">
+                                            {selectedZoneBaseVolumeLiters === null
+                                                ? "Base volume is unavailable for this zone configuration."
+                                                : `${percentageInput}% of ${formatLiters(selectedZoneBaseVolumeLiters)} = ${formatLiters(selectedZoneBaseVolumeLiters * (percentageInput / 100))}`}
+                                        </Text>
+                                    </VStack>
+                                )}
+
+                                {mode === "rain" && (
+                                    <VStack align="stretch" gap={3}>
+                                        <Slider.Root
+                                            value={[parsePositiveNumber(rainMmInput) ?? rainSliderDefaultMm]}
+                                            min={1}
+                                            max={10}
+                                            step={1}
+                                            colorPalette="orange"
+                                            onValueChange={(event) => setRainMmInput(String(event.value[0]))}
+                                            disabled={!selectedZoneData || isStarting || selectedZoneAreaM2 === null || selectedZoneBaseVolumeMm === null}
+                                        >
+                                            <HStack justify="space-between" align="center">
+                                                <Text fontSize="sm" color="gray.600">
+                                                    Rainfall depth
+                                                </Text>
+                                                <Text fontSize="sm" fontWeight="medium">
+                                                    {formatMillimeters(parsePositiveNumber(rainMmInput) ?? rainSliderDefaultMm)}
+                                                </Text>
+                                            </HStack>
+                                            <Slider.Control>
+                                                <Slider.Track>
+                                                    <Slider.Range />
+                                                </Slider.Track>
+                                                <Slider.Thumbs />
+                                            </Slider.Control>
+                                        </Slider.Root>
+
+                                        <Text fontSize="sm" color="gray.600">
+                                            {selectedZoneAreaM2 === null || selectedZoneBaseVolumeMm === null
+                                                ? "Rainfall settings are unavailable for this zone."
+                                                : `${formatMillimeters(parsePositiveNumber(rainMmInput) ?? rainSliderDefaultMm)} on ${selectedZoneAreaM2.toFixed(1)} m² = ${formatLiters((parsePositiveNumber(rainMmInput) ?? rainSliderDefaultMm) * selectedZoneAreaM2)}; base volume corresponds to ${formatMillimeters(selectedZoneBaseVolumeMm)}.`}
+                                        </Text>
+                                    </VStack>
+                                )}
+
+                                {!manualIrrigationPlan.valid && selectedZoneData && (
+                                    <Text fontSize="xs" color="red.500">
+                                        {manualIrrigationPlan.message}
+                                    </Text>
+                                )}
 
                                 <Button
                                     colorPalette="orange"

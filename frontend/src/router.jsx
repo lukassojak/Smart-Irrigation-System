@@ -11,6 +11,10 @@ import CreateNodePage from "./modules/configuration/pages/CreateNodePage"
 import EditNodePage from "./modules/configuration/pages/EditNodePage"
 import ZoneDetailPage from "./modules/configuration/pages/ZoneDetailPage"
 import GlobalSettingsPage from "./modules/configuration/pages/GlobalSettingsPage"
+import NotificationsPage from "./modules/runtime/pages/NotificationsPage"
+import WeatherHistoryPage from "./modules/history/pages/WeatherHistoryPage"
+import SettingsPage from "./modules/configuration/pages/SettingsPage"
+
 import Wizard from "./modules/configuration/pages/CreateZoneWizard/Wizard"
 import EditZoneWizard from "./modules/configuration/pages/EditZoneWizard/EditZoneWizard"
 import AppLayout from "./components/layout/AppLayout"
@@ -86,21 +90,13 @@ const router = createBrowserRouter([
 
             {
                 path: "manual",
-                // placeholder
                 element: <ManualControlPage />
             },
 
             {
                 path: "notifications",
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Notifications
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the notifications page placeholder.
-                    </Box>
-                </Box>
+                // Not implemented page
+                element: <NotificationsPage />
             },
 
             {
@@ -118,7 +114,6 @@ const router = createBrowserRouter([
 
             {
                 path: "statistics",
-                // placeholder
                 element: <StatisticsPage />
             },
 
@@ -137,28 +132,14 @@ const router = createBrowserRouter([
 
             {
                 path: "weather",
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Weather History
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the weather history page placeholder.
-                    </Box>
-                </Box>
+                // Not implemented page
+                element: <WeatherHistoryPage />
             },
 
             {
                 path: "settings",
-                // placeholder
-                element: <Box p={6}>
-                    <Box fontSize="2xl" fontWeight="bold" mb={4}>
-                        Settings
-                    </Box>
-                    <Box fontSize="md" color="fg.muted">
-                        This is the settings page placeholder.
-                    </Box>
-                </Box>
+                // Not implemented page
+                element: <SettingsPage />
             },
 
             {

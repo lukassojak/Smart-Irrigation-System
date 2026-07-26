@@ -1,5 +1,5 @@
 import React, { useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useOutletContext } from "react-router-dom"
 import {
     Box,
     Badge,
@@ -16,7 +16,6 @@ import {
 } from "@chakra-ui/react"
 import {
     Activity,
-    ArrowLeft,
     CalendarClock,
     CheckCircle2,
     CloudRain,
@@ -582,6 +581,9 @@ export default function IrrigationRecordDetailPage() {
     const isUncleanInterrupt = record.outcome === "interrupted" && /unclean|shutdown|power/i.test(record.reason ?? "")
     const zoneTitle = record.zone_name || `Zone ${record.circuit_id}`
 
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
+
     return (
         <>
             <ControlActionDialogViewport />
@@ -589,11 +591,12 @@ export default function IrrigationRecordDetailPage() {
             <GlassPageHeader
                 title={`Irrigation record — Zone #${record.circuit_id}`}
                 subtitle={startStr}
+                showMobileMenuButton={isMobile}
+                onMobileMenuClick={openMobileSidebar}
                 actions={(
                     <>
                         <HeaderAction onClick={() => navigate(-1)}>
-                            <ArrowLeft size={16} style={{ marginRight: 6 }} />
-                            Back
+                            &larr; Back to irrigation history
                         </HeaderAction>
                         <HeaderActionDanger onClick={handleDeleteRecord}>
                             Delete record

@@ -330,6 +330,7 @@ export default function MainDashboardPage() {
                     />
 
                     {/* SECTION 5 - UPCOMING TASKS */}
+                    {/*
                     <Grid
                         templateColumns={{ base: "1fr", xl: "1fr 1fr" }}
                         gap={8}
@@ -342,9 +343,11 @@ export default function MainDashboardPage() {
 
                         <WeatherWaterSummaryCard data={weatherWaterData} />
                     </Grid>
+                    */}
 
                     {/* SECTION 6 - WEATHER FORECAST */}
                     {/* <WeatherForecastSection data={weatherForecastData} /> */}
+
 
                 </DashboardPageSectionStack>
             </PageContainer>

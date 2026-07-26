@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1]
+
+### Added
+- Added placeholder pages for "Notifications", "Weather History", and "Settings" in the frontend navigation. These pages currently display a `PageNotImplementedWarning.jsx` component to inform users that the features are not yet available. These pages will be implemented in future releases.
+- Added a new manual irrigation modes to the `ManualControlPage.jsx` component.
+
+### Changed
+- Disabled the "Upcoming Tasks" and "Weather & Water Summary" sections on the main dashboard page for now, as they are not yet fully implemented and may cause confusion. These sections will be re-enabled in a future release once the necessary data and functionality are available.
+- Disabled outline focus on the recharts.
+- Unified all bottom sheet "back" buttons to use the same text and icon for consistency across the application.
+- Updated the `GlassPageHeader` component to show menu button on md and smaller viewports
+
+### Fixed
+- Fixed hamburger menu link issue (invalid href) in `ZoneDetailPage.jsx`.
+
+### Removed
+
+### Known Issues
+
+---
+
 ## [1.4.0]
 
 ### Added

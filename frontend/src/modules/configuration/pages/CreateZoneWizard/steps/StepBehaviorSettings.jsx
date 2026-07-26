@@ -315,9 +315,9 @@ export default function StepBehaviorSettings({ data, onChange }) {
                             <Slider.Root
                                 width="100%"
                                 maxW="300px"
-                                min={-1}
-                                max={1}
-                                step={0.05}
+                                min={-0.5}
+                                max={0.5}
+                                step={0.01}
                                 value={[local_correction_factors[key]]}
                                 onValueChange={(e) =>
                                     updateCorrections({

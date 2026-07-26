@@ -9,6 +9,7 @@ import {
     Image,
     HStack,
     VStack,
+    useBreakpointValue
 } from "@chakra-ui/react"
 
 import PanelSection from "../../../components/layout/PanelSection"
@@ -25,6 +26,7 @@ export default function NodeHeaderDetailPage() {
     const [pins, setPins] = useState([])
     const [loading, setLoading] = useState(true)
 
+    const showImage = useBreakpointValue({ base: true, md: false })
     // In the future, this would fetch actual data from API:
     // useEffect(() => {
     //     fetchNodeGPIOPins(nodeId)
@@ -135,7 +137,7 @@ export default function NodeHeaderDetailPage() {
                     <PanelSection title="GPIO Header Configuration" description="Hover on any pin to view details. Green pins are available, red pins are in use.">
                         <VStack gap={4} align="start">
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={6} alignItems="center">
-                                <GPIOHeaderVisualizer pins={pins} showImage={isMobile} />
+                                <GPIOHeaderVisualizer pins={pins} showImage={showImage} />
 
                                 <Box display={{ base: "none", md: "flex" }}>
                                     <Image

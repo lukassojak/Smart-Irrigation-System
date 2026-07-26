@@ -27,11 +27,11 @@ export default function GlassPageHeader({
     subtitle,
     actions,
     children,
-    showMobileMenuButton = false,
+    showMobileMenuButton = true,
     onMobileMenuClick
 }) {
 
-    const isMobile = useBreakpointValue({ base: true, md: false })
+    const isMobile = useBreakpointValue({ base: true, lg: false })
     const [compact, setCompact] = useState(false)
 
     useEffect(() => {
@@ -77,16 +77,14 @@ export default function GlassPageHeader({
                         alignItems="flex-start"
                         pt={1}
                     >
-                        {showMobileMenuButton && (
-                            <IconButton
-                                aria-label="Open menu"
-                                variant="ghost"
-                                size="sm"
-                                onClick={onMobileMenuClick}
-                            >
-                                <LayoutList size={24} />
-                            </IconButton>
-                        )}
+                        <IconButton
+                            aria-label="Open menu"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onMobileMenuClick}
+                        >
+                            <LayoutList size={24} />
+                        </IconButton>
                     </Box>
                 )}
 

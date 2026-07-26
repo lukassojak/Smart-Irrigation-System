@@ -17,7 +17,7 @@ import {
     SlidersHorizontal,
     Activity
 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useOutletContext } from "react-router-dom"
 
 import GlassPageHeader from "./components/layout/GlassPageHeader"
 import GlassPanelSection from "./components/layout/GlassPanelSection"
@@ -25,6 +25,8 @@ import GlassPanelSection from "./components/layout/GlassPanelSection"
 export default function HomePage() {
 
     const navigate = useNavigate()
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
 
     const sections = [
         {
@@ -89,6 +91,7 @@ export default function HomePage() {
             <GlassPageHeader
                 title="Smart Irrigation System"
                 subtitle="Control & Monitoring Interface"
+                onMobileMenuClick={openMobileSidebar}
             >
                 <Text fontSize="sm" color="gray.600">
                     Select a module to continue.
