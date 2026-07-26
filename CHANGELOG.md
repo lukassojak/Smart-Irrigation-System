@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added placeholder pages for "Notifications", "Weather History", and "Settings" in the frontend navigation. These pages currently display a `PageNotImplementedWarning.jsx` component to inform users that the features are not yet available. These pages will be implemented in future releases.
+- Added a new manual irrigation modes to the `ManualControlPage.jsx` component.
 
 ### Changed
 - Disabled the "Upcoming Tasks" and "Weather & Water Summary" sections on the main dashboard page for now, as they are not yet fully implemented and may cause confusion. These sections will be re-enabled in a future release once the necessary data and functionality are available.
