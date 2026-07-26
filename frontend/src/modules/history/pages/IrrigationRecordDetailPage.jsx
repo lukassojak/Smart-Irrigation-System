@@ -583,6 +583,7 @@ export default function IrrigationRecordDetailPage() {
 
     const { isMobile, openMobileSidebar } = useOutletContext() || {}
 
+
     return (
         <>
             <ControlActionDialogViewport />
