@@ -8,9 +8,9 @@ export default function PageNotImplementedWarning({
     detail = undefined,
 }) {
     return (
-        <HStack gap={4} p={6} bg="rgba(255,193,7,0.05)" borderRadius="md">
+        <HStack gap={4} p={6} bg="rgba(7, 152, 255, 0.05)" borderRadius="md">
             <Box w="32px" h="32px" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
-                <Icon size={20} color="#F59E0B" />
+                <Icon size={20} color="rgb(7, 152, 255)" />
             </Box>
             <Stack gap={2}>
                 <Text fontSize="sm" color="fg.muted">
