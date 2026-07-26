@@ -3,15 +3,24 @@ import DashboardPageSectionStack from "../../../components/layout/DashboardPageS
 import GlassPageHeader from "../../../components/layout/GlassPageHeader"
 import PageNotImplementedWarning from "../../../components/ui/PageNotImplementedWarning"
 import GlassPanelSection from "../../../components/layout/GlassPanelSection"
+import { useOutletContext } from "react-router-dom"
 
 export default function NotificationsPage() {
+    const { isMobile, openMobileSidebar } = useOutletContext() || {}
+
     return (
         <>
-            <GlassPageHeader title="Notifications" />
+            <GlassPageHeader
+                title="Notifications"
+                onMobileMenuClick={openMobileSidebar}
+            />
             <PageContainer>
                 <DashboardPageSectionStack>
                     <GlassPanelSection>
-                        <PageNotImplementedWarning message="The notifications page is not available yet." />
+                        <PageNotImplementedWarning
+                            message="The notifications page is not available yet."
+                            detail="This feature is not supported in the current version."
+                        />
                     </GlassPanelSection>
                 </DashboardPageSectionStack>
             </PageContainer>

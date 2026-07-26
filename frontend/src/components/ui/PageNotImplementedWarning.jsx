@@ -1,10 +1,10 @@
 import { Box, HStack, Text, Stack } from "@chakra-ui/react"
-import { StickyNote } from 'lucide-react'
+import { StickyNoteOff } from "lucide-react"
 
 
 export default function PageNotImplementedWarning({
     message = "This page is not available yet.",
-    icon: Icon = StickyNote,
+    icon: Icon = StickyNoteOff,
     detail = undefined,
 }) {
     return (
