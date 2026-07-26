@@ -8,11 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.4.1]
 
 ### Added
+- Added placeholder pages for "Notifications", "Weather History", and "Settings" in the frontend navigation. These pages currently display a `PageNotImplementedWarning.jsx` component to inform users that the features are not yet available. These pages will be implemented in future releases.
 
 ### Changed
 - Disabled the "Upcoming Tasks" and "Weather & Water Summary" sections on the main dashboard page for now, as they are not yet fully implemented and may cause confusion. These sections will be re-enabled in a future release once the necessary data and functionality are available.
 - Disabled outline focus on the recharts.
 - Unified all bottom sheet "back" buttons to use the same text and icon for consistency across the application.
+- Updated the `GlassPageHeader` component to show menu button on md and smaller viewports
 
 ### Fixed
 - Fixed hamburger menu link issue (invalid href) in `ZoneDetailPage.jsx`.
