@@ -141,8 +141,8 @@ class TaskScheduler:
             try:
                 task.fn()
             except Exception as e:
-                # Log or handle exception as needed, e.g., send to ControllerCore
-                pass
+                # Or handle exception as needed, e.g., send to ControllerCore
+                self.logger.exception(f"Error executing task '{task.name}': {e}")
             
 
     

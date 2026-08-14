@@ -21,15 +21,11 @@ def main():
     tracemalloc.start()
     logger.info("Initializing Smart Irrigation Node...")
     logger.info(f"Version: {version}")
-    print("Initializing ", end="", flush=True)
-    time.sleep(0.5)
-    print(".", end="", flush=True)
+    print("Initializing ...", flush=True)
 
     # Initialize the ControllerCore
     try:
         controller = ControllerCore()
-        time.sleep(0.5)
-        print(".", end="", flush=True)
     except Exception as e:
         logger.error(f"Failed to initialize ControllerCore: {e}")
         return
@@ -39,13 +35,12 @@ def main():
         identity = load_node_identity()
         mqtt_client = MQTTClient(controller, identity=identity)
         mqtt_client.start()
-        time.sleep(0.5)
-        print(".", end="", flush=True)
     except Exception as e:
         logger.error(f"Failed to initialize network components: {e}")
         del controller
         return
 
+    print("Smart Irrigation Node is running. Press Ctrl+C to exit.", flush=True)
     try:
         while True:
             time.sleep(60)
