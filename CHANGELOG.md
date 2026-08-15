@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Improved `ControllerCore` initialization by initializing controller state and synchronization primitives before starting background workers.
 - Corrected `TaskScheduler` handling of `initial_delay` so the first task execution occurs only after the configured delay.
+- Updated `ThreadManager.join_all_workers()` to treat the timeout as a total deadline for joining all workers.
+- Improved controller cleanup to perform best-effort shutdown across all resources while preserving cleanup errors for diagnostics.
+- Updated config apply restart handling to continue with process restart even if graceful controller cleanup fails.
 
 ### Fixed
 - Fixed a `TaskScheduler` bug where tasks with a non-zero `initial_delay` could execute immediately after scheduler startup instead of waiting for the configured delay.
 - Fixed a `ControllerCore` initialization race condition where `refresh_state` could execute before `_state_lock` was initialized.
+- Improved node shutdown reliability when background workers fail to terminate within the configured timeout.
+- Fixed a side effect in `config_loader.py` where `validate_legacy_runtime_config()` was calling initializing new `IrrigationCircuit` objects, which could lead to unexpected side effects on GPIO pins during `RelayValve` initialization. The function now only validates the configuration without creating runtime objects.
 
 ### Removed
 

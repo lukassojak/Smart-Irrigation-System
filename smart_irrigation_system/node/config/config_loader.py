@@ -64,7 +64,7 @@ def load_global_config(filepath: str, secrets_path: str) -> GlobalConfig:
 def validate_legacy_runtime_config(
     legacy_runtime_config: dict[str, Any],
     secrets_path: str,
-) -> tuple[GlobalConfig, list[IrrigationCircuit]]:
+) -> None:
     """
     Strictly validates legacy runtime config payload and builds runtime objects.
 
@@ -81,9 +81,9 @@ def validate_legacy_runtime_config(
     if not isinstance(config_global, dict) or not isinstance(zones_config, dict):
         raise ValueError("legacy_runtime_config must contain config_global and zones_config objects")
 
-    global_config = _global_config_from_dict(config_global, secrets_path)
-    circuits = _circuits_from_zones_dict(zones_config, strict=True)
-    return global_config, circuits
+    # This actually builds the runtime object GlobalConfig and validates its content, but no side effect should occur here.
+    _global_config_from_dict(config_global, secrets_path)
+    _validate_zones_config(zones_config)
 
 
 def _global_config_from_dict(data: dict[str, Any], secrets_path: str) -> GlobalConfig:
@@ -351,6 +351,34 @@ def _is_valid_global_config(data: dict):
         raise ValueError("weather_api.realtime_url must be a string")
     if not isinstance(weather_api.get("history_url"), str):
         raise ValueError("weather_api.history_url must be a string")
+
+
+def _validate_zones_config(config_data: dict[str, Any]) -> None:
+    """
+    Validates the structure of the zones configuration dictionary.
+
+    :param config_data: The zones configuration dictionary to validate.
+    :raises ValueError: If the configuration is invalid.
+    """
+
+    zones = config_data.get("zones")
+
+    if not isinstance(zones, list):
+        raise ValueError("zones_config must contain a 'zones' list")
+
+    for zone in zones:
+        valid, errors = _is_valid_zone(zone)
+
+        if not valid:
+            zone_name = (
+                zone.get("name", "<unknown>")
+                if isinstance(zone, dict)
+                else "<unknown>"
+            )
+            raise ValueError(
+                f"Invalid zone configuration for {zone_name}: "
+                f"{', '.join(errors)}"
+            )
 
 
 # maybe useless, unused for now

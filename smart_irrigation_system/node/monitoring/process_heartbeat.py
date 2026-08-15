@@ -1,4 +1,5 @@
-import time
+import threading, time
+from pathlib import Path
 
 from smart_irrigation_system.node.utils.logger import get_logger
 
@@ -12,21 +13,31 @@ class ProcessHeartbeat:
     def __init__(self, path: str, interval: int = DEFAULT_INTERVAL):
         self.path = path
         self.interval = interval
+        self._stop_event = threading.Event()
         self.logger = get_logger(self.__class__.__name__)
 
     def run(self):
-        """Run the heartbeat loop."""
         self.logger.info(
-            f"Process heartbeat started with {self.interval}s interval."
+            f"Process heartbeat started with {self.interval:.0f}s interval."
         )
 
-        while True:
-            try:
-                with open(self.path, "w") as file:
-                    file.write(str(time.time()))
-            except Exception:
-                self.logger.error(
-                    "Failed to update process heartbeat."
-                )
+        while not self._stop_event.is_set():
+            self._write_heartbeat()
 
-            time.sleep(self.interval)
+            if self._stop_event.wait(timeout=self.interval):
+                break
+
+        self.logger.info("Process heartbeat stopped.")
+
+    def stop(self):
+        self._stop_event.set()
+
+    def _write_heartbeat(self):
+        try:
+            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+            with open(self.path, "w", encoding="utf-8") as file:
+                file.write(str(time.time()))
+        except Exception:
+            self.logger.error(
+                "Failed to update process heartbeat."
+            )

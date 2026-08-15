@@ -99,7 +99,7 @@ class ControllerCore(LegacyControllerAPI):
         # Init task scheduler last to ensure all components are ready
         self.task_scheduler = self._init_task_scheduler(
             thread_manager=self.thread_manager,
-            delay_seconds=5.0  # Delay to allow other components to initialize first
+            delay_seconds=1.0  # Delay to allow other components to initialize first
         )
 
         self._register_signal_handlers()
@@ -524,12 +524,15 @@ class ControllerCore(LegacyControllerAPI):
     # ==================================================================================================================
 
 
-    def _cleanup(self, force: bool = False):
+    def _cleanup(self, force: bool = False) -> None:
         """Cleans up the resources used by the irrigation controller.
         
         Args:
             force: If True, use 0s timeouts for immediate termination.
                    If False, use graceful timeouts (60s for irrigation, 10s for tasks).
+        
+        :param force: Whether to force immediate cleanup (True) or perform graceful cleanup (False).
+        :raises RuntimeError: If any errors occur during cleanup, they are collected and raised as a single RuntimeError.
         """
         with self._cleanup_lock:
             if self._cleanup_done.is_set():
@@ -541,6 +544,8 @@ class ControllerCore(LegacyControllerAPI):
         irrigation_timeout = 0.0 if force else 60.0
         task_timeout = 0.0 if force else 10.0
         worker_timeout = 0.0 if force else 10.0
+
+        cleanup_errors = []
         
         self.logger.info(f"Cleaning up resources ({'forced' if force else 'graceful'} mode, timeouts: irrigation={irrigation_timeout}s, tasks={task_timeout}s, workers={worker_timeout}s)...")
         if self.controller_state != ControllerState.IDLE:
@@ -549,16 +554,55 @@ class ControllerCore(LegacyControllerAPI):
                 self.irrigation_executor.stop_all_irrigation(timeout=irrigation_timeout)
             except TimeoutError:
                 self.logger.critical(f"Timeout while stopping irrigation tasks during cleanup (timeout={irrigation_timeout}s).")
+                cleanup_errors.append(f"Timeout while stopping irrigation tasks during cleanup (timeout={irrigation_timeout}s).")
             except Exception as e:
                 self.logger.critical(f"Unexpected error while stopping irrigation tasks during cleanup: {e}")
+                cleanup_errors.append(f"Unexpected error while stopping irrigation tasks during cleanup: {e}")
 
-        self.task_scheduler.stop(timeout=task_timeout)
-        self.thread_manager.join_all_workers(timeout=worker_timeout)
+        try:
+            self.task_scheduler.stop(timeout=task_timeout)
+        except Exception as e:
+            self.logger.error(f"Unexpected error while stopping TaskScheduler during cleanup: {e}")
+            cleanup_errors.append(f"Unexpected error while stopping TaskScheduler during cleanup: {e}")
+
+        try:
+            self.process_heartbeat.stop()
+        except Exception as e:
+            self.logger.error(f"Unexpected error while stopping ProcessHeartbeat during cleanup: {e}")
+            cleanup_errors.append(f"Unexpected error while stopping ProcessHeartbeat during cleanup: {e}")
+
+        try:
+            self.logger.debug(
+                f"Workers before join: "
+                f"{[w.name for w in self.thread_manager.get_running_workers()]}"
+                )
+            self.thread_manager.join_all_workers(timeout=worker_timeout)
+        except TimeoutError:
+            self.logger.error(f"Timeout while joining worker threads during cleanup (timeout={worker_timeout}s).")
+            cleanup_errors.append(f"Timeout while joining worker threads during cleanup (timeout={worker_timeout}s).")
+        except Exception as e:
+            self.logger.error(f"Unexpected error while joining worker threads during cleanup: {e}")
+            cleanup_errors.append(f"Unexpected error while joining worker threads during cleanup: {e}")
+        self.logger.debug(
+            f"Join completed. Remaining workers: "
+            f"{[w.name for w in self.thread_manager.get_running_workers()]}"
+            )
 
         # Double check if all valves are closed
         for circuit in self.circuits.values():
             if circuit.state == IrrigationState.IRRIGATING:
-                self.logger.warning(f"Circuit {circuit.zone_config.id} is still irrigating during cleanup, attempting to force-close valve.")	
-                circuit.close_valve()
+                self.logger.warning(f"Circuit {circuit.zone_config.id} is still irrigating during cleanup, attempting to force-close valve.")
+                try:
+                    circuit.close_valve()
+                except Exception as e:
+                    self.logger.critical(f"Failed to force-close valve for circuit {circuit.zone_config.id}: {e}")
+                    cleanup_errors.append(f"Failed to force-close valve for circuit {circuit.zone_config.id}: {e}")
 
-        self.state_manager.handle_clean_shutdown()
+        try:
+            self.state_manager.handle_clean_shutdown()
+        except Exception as e:
+            self.logger.error(f"Unexpected error while handling clean shutdown in CircuitStateManager: {e}")
+            cleanup_errors.append(f"Unexpected error while handling clean shutdown in CircuitStateManager: {e}")
+
+        if cleanup_errors:
+            raise RuntimeError(f"Cleanup completed with errors: {cleanup_errors}")
