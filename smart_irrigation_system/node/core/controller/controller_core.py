@@ -10,6 +10,7 @@ from smart_irrigation_system.node.utils.logger import get_logger
 
 from smart_irrigation_system.node.config.global_config import GlobalConfig
 from smart_irrigation_system.node.config.identity import load_node_identity
+from smart_irrigation_system.node.monitoring.process_heartbeat import ProcessHeartbeat
 from smart_irrigation_system.node.core.circuit_state_manager import CircuitStateManager
 from smart_irrigation_system.node.core.history_sync import HistorySyncManager
 from smart_irrigation_system.node.core.enums import ControllerState, IrrigationState
@@ -47,7 +48,7 @@ CONFIG_ZONES_PATH = os.path.join(BASE_DIR, "runtime/node/config/zones_config.jso
 ZONE_STATE_PATH = os.path.join(BASE_DIR, "runtime/node/data/zones_state.json")
 IRRIGATION_LOG_PATH = os.path.join(BASE_DIR, "runtime/node/data/irrigation_log.json")
 HISTORY_SYNC_QUEUE_PATH = os.path.join(BASE_DIR, "runtime/node/data/history_sync_queue.json")
-
+PROCESS_HEARTBEAT_PATH = os.path.join(BASE_DIR, "runtime/node/data/process_heartbeat")
 
 class ControllerCore(LegacyControllerAPI):
     """
@@ -57,7 +58,15 @@ class ControllerCore(LegacyControllerAPI):
 
     def __init__(self, global_config_path: str = CONFIG_GLOBAL_PATH,
                     config_zones_path: str = CONFIG_ZONES_PATH):
+
+        # Initialize logger
         self.logger = get_logger(self.__class__.__name__)
+
+        # Initialize locks and state variables
+        self._state_lock = threading.Lock()
+        self._cleanup_lock = threading.Lock()
+        self._cleanup_done = threading.Event()
+        self._controller_state = ControllerState.IDLE
 
         # Load configurations
         self.global_config: GlobalConfig = self._load_global_config(global_config_path)
@@ -83,16 +92,16 @@ class ControllerCore(LegacyControllerAPI):
             on_auto_irrigation_demand=self._on_auto_irrigation_demand
         )
 
+        # Initialize process heartbeat monitoring
+        self.process_heartbeat = ProcessHeartbeat(path=PROCESS_HEARTBEAT_PATH)
+        self.thread_manager.start_general_worker("process-heartbeat", self.process_heartbeat.run)
+
         # Init task scheduler last to ensure all components are ready
         self.task_scheduler = self._init_task_scheduler(
             thread_manager=self.thread_manager,
-            delay_seconds=1.0  # Delay to allow other components to initialize first
+            delay_seconds=5.0  # Delay to allow other components to initialize first
         )
 
-        self._state_lock = threading.Lock()
-        self._cleanup_lock = threading.Lock()
-        self._cleanup_done = threading.Event()
-        self._controller_state = ControllerState.IDLE
         self._register_signal_handlers()
         atexit.register(self._cleanup)
 

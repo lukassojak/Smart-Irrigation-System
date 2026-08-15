@@ -24,6 +24,7 @@ class ScheduledTask:
     async_mode: bool
     last_run: datetime | None = None
     initial_delay: float = 0.0  # seconds
+    registered_at: datetime | None = None
 
 
 class TaskScheduler:
@@ -60,7 +61,8 @@ class TaskScheduler:
             fn=fn,
             interval=interval,
             async_mode=async_mode,
-            initial_delay=initial_delay
+            initial_delay=initial_delay,
+            registered_at=time_utils.now()
         )
 
         self.logger.info(f"Registered task '{name}' with interval {interval}s (async_mode={async_mode}, initial_delay={initial_delay}s).")
@@ -116,11 +118,16 @@ class TaskScheduler:
             for task in self.tasks.values():
                 if task.last_run is None:
                     if task.initial_delay > 0:
-                        # Not yet time for the first run
-                        if time_utils.elapsed_seconds(now - timedelta(seconds=task.initial_delay), now) < 0:
+                        first_run_at = (
+                            task.registered_at
+                            + timedelta(seconds=task.initial_delay)
+                            )
+                        if now < first_run_at:
+                            # Not yet time for the first run
                             continue
                     # First run
                     self._execute_task(task)
+                    self.logger.debug(f"Executed first run of task '{task.name}' at {now.isoformat()}.")
                 else:
                     elapsed = time_utils.elapsed_seconds(task.last_run, now)
                     if elapsed >= task.interval:

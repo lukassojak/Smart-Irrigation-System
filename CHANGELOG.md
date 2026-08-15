@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2]
+
+### Added
+- Added a process heartbeat mechanism managed by `ThreadManager`, writing a heartbeat timestamp every 60 seconds for external process health monitoring.
+
+### Changed
+- Improved `ControllerCore` initialization by initializing controller state and synchronization primitives before starting background workers.
+- Corrected `TaskScheduler` handling of `initial_delay` so the first task execution occurs only after the configured delay.
+
+### Fixed
+- Fixed a `TaskScheduler` bug where tasks with a non-zero `initial_delay` could execute immediately after scheduler startup instead of waiting for the configured delay.
+- Fixed a `ControllerCore` initialization race condition where `refresh_state` could execute before `_state_lock` was initialized.
+
+### Removed
+
+### Known Issues
+- Weather adjustment calculations may fall back to standard conditions when weather data parsing fails.
+
+---
+
 ## [1.4.1]
 
 ### Added
