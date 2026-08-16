@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a side effect in `config_loader.py` where `validate_legacy_runtime_config()` was calling initializing new `IrrigationCircuit` objects, which could lead to unexpected side effects on GPIO pins during `RelayValve` initialization. The function now only validates the configuration without creating runtime objects.
 
 ### Removed
+- CLI is no longer started in `main.py` when the node is run. Not removed yet, expected to be moved to the `deprecated` module in future.
 
 ### Known Issues
 - Weather adjustment calculations may fall back to standard conditions when weather data parsing fails.
