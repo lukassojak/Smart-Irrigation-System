@@ -7,7 +7,13 @@ Ensures consistent timestamp handling across:
 - IrrigationResult logging
 """
 
+import time
 from datetime import datetime, timezone
+
+
+# =========================================================================================================
+# Wall-clock utilities for timestamps, logging, and persistence.
+# =========================================================================================================
 
 
 def now(utc: bool = False) -> datetime:
@@ -35,6 +41,7 @@ def from_iso(iso_str: str) -> datetime:
         return None
     return datetime.fromisoformat(iso_str)
 
+
 def elapsed_seconds(start: datetime, end: datetime) -> int:
     """
     Calculate elapsed seconds between two datetimes.
@@ -49,6 +56,7 @@ def elapsed_seconds(start: datetime, end: datetime) -> int:
     delta = end - start
     return int(delta.total_seconds())
 
+
 def is_same_day(dt1: datetime, dt2: datetime) -> bool:
     """
     Check if two datetimes fall on the same calendar day.
@@ -61,3 +69,26 @@ def is_same_day(dt1: datetime, dt2: datetime) -> bool:
     if dt1 is None or dt2 is None:
         raise ValueError("Both 'dt1' and 'dt2' must be valid datetime objects.")
     return dt1.date() == dt2.date()
+
+
+# =========================================================================================================
+# Monotonic helpers for deadlines and elapsed-duration calculations.
+# These are intentionally separate from wall-clock datetime utilities.
+# =========================================================================================================
+
+
+def monotonic_now() -> float:
+    """Return a monotonic timestamp suitable for timeout and deadline calculations."""
+    return time.monotonic()
+
+
+def deadline_from_now(timeout_seconds: float) -> float:
+    """Return a monotonic deadline that expires after the given number of seconds."""
+    if timeout_seconds < 0:
+        raise ValueError("timeout_seconds must be non-negative.")
+    return monotonic_now() + timeout_seconds
+
+
+def remaining_time(deadline: float) -> float:
+    """Return the remaining time until the deadline, clamped at zero."""
+    return max(0.0, deadline - monotonic_now())

@@ -3,7 +3,6 @@ import tracemalloc, time
 
 from smart_irrigation_system.__version__ import __version__ as version
 from smart_irrigation_system.node.utils.logger import get_logger
-from smart_irrigation_system.node.interface.irrigation_cli import IrrigationCLI
 from smart_irrigation_system.node.config.identity import load_node_identity
 from smart_irrigation_system.node.network.mqtt_client import MQTTClient
 
@@ -22,15 +21,11 @@ def main():
     tracemalloc.start()
     logger.info("Initializing Smart Irrigation Node...")
     logger.info(f"Version: {version}")
-    print("Initializing ", end="", flush=True)
-    time.sleep(0.5)
-    print(".", end="", flush=True)
+    print("Initializing ...", flush=True)
 
     # Initialize the ControllerCore
     try:
         controller = ControllerCore()
-        time.sleep(0.5)
-        print(".", end="", flush=True)
     except Exception as e:
         logger.error(f"Failed to initialize ControllerCore: {e}")
         return
@@ -40,39 +35,21 @@ def main():
         identity = load_node_identity()
         mqtt_client = MQTTClient(controller, identity=identity)
         mqtt_client.start()
-        time.sleep(0.5)
-        print(".", end="", flush=True)
     except Exception as e:
         logger.error(f"Failed to initialize network components: {e}")
         del controller
         return
 
-    # Start the controller main loop
-    controller.start_main_loop()
-
-    # Initialize CLI
+    print("Smart Irrigation Node is running. Press Ctrl+C to exit.", flush=True)
     try:
-        cli = IrrigationCLI(controller, refresh_interval_idle=REFRESH_INTERVAL_IDLE,
-                            refresh_interval_active=REFRESH_INTERVAL_ACTIVE)
-    except Exception as e:
-        logger.error(f"Failed to initialize IrrigationCLI: {e}")
-        controller.stop_main_loop()
-        del controller
-        return
-    
-    # Run the CLI
-    try:
-        cli.run()
+        while True:
+            time.sleep(60)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Exiting Smart Irrigation System...")
-    except Exception as e:
-        logger.error(f"Error in CLI: {e}")
-
-    controller.stop_main_loop()
-
-    # Finalize controller
-    del controller
-    logger.info("Smart Irrigation System stopped.")
+    finally:
+        mqtt_client.stop()
+        del controller
+        logger.info("Smart Irrigation System stopped.")
 
     # Debug memory usage
     current, peak = tracemalloc.get_traced_memory()

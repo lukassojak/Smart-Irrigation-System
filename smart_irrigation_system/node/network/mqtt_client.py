@@ -421,15 +421,7 @@ class MQTTClient(threading.Thread):
             else:
                 self._write_json(CONFIG_GLOBAL_PATH, config_global)
                 self._write_json(CONFIG_ZONES_PATH, zones_config)
-                self.logger.info("Config apply completed. Written config to disk. Mode: %s", apply_mode)
-                self._ack(envelope, AckType.APPLIED)
-                
-                # Give MQTT a moment to publish the ACK, then gracefully shutdown and restart
-                self.logger.info("Config applied and ACK sent. Gracefully shutting down node process for restart...")
-                time.sleep(0.5)  # Allow MQTT message to be sent
-                self.controller.shutdown(force=False)
-                self._terminate_process_for_restart()
-                
+
         except Exception as exc:
             self._error(
                 envelope,
@@ -437,6 +429,23 @@ class MQTTClient(threading.Thread):
                 message=str(exc),
                 retryable=True,
             )
+
+        self.logger.info("Config apply completed. Written config to disk. Mode: %s", apply_mode)
+        self._ack(envelope, AckType.APPLIED)
+        
+        # Give MQTT a moment to publish the ACK, then gracefully shutdown and restart
+        self.logger.info("Config applied and ACK sent. Gracefully shutting down node process for restart...")
+        time.sleep(0.5)  # Allow MQTT message to be sent
+        try:
+            self.controller.shutdown(force=False)
+        except Exception as exc:
+            self.logger.critical(
+                "Graceful shutdown failed before restart: %s",
+                exc,
+                exc_info=True,
+            )
+        self._terminate_process_for_restart()
+            
 
     def _write_json(self, path: str, data: dict[str, Any]) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)

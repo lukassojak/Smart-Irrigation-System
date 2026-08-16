@@ -1,11 +1,13 @@
 # smart_irrigation_system/node/core/controller/thread_manager.py
 
 import threading
+import time
 
 from collections.abc import Callable
 from enum import Enum
 
 from smart_irrigation_system.node.utils.logger import get_logger
+from smart_irrigation_system.node.utils.time_utils import deadline_from_now, remaining_time
 
 from smart_irrigation_system.node.exceptions import WorkerThreadError, WorkerThreadAlreadyExistsError
 
@@ -121,23 +123,52 @@ class ThreadManager:
         """
         Join all running workers, optionally filtered by task type.
 
+        The provided timeout is a total deadline for the whole operation, not a per-worker timeout.
+        Each worker is joined in rounds with the remaining time budget so one stuck worker does not
+        prevent the rest of the workers from being attempted to join.
+
         :param task_type: if specified, only join workers of this type.
-        :param timeout: maximum time to wait for each worker to join. Defaults to 10 seconds.
-        :raises TimeoutError: if any worker fails to join within the given timeout.
+        :param timeout: maximum total time to wait for the whole join operation. Defaults to 10 seconds.
+        :raises TimeoutError: if any worker still remains alive after the deadline.
         """
 
-        self.logger.debug(f"Joining all workers of type '{task_type or 'any'}' with timeout {timeout} seconds.")
+        self.logger.debug(f"Joining all workers of type '{task_type or 'any'}' with total timeout {timeout} seconds.")
         with self._lock:
             workers_to_join = [
                 worker_handle for worker_handle in self._workers.values()
                 if task_type is None or worker_handle.task_type == task_type
             ]
-        for worker_handle in workers_to_join:
-            worker_handle.thread.join(timeout=timeout)
-            if worker_handle.thread.is_alive():
-                raise TimeoutError(f"Worker '{worker_handle.name}' failed to join within {timeout} seconds.")
 
-        self.logger.debug(f"All workers of type '{task_type or 'any'}' have been joined.")
+        deadline = deadline_from_now(timeout)
+        remaining_workers = list(workers_to_join)
+
+        while remaining_workers:
+            if remaining_time(deadline) <= 0:
+                break
+
+            next_remaining_workers = []
+            for worker_handle in remaining_workers:
+                wait_time = remaining_time(deadline)
+                if wait_time <= 0:
+                    next_remaining_workers.append(worker_handle)
+                    continue
+
+                worker_handle.thread.join(timeout=wait_time)
+                self.logger.debug(
+                    f"Join returned for worker '{worker_handle.name}', "
+                    f"is_alive={worker_handle.thread.is_alive()}"
+                )
+                if worker_handle.thread.is_alive():
+                    next_remaining_workers.append(worker_handle)
+
+            remaining_workers = next_remaining_workers
+
+        if remaining_workers:
+            names = ", ".join(worker_handle.name for worker_handle in remaining_workers)
+            raise TimeoutError(
+                f"Workers failed to join within {timeout} seconds: {names}"
+            )
+
     
     def join_worker_handle(self, worker_handle: WorkerHandle, timeout: float = 10.0) -> None:
         """
